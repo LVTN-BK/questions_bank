@@ -1,8 +1,6 @@
 import inspect
 import logging
 import logging.config
-from os import path
-from os.path import dirname
 import inspect
 
 
