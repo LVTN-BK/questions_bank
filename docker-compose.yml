@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  questions_bank:
+    build:
+      context: .
+    command: sh ./entrypoint.sh
+    ports:
+      - 1706:1706
+    volumes:
+      - .:/usr/questions_bank
+    environment:
+      MONGO_DEFAULT_USER: ${MONGO_DEFAULT_USER}
+      MONGO_DEFAULT_PASS: ${MONGO_DEFAULT_PASS}
+    env_file:
+      - .env

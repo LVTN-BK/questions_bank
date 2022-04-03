@@ -1,0 +1,3 @@
+PROJECT_NAME=QUESTIONS_BANK
+GIT_SSH_REPO=git@github.com:<organize/username>/<repo_name>.git
+SERVICE_NAME="deploy_$PROJECT_NAME"
