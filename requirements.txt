@@ -1,3 +1,6 @@
+aiofiles==0.6.0
+amqp==5.0.5
+asgiref==3.3.1
 fastapi==0.63.0
 pydantic==1.7.3
 pymongo==3.11.2
