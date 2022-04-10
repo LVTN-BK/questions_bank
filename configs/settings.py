@@ -19,22 +19,22 @@ app = FastAPI(
 )
 
 
-def custom_openapi():
-    openapi_schema = get_openapi(
-        title='questions bank',
-        description='pattern',
-        version='1.0',
-        tags=TAGS_METADATA,
-        routes=app.routes
-    )
-    openapi_schema['info']['x-logo'] = {
-        'url': '#'
-    }
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
+# def custom_openapi():
+#     openapi_schema = get_openapi(
+#         title='questions bank',
+#         description='pattern',
+#         version='1.0',
+#         tags=TAGS_METADATA,
+#         routes=app.routes
+#     )
+#     openapi_schema['info']['x-logo'] = {
+#         'url': '#'
+#     }
+#     app.openapi_schema = openapi_schema
+#     return app.openapi_schema
 
 
-app.openapi = custom_openapi
+# app.openapi = custom_openapi
 
 # Provide which origins should be accepted to call apis
 origins = [

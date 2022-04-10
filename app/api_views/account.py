@@ -1,5 +1,5 @@
 from fastapi import status, Form
-from fastapi.param_functions import Body
+from fastapi import Body
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
 from configs.settings import SYSTEM, app

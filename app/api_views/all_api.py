@@ -31,6 +31,6 @@ async def join_group(
     data: all_data_model.DATA_Auto_comment,
     valid_headers: dict = Depends(valid_headers)
 ):
-    logger.info('==========api create task join_group============')
+    logger().info('==========api create task join_group============')
 
     return JSONResponse(content={'status': 'Done'}, status_code=status.HTTP_201_CREATED)
