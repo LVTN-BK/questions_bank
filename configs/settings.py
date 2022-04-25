@@ -75,6 +75,25 @@ noti_db[NOTI_COLLECTION].create_index([('datetime_created', pymongo.DESCENDING)]
 noti_db[NOTI_SETTING_COLLECTION].create_index([('user_id', pymongo.ASCENDING), ('noti_type', pymongo.ASCENDING)])
 
 
+#############################################
+# group db
+group_db = MONGO_CLIENT['group-db']
+GROUP = 'group'
+GROUP_LABEL = 'group_label'
+GROUP_INVITATION = 'group_invitation'
+GROUP_PARTICIPANT = 'group_participant'
+GROUP_JOIN_REQUEST = 'group_join_request'
+group_db[GROUP_INVITATION].create_index([('group_id', pymongo.ASCENDING), ('user_id', pymongo.ASCENDING)], unique=True)
+group_db[GROUP_JOIN_REQUEST].create_index([('group_id', pymongo.ASCENDING), ('user_id', pymongo.ASCENDING)], unique=True)
+
+#create text index for group name
+group_db.get_collection(GROUP).create_index([('group_name', 'text')])
+
+
+#create index for group_participant
+group_db.get_collection('group_participant').create_index([('group_id', pymongo.ASCENDING), ('user_id', pymongo.ASCENDING)], unique=True)
+
+
 LIST_PROVIDER_API = [
 ]
 
