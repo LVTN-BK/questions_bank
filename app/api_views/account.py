@@ -29,7 +29,10 @@ from configs.logger import *
     },
     tags=['system_account']
 )
-async def login_system(email: EmailStr = Body(...), password: str = Body(...)):
+async def login_system(
+    email: EmailStr = Body(...), 
+    password: str = Body(...)
+):
     user = SYSTEM['users'].find_one({'email': {'$eq': email}})
     if user is None:
         return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
@@ -120,16 +123,16 @@ async def create_system_account(
         {'email': {'$eq': email}},
     )
 
-    # add ma_tv
-    ma_tv = str(user.get('_id'))
-    SYSTEM['users'].update_one(
-        {'email': {'$eq': email}},
-        {
-            '$set': {
-                'ma_tv': ma_tv
-            }
-        }
-    )
+    # # add ma_tv
+    # ma_tv = str(user.get('_id'))
+    # SYSTEM['users'].update_one(
+    #     {'email': {'$eq': email}},
+    #     {
+    #         '$set': {
+    #             'ma_tv': ma_tv
+    #         }
+    #     }
+    # )
 
     return JSONResponse(content={
         'status': 'Created',
@@ -165,10 +168,7 @@ async def get_account_info(email: EmailStr = Form(...)):
             encrypt_password = bytes(user.get('encrypt_password'), 'utf-8')
             password=fernet.decrypt(encrypt_password).decode()
 
-            crawl_instance_url = user.get('aws_instance_url')
-            list_ele = crawl_instance_url.split(':')
-            instance_url = f'{list_ele[0]}:{list_ele[1]}:2306'
-            return JSONResponse(content={'email': email, 'password': password, 'instance_url': instance_url}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={'email': email, 'password': password}, status_code=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(e)
+            logger().error(e)
             return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
