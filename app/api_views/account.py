@@ -208,74 +208,27 @@ async def update_account_info(
     data1: DATA_Update_Account,
     data2: dict = Depends(valid_headers)
 ):
-    # # Check if user already exist
-    # if SYSTEM['users'].find({"email": {"$eq": email}}).count():
-    #     return JSONResponse(content={
-    #         "status": "Failed",
-    #         "msg": "Email is existing for another account"
-    #     }, status_code=status.HTTP_403_FORBIDDEN)
-    
+    logger().info('=====================update_account_info======================')
+    try:
+        field_update = {}
+        data1 = jsonable_encoder(data1)
+        for key in data1.keys():
+            if data1.get(key):
+                field_update.update({key: data1.get(key)})
+        logger().info(field_update)
+        query_update = {
+            '$set': field_update
+        }
+        SYSTEM[USERS_PROFILE].update_one(
+            {'user_id': {'$eq': data2.get('user_id')}},
+            query_update
+        )
 
-    # #Thêm encrypt password
-    # key = Fernet.generate_key()
-    # fernet = Fernet(key)
-
-    # user = User(
-    #     name=name,
-    #     # token=token,
-    #     # secret_key=secret_key,
-    #     email=email,
-    #     hashed_password=get_password_hash(password),
-    #     encrypt_password=fernet.encrypt(password.encode()), #pass
-    #     encrypt_key=key,                                     #key
-    #     datetime_created=datetime.now()
-    # )
-
-    # # Create user in db
-    # user_id = SYSTEM[USER_COLLECTION].insert_one(
-    #     jsonable_encoder(user)
-    # ).inserted_id
-
-    # # insert to user profile
-    # query_profile = {
-    #     'user_id': str(user_id),
-    #     'name': name
-    # }
-    # SYSTEM[USERS_PROFILE].insert_one(
-    #     query_profile
-    # )
-
-    # # Update access token, secret key
-    # access_token, secret_key = create_access_token(
-    #     data={
-    #         'email': email,
-    #         'user_id': str(user_id)
-    #     }
-    # )
-
-    # token = Token(
-    #     access_token=access_token,
-    #     token_type='Bearer'
-    # )
-    
-    # user = SYSTEM['users'].find_one(
-    #     {'email': {'$eq': email}},
-    # )
-
-    # query_update = {
-    #     '$set': {
-    #         'token': jsonable_encoder(token),
-    #         'secret_key': secret_key,
-    #     }      
-    # }
-
-    # SYSTEM['users'].update_one(
-    #     {'email': {'$eq': email}},
-    #     query_update
-    # )
-
-    return JSONResponse(content={
-        'status': 'Created'
-    }, status_code=status.HTTP_200_OK)
+        return JSONResponse(content={
+            'status': 'success'
+        }, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed!'}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
