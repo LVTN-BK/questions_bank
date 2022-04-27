@@ -4,8 +4,8 @@ from configs.settings import SYSTEM
 
 
 async def valid_headers(
-        Authorization: str = Header(..., description='access_token return by login on fbcrawl'),
-        s_key: str = Header(..., description='secret_key return by login on fbcrawl'),
+        Authorization: str = Header(..., description='access_token return by login'),
+        s_key: str = Header(..., description='secret_key return by login'),
 ):
     """Check if access token valid for accessing api
     Args:

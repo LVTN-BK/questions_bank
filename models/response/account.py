@@ -31,9 +31,9 @@ class GetAccount403(BaseModel):
     status: str = Field(default="Failed")
 
 class User(BaseModel):
-    username: str = Field(...)
-    token: Token = Field(...)
-    secret_key: str = Field(...)
+    name: str = Field(...)
+    # token: Token = Field(...)
+    # secret_key: str = Field(...)
     email: EmailStr = Field(...)
     hashed_password: str = Field(...)
     encrypt_password: str = Field(...)

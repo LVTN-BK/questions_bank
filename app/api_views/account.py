@@ -43,7 +43,7 @@ async def login_system(
             access_token, _ = create_access_token(
                 data={
                     'email': user.get('email'),
-                    'username': user.get('username')
+                    'user_id': str(user.get('_id'))
                 },
                 secret_key=secret_key
             )
@@ -78,7 +78,7 @@ async def login_system(
 )
 async def create_system_account(
         email: EmailStr = Form(..., description='Email'),
-        username: str = Form(..., description='Username'),
+        name: str = Form(..., description='name'),
         password: str = Form(..., description='Password'),
 ):
     # Check if user already exist
@@ -87,27 +87,16 @@ async def create_system_account(
             "status": "Failed",
             "msg": "Email is existing for another account"
         }, status_code=status.HTTP_403_FORBIDDEN)
-    # Create user in db
-    access_token, secret_key = create_access_token(
-        data={
-            'email': email,
-            'username': username
-        }
-    )
-
-    token = Token(
-        access_token=access_token,
-        token_type='Bearer'
-    )
+    
 
     #Thêm encrypt password
     key = Fernet.generate_key()
     fernet = Fernet(key)
 
     user = User(
-        username=username,
-        token=token,
-        secret_key=secret_key,
+        name=name,
+        # token=token,
+        # secret_key=secret_key,
         email=email,
         hashed_password=get_password_hash(password),
         encrypt_password=fernet.encrypt(password.encode()), #pass
@@ -115,24 +104,38 @@ async def create_system_account(
         datetime_created=datetime.now()
     )
 
-    SYSTEM['users'].insert_one(
+    user_id = SYSTEM['users'].insert_one(
         jsonable_encoder(user)
+    ).inserted_id
+
+    # Create user in db
+    access_token, secret_key = create_access_token(
+        data={
+            'email': email,
+            'user_id': str(user_id)
+        }
     )
 
+    token = Token(
+        access_token=access_token,
+        token_type='Bearer'
+    )
+    
     user = SYSTEM['users'].find_one(
         {'email': {'$eq': email}},
     )
 
-    # # add ma_tv
-    # ma_tv = str(user.get('_id'))
-    # SYSTEM['users'].update_one(
-    #     {'email': {'$eq': email}},
-    #     {
-    #         '$set': {
-    #             'ma_tv': ma_tv
-    #         }
-    #     }
-    # )
+    query_update = {
+        '$set': {
+            'token': jsonable_encoder(token),
+            'secret_key': secret_key,
+        }      
+    }
+
+    SYSTEM['users'].update_one(
+        {'email': {'$eq': email}},
+        query_update
+    )
 
     return JSONResponse(content={
         'status': 'Created',
@@ -172,3 +175,6 @@ async def get_account_info(email: EmailStr = Form(...)):
         except Exception as e:
             logger().error(e)
             return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+
+
