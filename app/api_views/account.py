@@ -1,10 +1,12 @@
 from fastapi import status, Form
-from fastapi import Body
+from fastapi import Body, Depends
+from models.request.account import DATA_Update_Account
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
-from configs.settings import SYSTEM, app
+from configs.settings import SYSTEM, USER_COLLECTION, USERS_PROFILE, app
 from app.secure._password import *
 from app.secure._token import *
+from app.utils._header import valid_headers
 from pydantic import EmailStr
 from fastapi.encoders import jsonable_encoder
 
@@ -104,11 +106,21 @@ async def create_system_account(
         datetime_created=datetime.now()
     )
 
-    user_id = SYSTEM['users'].insert_one(
+    # Create user in db
+    user_id = SYSTEM[USER_COLLECTION].insert_one(
         jsonable_encoder(user)
     ).inserted_id
 
-    # Create user in db
+    # insert to user profile
+    query_profile = {
+        'user_id': str(user_id),
+        'name': name
+    }
+    SYSTEM[USERS_PROFILE].insert_one(
+        query_profile
+    )
+
+    # Update access token, secret key
     access_token, secret_key = create_access_token(
         data={
             'email': email,
@@ -176,5 +188,94 @@ async def get_account_info(email: EmailStr = Form(...)):
             logger().error(e)
             return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
 
+
+#===========================================
+#===============UPDATE_ACCOUNT_INFO=========
+#===========================================
+@app.put(
+    path='/update_account_info',
+    responses={
+        status.HTTP_200_OK: {
+            'model': CreateAccountResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': CreateAccountResponse403
+        }
+    }, 
+    tags=['system_account']
+)
+async def update_account_info(
+    data1: DATA_Update_Account,
+    data2: dict = Depends(valid_headers)
+):
+    # # Check if user already exist
+    # if SYSTEM['users'].find({"email": {"$eq": email}}).count():
+    #     return JSONResponse(content={
+    #         "status": "Failed",
+    #         "msg": "Email is existing for another account"
+    #     }, status_code=status.HTTP_403_FORBIDDEN)
+    
+
+    # #Thêm encrypt password
+    # key = Fernet.generate_key()
+    # fernet = Fernet(key)
+
+    # user = User(
+    #     name=name,
+    #     # token=token,
+    #     # secret_key=secret_key,
+    #     email=email,
+    #     hashed_password=get_password_hash(password),
+    #     encrypt_password=fernet.encrypt(password.encode()), #pass
+    #     encrypt_key=key,                                     #key
+    #     datetime_created=datetime.now()
+    # )
+
+    # # Create user in db
+    # user_id = SYSTEM[USER_COLLECTION].insert_one(
+    #     jsonable_encoder(user)
+    # ).inserted_id
+
+    # # insert to user profile
+    # query_profile = {
+    #     'user_id': str(user_id),
+    #     'name': name
+    # }
+    # SYSTEM[USERS_PROFILE].insert_one(
+    #     query_profile
+    # )
+
+    # # Update access token, secret key
+    # access_token, secret_key = create_access_token(
+    #     data={
+    #         'email': email,
+    #         'user_id': str(user_id)
+    #     }
+    # )
+
+    # token = Token(
+    #     access_token=access_token,
+    #     token_type='Bearer'
+    # )
+    
+    # user = SYSTEM['users'].find_one(
+    #     {'email': {'$eq': email}},
+    # )
+
+    # query_update = {
+    #     '$set': {
+    #         'token': jsonable_encoder(token),
+    #         'secret_key': secret_key,
+    #     }      
+    # }
+
+    # SYSTEM['users'].update_one(
+    #     {'email': {'$eq': email}},
+    #     query_update
+    # )
+
+    return JSONResponse(content={
+        'status': 'Created'
+    }, status_code=status.HTTP_200_OK)
 
 

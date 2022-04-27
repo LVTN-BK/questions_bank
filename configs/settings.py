@@ -60,7 +60,12 @@ MONGO_DEFAULT_PASS = os.environ.get('MONGO_DEFAULT_PASS')
 
 # MONGO_CLIENT = MongoClient(f'mongodb://{MONGO_DEFAULT_USER}:{MONGO_DEFAULT_PASS}@<DB_HOST>:<DB_PORT>/authSource?authSource=admin&authMechanism=SCRAM-SHA-256')
 MONGO_CLIENT = MongoClient(f'mongodb+srv://root:root@cluster0.3n45m.mongodb.net/question-bank?authSource=admin&replicaSet=Cluster0-shard-0&readPreference=primary&appname=MongoDB%20Compass%20Community&ssl=true')
-SYSTEM = MONGO_CLIENT['question-bank']
+
+################################################
+# user
+SYSTEM = MONGO_CLIENT['user-db']
+USER_COLLECTION = 'users'
+USERS_PROFILE = 'users_profile'
 
 ##############################################
 # notification db
