@@ -79,9 +79,9 @@ async def login_system(
     }, tags=['system_account']
 )
 async def create_system_account(
-        email: EmailStr = Form(..., description='Email'),
-        name: str = Form(..., description='name'),
-        password: str = Form(..., description='Password'),
+        email: EmailStr = Body(..., description='Email'),
+        name: str = Body(..., description='name'),
+        password: str = Body(..., description='Password'),
 ):
     # Check if user already exist
     if SYSTEM['users'].find({"email": {"$eq": email}}).count():
