@@ -1,0 +1,9 @@
+class UserInfo:
+    id: str
+    avatar: str
+    email: str
+    name: str
+    phone: str
+    address: str
+    gender: str
+    birthday: str

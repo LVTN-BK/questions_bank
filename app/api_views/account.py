@@ -1,6 +1,7 @@
 from fastapi import status, Form
 from fastapi import Body, Depends
-from models.request.account import DATA_Update_Account
+from models.define.user import UserInfo
+from models.request.account import DATA_Update_Account, DATA_Update_Email
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
 from configs.settings import SYSTEM, USER_COLLECTION, USERS_PROFILE, app
@@ -58,7 +59,12 @@ async def login_system(
                 },
                 return_document=ReturnDocument.AFTER
             )
-            return JSONResponse(content={'token': user.get('token'), 'secret_key': secret_key},
+
+            user_info = SYSTEM[USERS_PROFILE].find_one({'user_id': str(user.get('_id'))})
+            del user_info['_id']
+
+            # user_info_return = UserInfo(id=str(user.get('_id')), avatar=user_info.get('avatar'))
+            return JSONResponse(content={'token': user.get('token'), 'secret_key': secret_key, 'user': user_info},
                                 status_code=status.HTTP_200_OK)
     except:
         pass
@@ -114,7 +120,8 @@ async def create_system_account(
     # insert to user profile
     query_profile = {
         'user_id': str(user_id),
-        'name': name
+        'name': name,
+        'email': email
     }
     SYSTEM[USERS_PROFILE].insert_one(
         query_profile
@@ -231,4 +238,119 @@ async def update_account_info(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed!'}, status_code=status.HTTP_400_BAD_REQUEST)
 
+#===========================================
+#=================UPDATE_AVATAR=============
+#===========================================
+@app.put(
+    path='/update_avatar',
+    responses={
+        status.HTTP_200_OK: {
+            'model': CreateAccountResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': CreateAccountResponse403
+        }
+    }, 
+    tags=['system_account']
+)
+async def update_avatar(
+    avatar: str = Body(..., description='new avatar url'),
+    data2: dict = Depends(valid_headers)
+):
+    logger().info('=====================update_avatar======================')
+    try:
+        field_update = {
+            'avatar': avatar
+        }
+        logger().info(field_update)
+        query_update = {
+            '$set': field_update
+        }
+        SYSTEM[USERS_PROFILE].update_one(
+            {'user_id': {'$eq': data2.get('user_id')}},
+            query_update
+        )
+
+        return JSONResponse(content={
+            'status': 'success'
+        }, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed!'}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#===========================================
+#=================UPDATE_EMAIL==============
+#===========================================
+@app.put(
+    path='/update_email',
+    responses={
+        status.HTTP_200_OK: {
+            'model': CreateAccountResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': CreateAccountResponse403
+        }
+    }, 
+    tags=['system_account']
+)
+async def update_email(
+    data1: DATA_Update_Email,
+    data2: dict = Depends(valid_headers)
+):
+    logger().info('=====================update_email======================')
+    user = SYSTEM['users'].find_one({'email': {'$eq': data2.get('email')}})
+    if user is None:
+        return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
+    try:
+        if verify_password(data1.get('password'), user.get('hashed_password')):
+            # Create new access token for user
+            secret_key = user.get('secret_key')
+            access_token, secret_key = create_access_token(
+                data={
+                    'email': data1.get('email'),
+                    'user_id': str(user.get('_id'))
+                }
+            )
+
+            # update in user table
+            user = SYSTEM['users'].find_one_and_update(
+                {'email': {'$eq': data2.get('email')}},
+                {
+                    '$set': {
+                        'email': data1.get('email'),
+                        'token.access_token': access_token,
+                        'secret_key': secret_key
+                    }
+                },
+                return_document=ReturnDocument.AFTER
+            )
+
+            # update in user information table
+            query_update = {
+                '$set': {
+                    'email': data1.get('email')
+                }
+            }
+            SYSTEM[USERS_PROFILE].find_one_and_update(
+                {'user_id': str(user.get('_id'))},
+                query_update
+            )
+
+            data = {
+                'access_token': access_token, 
+                'secret_key': secret_key,
+                'email': data1.get('email')
+            }
+            msg = 'update avatar successfully'
+            return JSONResponse(
+                content={
+                    'status': 'success',
+                    'data': data,
+                    'msg': msg
+                },
+                status_code=status.HTTP_200_OK
+            )
+    except:
+        msg = 'maybe password was wrong'
+        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
