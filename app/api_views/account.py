@@ -1,7 +1,7 @@
 from fastapi import status, Form
 from fastapi import Body, Depends
 from models.define.user import UserInfo
-from models.request.account import DATA_Update_Account, DATA_Update_Email
+from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
 from configs.settings import SYSTEM, USER_COLLECTION, USERS_PROFILE, app
@@ -346,6 +346,54 @@ async def update_email(
                 content={
                     'status': 'success',
                     'data': data,
+                    'msg': msg
+                },
+                status_code=status.HTTP_200_OK
+            )
+    except:
+        msg = 'maybe password was wrong'
+        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#===========================================
+#================UPDATE_PASSWORD============
+#===========================================
+@app.put(
+    path='/update_password',
+    responses={
+        status.HTTP_200_OK: {
+            'model': CreateAccountResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': CreateAccountResponse403
+        }
+    }, 
+    tags=['system_account']
+)
+async def update_password(
+    data1: DATA_Update_Password,
+    data2: dict = Depends(valid_headers)
+):
+    logger().info('=====================update_password======================')
+    user = SYSTEM['users'].find_one({'email': {'$eq': data2.get('email')}})
+    if user is None:
+        return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
+    try:
+        if verify_password(data1.get('old_password'), user.get('hashed_password')):
+            # update in user table
+            user = SYSTEM['users'].find_one_and_update(
+                {'email': {'$eq': data2.get('email')}},
+                {
+                    '$set': {
+                        'hashed_password': get_password_hash(data1.get('new_password'))
+                    }
+                },
+                return_document=ReturnDocument.AFTER
+            )
+
+            msg = 'update password successfully'
+            return JSONResponse(
+                content={
+                    'status': 'success',
                     'msg': msg
                 },
                 status_code=status.HTTP_200_OK

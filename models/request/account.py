@@ -12,3 +12,7 @@ class DATA_Update_Account(BaseModel):
 class DATA_Update_Email(BaseModel):
     email: EmailStr = Field(..., description='new email address')
     password: str = Field(..., description='user password')
+
+class DATA_Update_Password(BaseModel):
+    old_password: str = Field(..., description='old password')
+    new_password: str = Field(..., description='new password')
