@@ -299,6 +299,7 @@ async def update_email(
 ):
     logger().info('=====================update_email======================')
     user = SYSTEM['users'].find_one({'email': {'$eq': data2.get('email')}})
+    data1 = jsonable_encoder(data1)
     if user is None:
         return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
     try:
@@ -341,7 +342,7 @@ async def update_email(
                 'secret_key': secret_key,
                 'email': data1.get('email')
             }
-            msg = 'update avatar successfully'
+            msg = 'update email successfully'
             return JSONResponse(
                 content={
                     'status': 'success',
@@ -350,7 +351,8 @@ async def update_email(
                 },
                 status_code=status.HTTP_200_OK
             )
-    except:
+    except Exception as Argument:
+        logging.exception("Error occurred")
         msg = 'maybe password was wrong'
         return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
