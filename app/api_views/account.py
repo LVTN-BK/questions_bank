@@ -353,8 +353,8 @@ async def update_email(
             )
     except Exception as Argument:
         logging.exception("Error occurred")
-        msg = 'maybe password was wrong'
-        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+    msg = 'maybe password was wrong'
+    return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #================UPDATE_PASSWORD============
@@ -376,6 +376,7 @@ async def update_password(
     data2: dict = Depends(valid_headers)
 ):
     logger().info('=====================update_password======================')
+    data1 = jsonable_encoder(data1)
     user = SYSTEM['users'].find_one({'email': {'$eq': data2.get('email')}})
     if user is None:
         return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
@@ -401,6 +402,7 @@ async def update_password(
                 status_code=status.HTTP_200_OK
             )
     except:
-        msg = 'maybe password was wrong'
-        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        logging.exception("Error occurred")
+    msg = 'maybe password was wrong'
+    return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
