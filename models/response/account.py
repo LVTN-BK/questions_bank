@@ -36,6 +36,24 @@ class User(BaseModel):
     # secret_key: str = Field(...)
     email: EmailStr = Field(...)
     hashed_password: str = Field(...)
-    encrypt_password: str = Field(...)
-    encrypt_key: str = Field(...)
+    # encrypt_password: str = Field(...)
+    # encrypt_key: str = Field(...)
     datetime_created: datetime = Field(...)
+
+class PutResetPasswordResponse200(BaseModel):
+    status: str = Field(default='Thành công!')
+    msg: str = Field(default='Mật khẩu đã được thiết lập lại')
+
+class PutResetPasswordResponse400(BaseModel):
+    status: str = Field(default='Lỗi!')
+    msg: str = Field(default='Mã hết thời gian hoặc không tồn tại!')
+
+
+class ResetPasswordResponse201(BaseModel):
+    status: str = Field(default='Thành công!')
+    msg: str = Field(default='Vui lòng kiểm tra email và nhập mã!')
+
+
+class ResetPasswordResponse404(BaseModel):
+    status: str = Field(default='Lỗi!')
+    msg: str = Field(default='Tài khoản không tồn tại!')

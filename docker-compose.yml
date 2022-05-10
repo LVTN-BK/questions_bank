@@ -11,5 +11,7 @@ services:
     environment:
       MONGO_DEFAULT_USER: ${MONGO_DEFAULT_USER}
       MONGO_DEFAULT_PASS: ${MONGO_DEFAULT_PASS}
+      SENDGRID_MAIL: "hotro.qb@gmail.com"
+      SENDGRID_API_KEY: ""
     env_file:
       - .env

@@ -1,5 +1,6 @@
 from fastapi import status, Form
 from fastapi import Body, Depends
+from app.utils.account import send_reset_password_email
 from models.define.user import UserInfo
 from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
 from pymongo.collection import ReturnDocument
@@ -11,9 +12,9 @@ from app.utils._header import valid_headers
 from pydantic import EmailStr
 from fastapi.encoders import jsonable_encoder
 
-from cryptography.fernet import Fernet
+# from cryptography.fernet import Fernet
 
-from models.response.account import CreateAccountResponse200, CreateAccountResponse403, GetAccount200, GetAccount403, LoginResponse200, LoginResponse403, Token, User
+from models.response.account import CreateAccountResponse200, CreateAccountResponse403, GetAccount200, GetAccount403, LoginResponse200, LoginResponse403, PutResetPasswordResponse200, PutResetPasswordResponse400, ResetPasswordResponse201, ResetPasswordResponse404, Token, User
 
 from configs.logger import *
 
@@ -97,9 +98,9 @@ async def create_system_account(
         }, status_code=status.HTTP_403_FORBIDDEN)
     
 
-    #Thêm encrypt password
-    key = Fernet.generate_key()
-    fernet = Fernet(key)
+    # #Thêm encrypt password
+    # key = Fernet.generate_key()
+    # fernet = Fernet(key)
 
     user = User(
         name=name,
@@ -107,8 +108,8 @@ async def create_system_account(
         # secret_key=secret_key,
         email=email,
         hashed_password=get_password_hash(password),
-        encrypt_password=fernet.encrypt(password.encode()), #pass
-        encrypt_key=key,                                     #key
+        # encrypt_password=fernet.encrypt(password.encode()), #pass
+        # encrypt_key=key,                                     #key
         datetime_created=datetime.now()
     )
 
@@ -161,39 +162,39 @@ async def create_system_account(
         'access_token': access_token
     }, status_code=status.HTTP_200_OK)
 
-#===========================================
-#==============GET_ACCOUNT_INFO=============
-#===========================================
-@app.post(
-    path= '/get_account_info',
-    responses={
-        status.HTTP_200_OK: {
-            'model': GetAccount200
-        },
-        status.HTTP_403_FORBIDDEN: {
-            'model': GetAccount403
-        }
-    },
-    tags=['system_account']
-)
-async def get_account_info(email: EmailStr = Form(...)):
-    user = SYSTEM['users'].find_one({'email': {'$eq': email}})
-    if user is None:
-        return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
-    else:
-        try:
-            email = user.get('email')
+# #===========================================
+# #==============GET_ACCOUNT_INFO=============
+# #===========================================
+# @app.post(
+#     path= '/get_account_info',
+#     responses={
+#         status.HTTP_200_OK: {
+#             'model': GetAccount200
+#         },
+#         status.HTTP_403_FORBIDDEN: {
+#             'model': GetAccount403
+#         }
+#     },
+#     tags=['system_account']
+# )
+# async def get_account_info(email: EmailStr = Form(...)):
+#     user = SYSTEM['users'].find_one({'email': {'$eq': email}})
+#     if user is None:
+#         return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
+#     else:
+#         try:
+#             email = user.get('email')
 
-            key = user.get('encrypt_key')
-            fernet = Fernet(key)
+#             key = user.get('encrypt_key')
+#             fernet = Fernet(key)
 
-            encrypt_password = bytes(user.get('encrypt_password'), 'utf-8')
-            password=fernet.decrypt(encrypt_password).decode()
+#             encrypt_password = bytes(user.get('encrypt_password'), 'utf-8')
+#             password=fernet.decrypt(encrypt_password).decode()
 
-            return JSONResponse(content={'email': email, 'password': password}, status_code=status.HTTP_200_OK)
-        except Exception as e:
-            logger().error(e)
-            return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+#             return JSONResponse(content={'email': email, 'password': password}, status_code=status.HTTP_200_OK)
+#         except Exception as e:
+#             logger().error(e)
+#             return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
 
 
 #===========================================
@@ -406,3 +407,89 @@ async def update_password(
     msg = 'maybe password was wrong'
     return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
+
+@app.post(
+    path='/reset_password', 
+    responses={
+        status.HTTP_201_CREATED: {
+            'model': ResetPasswordResponse201
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResetPasswordResponse404
+        }
+    }, 
+    tags=['account']
+)
+async def reset_password(
+    email: EmailStr = Form(..., description='Email khôi phục mật khẩu'),
+):
+    """ 
+        Khôi phục lại mật khẩu, hệ thống gửi mail kèm theo mã để khôi phục lại mật khẩu
+    """
+    import datetime
+    import secrets
+    keyonce = secrets.token_urlsafe(6)
+    expire_in = datetime.datetime.now() + datetime.timedelta(minutes=30)
+    expire_at_timestamp = expire_in.timestamp()
+
+    user = SYSTEM[USER_COLLECTION].find_one(
+        filter={'email': {'$eq': email}}
+    )
+    if not user:
+        return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Email chưa đăng ký tài khoản!'}, status_code=status.HTTP_404_NOT_FOUND)
+    
+    # Check if keyonce is not used
+    await send_reset_password_email('support@hspace.biz', email, data={
+        'msg': 'Vui lòng xác nhận địa chỉ email của bạn bằng cách nhập mã xác minh bên dưới. Mã có giá trị trong 30 phút',
+        'keyonce': keyonce
+    })
+    SYSTEM[USER_COLLECTION].find_one_and_update(
+        filter={'email': {'$eq': email}},
+        update={'$set': {
+                'keyonce': keyonce,
+                'keyonce_expire_at': expire_at_timestamp
+            }
+        }
+    )
+    return JSONResponse(content={'status': 'Thành công!', 'msg': 'Vui lòng kiểm tra email và nhập mã!'}, status_code=status.HTTP_201_CREATED)
+
+
+
+@app.put(
+    path='/apply_reset_password', 
+    responses={
+        status.HTTP_200_OK: {
+            'model': PutResetPasswordResponse200
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            'model': PutResetPasswordResponse400
+        }
+    }, 
+    tags=['account']
+)
+async def apply_reset_password(
+    keyonce: str = Form(..., description='Mã một lần để khôi phục mật khẩu'),
+    password: str = Form(..., description='Mật khẩu lần một'),
+    re_password: str = Form(..., description='Mật khẩu lần hai'),
+):
+    """Khôi phục lại mật khẩu"""
+    if password != re_password:
+        return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Mật khẩu không khớp!'}, status_code=status.HTTP_400_BAD_REQUEST)
+    user = SYSTEM[USER_COLLECTION].find_one_and_update(
+        filter={
+            'keyonce': {'$eq': keyonce}, 'keyonce_expire_at': {'$gte': datetime.datetime.now().timestamp()}
+        },
+        update={
+            '$set': {
+                'tokens': [],
+                'hashed_password': get_password_hash(password),
+            },
+            '$unset': {
+                'keyonce': '',
+                'keyonce_expire_at': ''
+            }
+        }
+    )
+    if not user:
+        return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Mã hết thời gian hoặc không tồn tại!'}, status_code=status.HTTP_400_BAD_REQUEST)
+    return JSONResponse(content={'status': 'Thành công!', 'msg': 'Mật khẩu đã được thiết lập lại!'}, status_code=status.HTTP_200_OK)
