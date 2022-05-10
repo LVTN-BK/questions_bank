@@ -4,16 +4,18 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Optional
 
-cmd = "openssl rand -hex 32"
-completed_process = subprocess.run(shlex.split(cmd), capture_output=True)
-stdout = completed_process.stdout.decode(encoding='utf-8').strip('\n')
+from configs.settings import SECRET_KEY
 
-SECRET_KEY = stdout
+# cmd = "openssl rand -hex 32"
+# completed_process = subprocess.run(shlex.split(cmd), capture_output=True)
+# stdout = completed_process.stdout.decode(encoding='utf-8').strip('\n')
+
+# SECRET_KEY = stdout
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None, secret_key=None):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Return JWT and it's secret key for decoding
     Args:
         data (dict): data to be encoded
@@ -26,16 +28,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None, s
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.utcnow() + timedelta(days=90)
     to_encode.update({"exp": expire})
-    if not secret_key:
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        return encoded_jwt, SECRET_KEY
-    encoded_jwt = jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
-    return encoded_jwt, secret_key
+    # if not secret_key:
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+    # encoded_jwt = jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
+    # return encoded_jwt, secret_key
 
 
-def is_not_expired(encode_jwt, SECRET_KEY):
+def is_not_expired(encode_jwt):
     """Check if token is expired or not
     Args:
         encode_jwt (str): JWT token for checking
@@ -50,7 +52,7 @@ def is_not_expired(encode_jwt, SECRET_KEY):
     return True
 
 
-def get_data_from_access_token(encode_jwt, SECRET_KEY):
+def get_data_from_access_token(encode_jwt):
     """Check if token is expired or not
         Args:
             encode_jwt (str): JWT token for checking

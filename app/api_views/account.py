@@ -43,13 +43,13 @@ async def login_system(
     try:
         if verify_password(password, user.get('hashed_password')):
             # Create new access token for user
-            secret_key = user.get('secret_key')
-            access_token, _ = create_access_token(
+            # secret_key = user.get('secret_key')
+            access_token= create_access_token(
                 data={
                     'email': user.get('email'),
                     'user_id': str(user.get('_id'))
-                },
-                secret_key=secret_key
+                }
+                # secret_key=secret_key
             )
             user = SYSTEM['users'].find_one_and_update(
                 {'email': {'$eq': email}},
@@ -65,7 +65,7 @@ async def login_system(
             del user_info['_id']
 
             # user_info_return = UserInfo(id=str(user.get('_id')), avatar=user_info.get('avatar'))
-            return JSONResponse(content={'token': user.get('token'), 'secret_key': secret_key, 'user': user_info},
+            return JSONResponse(content={'token': user.get('token'), 'user': user_info},
                                 status_code=status.HTTP_200_OK)
     except:
         pass
@@ -129,7 +129,7 @@ async def create_system_account(
     )
 
     # Update access token, secret key
-    access_token, secret_key = create_access_token(
+    access_token = create_access_token(
         data={
             'email': email,
             'user_id': str(user_id)
@@ -147,8 +147,7 @@ async def create_system_account(
 
     query_update = {
         '$set': {
-            'token': jsonable_encoder(token),
-            'secret_key': secret_key,
+            'token': jsonable_encoder(token)
         }      
     }
 

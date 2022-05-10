@@ -54,6 +54,7 @@ app.add_middleware(
 # RABBITMQ = os.environ.get('RABBITMQ')
 # DB_HOST = os.environ.get('DB_HOST')
 # DB_PORT = os.environ.get('DB_PORT')
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 MONGO_DEFAULT_USER = os.environ.get('MONGO_DEFAULT_USER')
 MONGO_DEFAULT_PASS = os.environ.get('MONGO_DEFAULT_PASS')

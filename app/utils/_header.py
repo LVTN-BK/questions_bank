@@ -6,7 +6,7 @@ from configs.settings import SYSTEM, USER_COLLECTION
 
 async def valid_headers(
         Authorization: str = Header(..., description='access_token return by login'),
-        s_key: str = Header(..., description='secret_key return by login'),
+        # s_key: str = Header(..., description='secret_key return by login'),
 ):
     """Check if access token valid for accessing api
     Args:
@@ -19,8 +19,8 @@ async def valid_headers(
     """
     logger().info('===========valid header===========')
     bearer, token = Authorization.split(' ')
-    if is_not_expired(encode_jwt=token, SECRET_KEY=s_key):
-        data = get_data_from_access_token(encode_jwt=token, SECRET_KEY=s_key)
+    if is_not_expired(encode_jwt=token):
+        data = get_data_from_access_token(encode_jwt=token)
         email = data.get('email')
         user = SYSTEM[USER_COLLECTION].find_one({'email': {'$eq': email}})
         token_type = user.get('token').get('token_type')
@@ -28,9 +28,5 @@ async def valid_headers(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Token type is not valid')
         if user and user.get('token').get('access_token') != token:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Token is not valid')
-        headers = {
-            'Authorization': Authorization,
-            's-key': s_key
-        }
         return data
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Token is not valid')
