@@ -3,6 +3,7 @@ import shlex
 import jwt
 from datetime import datetime, timedelta
 from typing import Optional
+from configs.logger import logger
 
 from configs.settings import SECRET_KEY
 
@@ -47,7 +48,8 @@ def is_not_expired(encode_jwt):
     """
     try:
         jwt.decode(encode_jwt, SECRET_KEY, algorithms=ALGORITHM)
-    except Exception:
+    except Exception as e:
+        logger().error(e)
         return False
     return True
 

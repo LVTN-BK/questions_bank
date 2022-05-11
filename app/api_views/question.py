@@ -1,11 +1,15 @@
 from fastapi import status, Form
 from fastapi import Body, Depends
 from app.utils.account import send_reset_password_email
+from configs.logger import logger
+from models.db.question import Questions_DB, Questions_Version_DB
+from models.define.question import ManageQuestionType
 from models.define.user import UserInfo
 from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
+from models.request.question import DATA_Create_Multi_Choice_Question
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
-from configs.settings import SYSTEM, USER_COLLECTION, USERS_PROFILE, app
+from configs.settings import QUESTIONS, QUESTIONS_VERSION, SYSTEM, USER_COLLECTION, USERS_PROFILE, app, questions_db
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
@@ -14,23 +18,88 @@ from fastapi.encoders import jsonable_encoder
 
 
 #========================================================
+#=============CREATE__MULTI_CHOICE_QUESTION==============
+#========================================================
+@app.post(
+    path='/create_multi_choice_question',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def create_multi_choice_question(
+    data1: DATA_Create_Multi_Choice_Question,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check user
+        user = SYSTEM['users'].find_one(
+            {
+                'email': {
+                    '$eq': data2.get('email')
+                }
+            }
+        )
+        if not user:
+            return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
+
+        data1 = jsonable_encoder(data1)
+        
+        question = Questions_DB(
+            user_id=data2.get('user_id'),
+            class_id=data1.get('class_id'),
+            subject_id=data1.get('subject_id'),
+            chapter_id=data1.get('chapter_id'),
+            type=ManageQuestionType.MULTICHOICE,
+            tag_id=data1.get('tag_id'),
+            level_id=data1.get('level_id'),
+        )
+
+        # insert to questions table
+        id_question = questions_db[QUESTIONS].insert_one(jsonable_encoder(question)).inserted_id
+
+        # insert question version to questions_version
+        questions_version = Questions_Version_DB(
+            question_id=str(id_question),
+            question_content=data1.get('question_content'),
+            question_image=data1.get('question_image'),
+            answers=data1.get('answers'),
+            correct_answers=data1.get('correct_answers'),
+        )
+        id_question_version = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(questions_version)).inserted_id
+
+        del question['_id']
+        del questions_version['_id']
+        question.update({'question_info': questions_version})
+
+        return JSONResponse(content={'status': 'success', 'data': question},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+#========================================================
 #====================CREATE_QUESTION=====================
 #========================================================
 @app.post(
     path='/create_question',
     responses={
         status.HTTP_200_OK: {
-            'model': LoginResponse200
+            'model': ''
         },
         status.HTTP_403_FORBIDDEN: {
-            'model': LoginResponse403
+            'model': ''
         }
     },
     tags=['questions']
 )
 async def create_question(
-    email: EmailStr = Body(...), 
-    password: str = Body(...)
+    data1: DATA_Update_Account,
+    data2: dict = Depends(valid_headers)
 ):
     user = SYSTEM['users'].find_one({'email': {'$eq': email}})
     if user is None:

@@ -95,10 +95,15 @@ group_db[GROUP_JOIN_REQUEST].create_index([('group_id', pymongo.ASCENDING), ('us
 #create text index for group name
 group_db.get_collection(GROUP).create_index([('group_name', 'text')])
 
-
 #create index for group_participant
 group_db.get_collection('group_participant').create_index([('group_id', pymongo.ASCENDING), ('user_id', pymongo.ASCENDING)], unique=True)
 
+
+############################################
+#question db
+questions_db = MONGO_CLIENT['questions-db']
+QUESTIONS = 'questions'
+QUESTIONS_VERSION = 'questions_version'
 
 LIST_PROVIDER_API = [
 ]

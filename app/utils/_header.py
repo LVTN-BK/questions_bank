@@ -1,11 +1,13 @@
 from configs.logger import logger
-from fastapi import status, HTTPException, Header
+from fastapi import status, HTTPException, Header, Security
 from app.secure._token import is_not_expired, get_data_from_access_token
 from configs.settings import SYSTEM, USER_COLLECTION
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.encoders import jsonable_encoder
 
-
+security = HTTPBearer()
 async def valid_headers(
-        Authorization: str = Header(..., description='access_token return by login'),
+        Authorization: HTTPAuthorizationCredentials = Security(security)
         # s_key: str = Header(..., description='secret_key return by login'),
 ):
     """Check if access token valid for accessing api
@@ -18,7 +20,13 @@ async def valid_headers(
         HTTPException: if token is not valid
     """
     logger().info('===========valid header===========')
-    bearer, token = Authorization.split(' ')
+    logger().info(jsonable_encoder(Authorization))
+    # authen = jsonable_encoder(Authorization)
+    token = Authorization.credentials
+    bearer = Authorization.scheme
+    logger().info(token)
+    logger().info(type(token))
+    # bearer, token = Authorization.split(' ')
     if is_not_expired(encode_jwt=token):
         data = get_data_from_access_token(encode_jwt=token)
         email = data.get('email')
