@@ -13,6 +13,7 @@ class Questions_DB(BaseModel):
     level_id: str = Field(default=None, description='ID of level of question')
     is_public: bool = Field(default=False, description='ID of tag')
     liked: List[str] = Field(default=[], description='ID of tag')
+    is_removed: bool = Field(default=False, description='is removed?')
     datetime_created: float = Field(default=datetime.now().timestamp(), description='time create question')
 
 class Questions_Version_DB(BaseModel):

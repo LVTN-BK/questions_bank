@@ -104,6 +104,7 @@ group_db.get_collection('group_participant').create_index([('group_id', pymongo.
 questions_db = MONGO_CLIENT['questions-db']
 QUESTIONS = 'questions'
 QUESTIONS_VERSION = 'questions_version'
+ANSWERS = 'answers'
 
 LIST_PROVIDER_API = [
 ]

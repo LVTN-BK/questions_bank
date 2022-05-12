@@ -1,6 +1,7 @@
-from fastapi import status, Form
+from fastapi import Path, status, Form
 from fastapi import Body, Depends
 from app.utils.account import send_reset_password_email
+from app.utils.question_utils.question import get_answer
 from configs.logger import logger
 from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
 from models.define.question import ManageQuestionType
@@ -9,12 +10,13 @@ from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_
 from models.request.question import DATA_Create_Answer, DATA_Create_Fill_Question, DATA_Create_Matching_Question, DATA_Create_Multi_Choice_Question, DATA_Create_Sort_Question
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
-from configs.settings import QUESTIONS, QUESTIONS_VERSION, SYSTEM, USER_COLLECTION, USERS_PROFILE, app, questions_db
+from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM, USER_COLLECTION, USERS_PROFILE, app, questions_db
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
 from pydantic import EmailStr
 from fastapi.encoders import jsonable_encoder
+from bson import ObjectId
 
 
 #========================================================
@@ -314,12 +316,155 @@ async def create_answer(
 
 
         # insert to answers table
-        id_answer = questions_db[QUESTIONS].insert_one(jsonable_encoder(answer)).inserted_id
+        id_answer = questions_db[ANSWERS].insert_one(jsonable_encoder(answer)).inserted_id
 
         answer = jsonable_encoder(answer)
         answer.update({'answer_id': str(id_answer)})
 
         return JSONResponse(content={'status': 'success', 'data': answer},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+#========================================================
+#===================USER_GET_ONE_QUESTION================
+#========================================================
+@app.get(
+    path='/user/get_one_question/{question_id}',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def user_get_one_question(
+    question_id: str = Path(..., description='ID of question'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # find question
+        question = questions_db[QUESTIONS].find_one(
+            {
+                "$and": [
+                    {
+                        '_id': ObjectId(question_id)
+                    },
+                    {
+                        'user_id': {
+                            '$eq': data2.get('user_id')
+                        }
+                    },
+                    {
+                        'is_removed': False
+                    }
+                ]
+                        
+            }
+        )
+        if not question:
+            return JSONResponse(content={'status': 'Question not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+        
+        # find question version
+        question_version = questions_db[QUESTIONS_VERSION].find_one(
+            {
+                '$and': [
+                    {
+                        'question_id': question_id
+                    },
+                    {
+                        'is_latest': True
+                    }
+                ]
+            }
+        )
+        if not question_version:
+            return JSONResponse(content={'status': 'Question not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+
+        # get answer of question
+        answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
+
+        logger().info(answers)
+        question_version['answers'] = answers
+        del question['_id']
+        del question_version['_id']
+        question['question_info'] = question_version
+
+        return JSONResponse(content={'status': 'success', 'data': question},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+#========================================================
+#===================USER_GET_ALL_QUESTION================
+#========================================================
+@app.get(
+    path='/user/get_all_question',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def user_get_all_question(
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        result = []
+        # find question
+        questions = questions_db[QUESTIONS].find(
+            {
+                "$and": [
+                    {
+                        'user_id': {
+                            '$eq': data2.get('user_id')
+                        }
+                    },
+                    {
+                        'is_removed': False
+                    }
+                ]
+                        
+            }
+        )
+        
+        for question in questions:
+            # find question version
+            question_version = questions_db[QUESTIONS_VERSION].find_one(
+                {
+                    '$and': [
+                        {
+                            'question_id': str(question['_id'])
+                        },
+                        {
+                            'is_latest': True
+                        }
+                    ]
+                }
+            )
+            if question_version:
+                # get answer of question
+                answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
+
+                logger().info(answers)
+                question_version['answers'] = answers
+                del question['_id']
+                del question_version['_id']
+                question['question_info'] = question_version
+                result.append(question)
+            else:
+                del question['_id']
+                question['question_info'] = {}
+                result.append(question)
+
+        return JSONResponse(content={'status': 'success', 'data': result},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
