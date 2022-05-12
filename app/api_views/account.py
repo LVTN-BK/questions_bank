@@ -305,8 +305,8 @@ async def update_email(
     try:
         if verify_password(data1.get('password'), user.get('hashed_password')):
             # Create new access token for user
-            secret_key = user.get('secret_key')
-            access_token, secret_key = create_access_token(
+            # secret_key = user.get('secret_key')
+            access_token= create_access_token(
                 data={
                     'email': data1.get('email'),
                     'user_id': str(user.get('_id'))
@@ -320,7 +320,7 @@ async def update_email(
                     '$set': {
                         'email': data1.get('email'),
                         'token.access_token': access_token,
-                        'secret_key': secret_key
+                        # 'secret_key': secret_key
                     }
                 },
                 return_document=ReturnDocument.AFTER
@@ -339,7 +339,7 @@ async def update_email(
 
             data = {
                 'access_token': access_token, 
-                'secret_key': secret_key,
+                # 'secret_key': secret_key,
                 'email': data1.get('email')
             }
             msg = 'update email successfully'
@@ -406,7 +406,9 @@ async def update_password(
     msg = 'maybe password was wrong'
     return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
-
+#===========================================
+#================RESET_PASSWORD=============
+#===========================================
 @app.post(
     path='/reset_password', 
     responses={
@@ -453,7 +455,9 @@ async def reset_password(
     return JSONResponse(content={'status': 'Thành công!', 'msg': 'Vui lòng kiểm tra email và nhập mã!'}, status_code=status.HTTP_201_CREATED)
 
 
-
+#===========================================
+#=============APPLY_RESET_PASSWORD==========
+#===========================================
 @app.put(
     path='/apply_reset_password', 
     responses={

@@ -22,4 +22,9 @@ class Questions_Version_DB(BaseModel):
     question_image: str = Field(..., description='image of question')
     answers: Union[List[str], Dict[str, List[str]]] = Field(..., description='answer of question')
     correct_answers: Union[str, List[str], Dict[str, List[str]]] = Field(..., description='correct answer of question')
-    datetime_created: float = Field(default=datetime.now().timestamp(), description='correct answer of question')
+    datetime_created: float = Field(default=datetime.now().timestamp(), description='time create question version')
+
+class Answers_DB(BaseModel):
+    answer_content: str = Field(..., description='content of answer')
+    answer_image: bool = Field(default=None, description='image of amswer')
+    datetime_created: float = Field(default=datetime.now().timestamp(), description='time create answer')
