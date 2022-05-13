@@ -5,11 +5,12 @@ from importlib.metadata import metadata
 from json import JSONEncoder
 from math import ceil
 from typing import List, Optional, Union
+from models.db.group import Group_DB
 
 import pymongo
 import requests
 from bson import ObjectId
-from fastapi import BackgroundTasks, Path, Query, Body, status, UploadFile, File, Form
+from fastapi import BackgroundTasks, Depends, Path, Query, Body, status, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pymongo import ReturnDocument
 from app.utils.group_info import get_one_group_info, get_one_group_name_and_avatar
@@ -22,6 +23,9 @@ from models.response import *
 
 # Config logging
 from configs.logger import logger
+from fastapi.encoders import jsonable_encoder
+from app.utils._header import valid_headers
+
 
 
 
@@ -42,42 +46,27 @@ from configs.logger import logger
     tags=['Group']
 )
 async def create_group(
-    data: DATA_Create_Group
+    data: DATA_Create_Group,
+    data2: dict = Depends(valid_headers)
 ):
     try:
-        logger().info(type(data))
         logger().info(data.json())
-        json_data = {
-            'owner_id': data.user_id,
-            'group_name': data.group_name,
-            'group_label': data.group_label,
-            'group_description': data.group_description,
-            'group_address': {
-                'group_commune': data.group_address.group_commune,
-                'group_district': data.group_address.group_district,
-                'group_city': data.group_address.group_city
-            },
-            'group_type': GroupType.PRIVATE if (data.group_type.lower() == GroupType.PRIVATE) else GroupType.PUBLIC,
-            'group_avatar': data.group_avatar,
-            'group_cover_image': data.group_cover_image,
-            'members': [],
-            'group_status': GroupStatus.ENABLE,
-            'datetime_created': datetime.now().timestamp(),
-            'datetime_updated': None
-        }
-
-        group_id = group_db['group'].insert_one(json_data).inserted_id
         
-        logger().info(type(group_id))
+        group_data = Group_DB(
+            owner_id=data2.get('user_id'),
+            group_name=data.group_name,
+            group_description=data.group_description,
+            group_type=data.group_type,
+            group_avatar=data.group_avatar,
+            group_cover_image=data.group_cover_image
+        )
+        json_data = jsonable_encoder(group_data)
+
+        group_id = group_db[GROUP].insert_one(json_data).inserted_id
+        
         logger().info(group_id)
 
-
-        # Create group chat
-        ##########################################
-        ##########################################
-        ##########################################
-
-        return JSONResponse(content={'status': 'Done', 'group_id': str(group_id)}, status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'Done', 'data':{'group_id': str(group_id)}}, status_code=status.HTTP_200_OK)
     except Exception:
         return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 

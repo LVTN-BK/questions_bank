@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 
 #==================================================================
@@ -11,14 +11,14 @@ class GroupAddress(BaseModel):
     group_city: str = Field(default=None, description='tỉnh/thành phố')
 
 class DATA_Create_Group(BaseModel):
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
     group_name: str = Field(..., description='name of group')
-    group_label: str = Field(..., description='label of group')
+    # group_label: str = Field(..., description='label of group')
     group_description: Optional[str] = Field(default=None, description='description of group')
-    group_address: Optional[GroupAddress] = Field(default=None, description='group address')
+    # group_address: Optional[GroupAddress] = Field(default=None, description='group address')
     group_type: str = Field(default='public', enum=['public', 'private'])
-    group_avatar: str = Field(..., description='avatar of group')
-    group_cover_image: Optional[str] = Field(default=None, description='cover image of group')
+    group_avatar: HttpUrl = Field(..., description='avatar of group')
+    group_cover_image: HttpUrl = Field(default=None, description='cover image of group')
     
 #==================================================================
 #==========================GROUP_LABEL=============================
