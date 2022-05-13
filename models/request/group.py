@@ -39,12 +39,12 @@ class DATA_Group_Label(BaseModel):
 #==================================================================
 class DATA_Update_Group(BaseModel):
     group_id: str = Field(..., description='ID of group')
-    owner_id: str = Field(..., description='ID of owner')
+    # owner_id: str = Field(..., description='ID of owner')
     group_name: Optional[str] = Field(default=None, description='name of group')
     group_description: Optional[str] = Field(default=None, description='description of group')
-    group_address: Optional[GroupAddress] = Field(default=None, description='group address')
+    # group_address: Optional[GroupAddress] = Field(default=None, description='group address')
     group_type: Optional[str] = Field(default='public', enum=['public', 'private'])
-    group_label: Optional[str] = Field(default=None, description='label of group')
+    # group_label: Optional[str] = Field(default=None, description='label of group')
     # group_avatar: Optional[str] = Field(..., description='avatar of group')
     # group_cover_image: Optional[str] = Field(default=None, description='cover image of group')
 

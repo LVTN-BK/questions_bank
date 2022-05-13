@@ -93,8 +93,8 @@ async def create_group(
     tags=['Group']
 )
 async def update_group(
-        data: DATA_Update_Group,
-        background_tasks: BackgroundTasks = None
+    data: DATA_Update_Group,
+    data2: dict = Depends(valid_headers)
 ):
     try:
         # Find a group
@@ -102,7 +102,7 @@ async def update_group(
         group = group_db.get_collection('group').find_one(query)
         if group:
             # check owner of group
-            if group.get('owner_id') != data.owner_id:
+            if group.get('owner_id') != data2.get('user_id'):
                 content = {'status': 'Forbidden'}
                 return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
 
@@ -114,22 +114,7 @@ async def update_group(
                 update_data['group_description'] = data.group_description
             if data.group_type is not None:
                 update_data['group_type'] = data.group_type
-            if data.group_label is not None:
-                update_data['group_label'] = data.group_label
-            if data.group_address is not None:
-                if data.group_address.group_commune:
-                    update_data['group_address.group_commune'] = data.group_address.group_commune
-                    
-                if data.group_address.group_district:
-                    update_data['group_address.group_district'] = data.group_address.group_district
-                    
-                if data.group_address.group_city:
-                    update_data['group_address.group_city'] = data.group_address.group_city
-                    
-            
-            logger().info(type(data.group_id))
-            logger().info(data.group_id)
-
+         
             # #Group_avatar
             # if data.group_avatar is not None:
             #     update_data['group_avatar'] = data.group_avatar
@@ -138,14 +123,15 @@ async def update_group(
             # if data.group_cover_image is not None:
             #     update_data['group_cover_image'] = data.group_cover_image
             
-            update_data['datetime_updated'] = datetime.now().timestamp()
+            if update_data:
+                update_data['datetime_updated'] = datetime.now().timestamp()
 
-            update_query = {
-                '$set': update_data
-            }
+                update_query = {
+                    '$set': update_data
+                }
 
-            #update data:
-            group_db.get_collection('group').update_many(query, update_query)
+                #update data:
+                group_db.get_collection('group').update_many(query, update_query)
 
             return JSONResponse(content={'status': 'Success'}, status_code=status.HTTP_200_OK)
         else:
