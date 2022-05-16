@@ -141,63 +141,6 @@ async def update_group(
         return JSONResponse(content={'status': 'Bad request'}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #==================================================================
-#=========================UPDATE_GROUP_CHAT========================
-#==================================================================
-@app.post(
-    '/update_group_chat',
-    responses={
-        status.HTTP_200_OK: {
-            'model': UpdateGroupResponse200
-        },
-        status.HTTP_400_BAD_REQUEST: {
-            'model': UpdateGroupResponse400
-        },
-        status.HTTP_403_FORBIDDEN: {
-            'model': UpdateGroupResponse403
-        },
-        status.HTTP_404_NOT_FOUND: {
-            'model': UpdateGroupResponse404
-        }
-    },
-    description='Update group chat',
-    tags=['Group']
-)
-async def update_group_chat(
-        data: DATA_Update_Group_Chat
-):
-    try:
-        # Find a group
-        query = {'_id': ObjectId(data.group_id)}
-        group = group_db.get_collection('group').find_one(query)
-        if group:
-            # check owner of group
-            if group.get('owner_id') != data.owner_id:
-                content = {'status': 'Forbidden'}
-                return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
-
-            update_data = {}
-
-            if data.group_chat_id is not None:
-                update_data['group_chat_id'] = data.group_chat_id
-                
-            
-            update_data['datetime_updated'] = datetime.now().timestamp()
-
-            update_query = {
-                '$set': update_data
-            }
-
-            #update data:
-            group_db.get_collection('group').update_many(query, update_query)
-
-            return JSONResponse(content={'status': 'Success'}, status_code=status.HTTP_200_OK)
-        else:
-            return JSONResponse(content={'status': 'Not found'}, status_code=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        logger().error(e)
-        return JSONResponse(content={'status': 'Bad request'}, status_code=status.HTTP_400_BAD_REQUEST)
-
-#==================================================================
 #======================UPDATE_GROUP_IMAGE==========================
 #==================================================================
 @app.post(
@@ -220,7 +163,8 @@ async def update_group_chat(
     tags=['Group']
 )
 async def update_group_image(
-        data: DATA_Update_Group_image,
+    data: DATA_Update_Group_image,
+    data2: dict = Depends(valid_headers)
 ):
     try:
         # Find a group
@@ -228,7 +172,7 @@ async def update_group_image(
         group = group_db.get_collection('group').find_one(query)
         if group:
             # check owner of group
-            if group.get('owner_id') != data.owner_id:
+            if group.get('owner_id') != data2.get('user_id'):
                 content = {'status': 'Forbidden'}
                 return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
 
@@ -258,7 +202,7 @@ async def update_group_image(
 #======================INVITE_USERS_TO_GROUP======================
 #=================================================================
 @app.post(
-    '/invite_members/group/{group_id}',
+    '/invite_members_to_group/{group_id}',
     responses={
         status.HTTP_200_OK: {
             'model': AddUserResponse200,
@@ -275,6 +219,7 @@ async def update_group_image(
 )
 async def invite_users_to_group(
     data: DATA_Invite_Members,
+    data2: dict = Depends(valid_headers),
     group_id: str = Path(...)
 ):
     try:
@@ -283,28 +228,14 @@ async def invite_users_to_group(
         group = group_db.get_collection('group').find_one(query)
         if group:
             # check owner of group or member
-            if (group.get('owner_id') != data.user_id) and (data.user_id not in group.get('members')):
+            query_member = {
+                'group_id': group_id,
+                'user_id': data2.get('user_id')
+            }
+            member_group = group_db[GROUP_PARTICIPANT].find_one(query_member)
+            if (group.get('owner_id') != data2.get('user_id')) and not member_group:
                 content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
                 return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
-
-            # list_users = []
-            # try:
-            #     logger().info('before check...')
-            #     #check valid members corresponse to appellation 
-            #     response_check = requests.post(
-            #         LIST_PROVIDER_API[2],
-            #         json={
-            #             'user_id': data.list_user_ids,
-            #             'appellation_id': group.get('group_label')
-            #         }
-            #     )
-            #     logger().info(f'response check status: {response_check.status_code}')
-            #     logger().info(f'response check data: {response_check.json()}')
-            #     if response_check.status_code == 201:
-            #         list_users = response_check.json().get('data')
-                
-            # except Exception as e:
-            #     logger().error(e)
 
             logger().info('========add user========')
             logger().info(f'list users: {data.list_user_ids}')
@@ -314,7 +245,7 @@ async def invite_users_to_group(
                 logger().info(uid)
                 json_data = {
                     'group_id': group_id,
-                    'inviter_id': data.user_id,
+                    'inviter_id': data2.get('user_id'),
                     'user_id': uid,
                     'datetime_created': datetime.now().timestamp()
                 }
@@ -351,7 +282,8 @@ async def invite_users_to_group(
     tags=['Group - Invitation']
 )
 async def accept_invitation(
-    data: DATA_Accept_invitation
+    data: DATA_Accept_invitation,
+    data2: dict = Depends(valid_headers),
 ):
     try:
         #find invitation
@@ -362,7 +294,7 @@ async def accept_invitation(
         if not invitation:
             msg = 'invitation not found'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
-        elif invitation.get('user_id') != data.user_id:
+        elif invitation.get('user_id') != data2.get('user_id'):
             msg = 'not your invitation'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
@@ -373,21 +305,13 @@ async def accept_invitation(
             #add to group participant
             json_data = {
                 'group_id': invitation.get('group_id'),
-                'user_id': data.user_id,
+                'user_id': data2.get('user_id'),
                 'datetime_created': datetime.now().timestamp()
             }
             result = group_db[GROUP_PARTICIPANT].insert_one(json_data).inserted_id
 
             # delete invitation
             group_db[GROUP_INVITATION].find_one_and_delete(query_invitation)
-
-            # add member to group members
-            update_group_query = {
-                '$addToSet': {
-                    'members': data.user_id
-                }
-            }
-            group_db[GROUP].find_one_and_update(query_group, update_group_query)
 
             data = {
                 'group_id': invitation.get('group_id'),
@@ -424,7 +348,8 @@ async def accept_invitation(
     tags=['Group - Invitation']
 )
 async def user_reject_invitation(
-    data: DATA_Reject_invitation
+    data: DATA_Reject_invitation,
+    data2: dict = Depends(valid_headers),
 ):
     try:
         #find invitation
@@ -435,7 +360,7 @@ async def user_reject_invitation(
         if not invitation:
             msg = 'invitation not found'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
-        elif invitation.get('user_id') != data.user_id:
+        elif invitation.get('user_id') != data2.get('user_id'):
             msg = 'not your invitation'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
         
@@ -464,7 +389,8 @@ async def user_reject_invitation(
     tags=['Group - Invitation']
 )
 async def group_cancel_invitation(
-    data: DATA_Cancel_invitation
+    data: DATA_Cancel_invitation,
+    data2: dict = Depends(valid_headers),
 ):
     try:
         #find invitation
@@ -482,13 +408,13 @@ async def group_cancel_invitation(
         logger().info(f'group: {group}')
         if group:
             #check owner of group
-            if data.user_id != group.get('owner_id'):
+            if data2.get('user_id') != group.get('owner_id'):
                 msg = 'not owner of group'
                 return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
         else:
             #delete invitation
-            result = group_db[GROUP_INVITATION].find_one_and_delete(query_invitation)
+            group_db[GROUP_INVITATION].find_one_and_delete(query_invitation)
             
             msg = 'group not found'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
@@ -520,8 +446,9 @@ async def group_cancel_invitation(
 async def group_list_invitation_sent(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    user_id: str = Query(..., description='id of user(owner of group)'),
-    group_id: str = Path(..., description='id of group')
+    # user_id: str = Query(..., description='id of user(owner of group)'),
+    group_id: str = Path(..., description='id of group'),
+    data2: dict = Depends(valid_headers),
 ):
     try:
         # find group
@@ -529,7 +456,7 @@ async def group_list_invitation_sent(
         group = group_db[GROUP].find_one(query,{'owner_id':1})
         if group:
             #check owner of group
-            if user_id != group.get('owner_id'):
+            if data2.get('user_id') != group.get('owner_id'):
                 return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 
             #get list request
@@ -539,7 +466,7 @@ async def group_list_invitation_sent(
             num_skip = (page - 1)*limit
             list_invitation = group_db[GROUP_INVITATION].find(query_invitation).skip(num_skip).limit(limit)
             result = []
-            if list_invitation.count():
+            if list_invitation.count(True):
                 for invitation in list_invitation:
                     invitation['_id'] = str(invitation['_id'])
                     result.append(invitation)
@@ -549,7 +476,7 @@ async def group_list_invitation_sent(
             num_pages = ceil(num_invitation/limit)
 
             meta_data = {
-                'count': list_invitation.count(),
+                'count': list_invitation.count(True),
                 'current_page': page,
                 'has_next': (num_pages>page),
                 'has_previous': (page>1),
@@ -569,7 +496,7 @@ async def group_list_invitation_sent(
 #=======================USER_LIST_INVITATION======================
 #=================================================================
 @app.get(
-    '/user_list_invitation/{user_id}',
+    '/user_list_invitation',
     responses={
         status.HTTP_200_OK: {
             'model': RequestJoinGroupResponse200,
@@ -584,15 +511,16 @@ async def group_list_invitation_sent(
 async def user_list_invitation(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    user_id: str = Path(..., description='id of user')
+    data2: dict = Depends(valid_headers),
+    # user_id: str = Path(..., description='id of user')
 ):
     try:
         # find group
-        query = {'user_id': user_id}
+        query = {'user_id': data2.get('user_id')}
         num_skip = (page - 1)*limit
         list_invitation = group_db[GROUP_INVITATION].find(query).skip(num_skip).limit(limit)
         result = []
-        if list_invitation.count():
+        if list_invitation.count(True):
             for invitation in list_invitation:
                 invitation['_id'] = str(invitation['_id'])
                 group_info = get_one_group_name_and_avatar(group_id=invitation['group_id'])
@@ -609,7 +537,7 @@ async def user_list_invitation(
         num_pages = ceil(num_invitation/limit)
 
         meta_data = {
-            'count': list_invitation.count(),
+            'count': list_invitation.count(True),
             'current_page': page,
             'has_next': (num_pages>page),
             'has_previous': (page>1),
@@ -640,7 +568,8 @@ async def user_list_invitation(
     tags=['Group - Request Join']
 )
 async def send_request_join_group(
-    data: DATA_Join_Request
+    data: DATA_Join_Request,
+    data2: dict = Depends(valid_headers),
 ):
     try:
         # Find a group
@@ -649,7 +578,7 @@ async def send_request_join_group(
         if group:
             json_data = {
                 'group_id': data.group_id,
-                'user_id': data.user_id,
+                'user_id': data2.get('user_id'),
                 'datetime_created': datetime.now().timestamp()
             }
             try:
@@ -684,7 +613,8 @@ async def send_request_join_group(
     tags=['Group - Request Join']
 )
 async def group_accept_request_join_group(
-    data: DATA_Accept_Join_Request
+    data: DATA_Accept_Join_Request,
+    data2: dict = Depends(valid_headers),
 ):
     try:
         #find request
@@ -702,7 +632,7 @@ async def group_accept_request_join_group(
         logger().info(f'group: {group}')
         if group:
             #check owner of group
-            if data.user_id != group.get('owner_id'):
+            if data2.get('user_id') != group.get('owner_id'):
                 return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
             
             #add to group members
@@ -712,14 +642,6 @@ async def group_accept_request_join_group(
                 'datetime_created': datetime.now().timestamp()
             }
             request_id = group_db[GROUP_PARTICIPANT].insert_one(json_data).inserted_id
-
-            query_update_member = {
-                '$addToSet': {
-                    'members': request_join.get('user_id')
-                }
-            }
-
-            group_db[GROUP].find_one_and_update(query,query_update_member)
 
             #remove request join
             group_db[GROUP_JOIN_REQUEST].find_one_and_delete(query_request)
@@ -753,7 +675,8 @@ async def group_accept_request_join_group(
     tags=['Group - Request Join']
 )
 async def group_reject_request_join_group(
-    data: DATA_Reject_Join_Request
+    data: DATA_Reject_Join_Request,
+    data2: dict = Depends(valid_headers),
 ):
     try:
         #find request
@@ -769,7 +692,7 @@ async def group_reject_request_join_group(
         group = group_db[GROUP].find_one(query,{'owner_id': 1})
         if group:
             #check owner of group
-            if data.user_id != group.get('owner_id'):
+            if data2.get('user_id') != group.get('owner_id'):
                 return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 
             #remove request join
@@ -804,7 +727,8 @@ async def group_reject_request_join_group(
     tags=['Group - Request Join']
 )
 async def user_cancel_request_join_group(
-    data: DATA_Cancel_Join_Request
+    data: DATA_Cancel_Join_Request,
+    data2: dict = Depends(valid_headers),
 ):
     try:
         #find request
@@ -814,7 +738,7 @@ async def user_cancel_request_join_group(
                     '_id': ObjectId(data.request_id)
                 },
                 {
-                    'user_id': data.user_id
+                    'user_id': data2.get('user_id')
                 }
             ]
         }
@@ -849,8 +773,9 @@ async def user_cancel_request_join_group(
 async def group_list_request_join_group(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    user_id: str = Query(..., description='id of user(owner of group)'),
-    group_id: str = Path(..., description='id of group')
+    # user_id: str = Query(..., description='id of user(owner of group)'),
+    group_id: str = Path(..., description='id of group'),
+    data2: dict = Depends(valid_headers),
 ):
     try:
         # find group
@@ -858,7 +783,7 @@ async def group_list_request_join_group(
         group = group_db[GROUP].find_one(query,{'owner_id':1})
         if group:
             #check owner of group
-            if user_id != group.get('owner_id'):
+            if data2.get('user_id') != group.get('owner_id'):
                 return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 
             #get list request
@@ -868,7 +793,7 @@ async def group_list_request_join_group(
             num_skip = (page - 1)*limit
             list_request = group_db[GROUP_JOIN_REQUEST].find(query_request).skip(num_skip).limit(limit)
             result = []
-            if list_request.count():
+            if list_request.count(True):
                 for request_join in list_request:
                     request_join['_id'] = str(request_join['_id'])
                     result.append(request_join)
@@ -878,7 +803,7 @@ async def group_list_request_join_group(
             num_pages = ceil(num_request_join/limit)
 
             meta_data = {
-                'count': list_request.count(),
+                'count': list_request.count(True),
                 'current_page': page,
                 'has_next': (num_pages>page),
                 'has_previous': (page>1),
@@ -900,7 +825,7 @@ async def group_list_request_join_group(
 #====================USER_LIST_REQUEST_JOIN_GROUP=================
 #=================================================================
 @app.get(
-    '/user_list_request_join_group/{user_id}',
+    '/user_list_request_join_group',
     responses={
         status.HTTP_200_OK: {
             'model': RequestJoinGroupResponse200,
@@ -915,17 +840,18 @@ async def group_list_request_join_group(
 async def user_list_request_join_group(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    user_id: str = Path(..., description='id of user'),
+    data2: dict = Depends(valid_headers),
+    # user_id: str = Path(..., description='id of user'),
 ):
     try:
         #get list request
         query_request = {
-            'user_id': user_id
+            'user_id': data2.get('user_id')
         }
         num_skip = (page - 1)*limit
         list_request = group_db[GROUP_JOIN_REQUEST].find(query_request).skip(num_skip).limit(limit)
         result = []
-        if list_request.count():
+        if list_request.count(True):
             for request_join in list_request:
                 request_join['_id'] = str(request_join['_id'])
                 group_info = get_one_group_name_and_avatar(group_id=request_join['group_id'])
@@ -942,7 +868,7 @@ async def user_list_request_join_group(
         num_pages = ceil(num_request_join/limit)
 
         meta_data = {
-            'count': list_request.count(),
+            'count': list_request.count(True),
             'current_page': page,
             'has_next': (num_pages>page),
             'has_previous': (page>1),
@@ -973,15 +899,24 @@ async def user_list_request_join_group(
     tags=['Group']
 )
 async def list_group_members(
-    group_id: str = Query(..., description='id of group')
+    group_id: str = Query(..., description='id of group'),
+    data2: dict = Depends(valid_headers),
 ):
     try:
         # find group
+        
         query = {'_id': ObjectId(group_id)}
-        group = group_db[GROUP].find_one(query,{'owner_id':1, 'members': 1})
+        group = group_db[GROUP].find_one(query,{'owner_id':1})
         if group:
             del group['_id']
-            group['members'] = [group.get('owner_id')] + group.get('members')
+            query_group_participant = {
+                'group_id': group_id
+            }
+            list_members = list(group_db[GROUP_PARTICIPANT].find(query_group_participant))
+            import functools
+            result = functools.reduce(lambda a, b: a + [b['user_id']],list_members,[])
+
+            group['members'] = result
 
             return JSONResponse(content={'status': 'success', 'data': group}, status_code=status.HTTP_200_OK)
         else:
@@ -995,7 +930,7 @@ async def list_group_members(
 #=================================================================
 @app.post(
     '/remove_members',
-    description='Remove group members',
+    description='Remove group members (only group owner can do it)',
     responses={
         status.HTTP_404_NOT_FOUND: {
             'model': RemoveMemberResponse404,
@@ -1010,7 +945,8 @@ async def list_group_members(
     tags=['Group']
 )
 async def group_remove_members(
-    data: DATA_Remove_Members
+    data: DATA_Remove_Members,
+    data2: dict = Depends(valid_headers),
 ):
     logger().info('===============group_remove_members=================')
     try:
@@ -1019,7 +955,7 @@ async def group_remove_members(
         group = group_db.get_collection('group').find_one(query)
         if group:
             # check owner of group
-            if group.get('owner_id') != data.owner_id:
+            if group.get('owner_id') != data2.get('user_id'):
                 content = {'status': 'Failed', 'msg': 'User is not the owner of group'}
                 return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
             
@@ -1040,16 +976,6 @@ async def group_remove_members(
                 ]
             }
             group_db[GROUP_PARTICIPANT].delete_many(query_remove_participant)
-
-            #remove members in group collection:
-            query_remove_members = {
-                '$pull': {
-                    'members': {
-                        '$in': data.list_user_ids
-                    }
-                }
-            }
-            group_db[GROUP].update_many(query, query_remove_members)
 
             #request remove list user out of group chat
             #################################################
@@ -1087,7 +1013,8 @@ async def group_remove_members(
     tags=['Group']
 )
 async def remove_group(
-    data: DATA_Delete_Group
+    data: DATA_Delete_Group,
+    data2: dict = Depends(valid_headers),
 ):
     logger().info('===============remove_group=================')
     # Find a group
@@ -1095,7 +1022,7 @@ async def remove_group(
     group = group_db.get_collection('group').find_one(query)
     if group:
         # check owner of group
-        if group.get('owner_id') != data.owner_id:
+        if group.get('owner_id') != data2.get('user_id'):
             content = {'status': 'Failed', 'msg': 'User is not the owner of group'}
             return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
         
@@ -1155,34 +1082,30 @@ async def remove_group(
     tags=['Group']
 )
 async def get_group_info(
-        group_id: str = Path(..., description='ID of the group'),
-        user_id: str = Query(..., description='id of user')
+    group_id: str = Path(..., description='ID of the group'),
+    data2: dict = Depends(valid_headers),
 ):
     logger().info('===============get_group_info=================')
     # Find a group
     try:
         group_info = get_one_group_info(group_id)
         if group_info:
-            label_name = get_label_name(group_info['group_label'])
-            group_info['group_label'] = {
-                'label_id': group_info['group_label'],
-                'label_name': label_name
-            }
             query = {
                 '$and': [
                     {
                         'group_id': group_id
                     },
                     {
-                        'user_id': user_id
+                        'user_id': data2.get('user_id')
                     }
                 ] 
             }
             invitation = group_db[GROUP_INVITATION].find_one(query)
+            participant = group_db[GROUP_PARTICIPANT].find_one(query)
             request_join = group_db[GROUP_JOIN_REQUEST].find_one(query)
 
-            group_info['is_owner'] = (user_id == group_info.get('owner_id'))
-            group_info['is_member'] = (user_id in group_info.get('members'))
+            group_info['is_owner'] = (data2.get('user_id') == group_info.get('owner_id'))
+            group_info['is_member'] = True if participant else False
             group_info['is_invited'] = True if invitation else False
             group_info['is_requested'] = True if request_join else False
 
@@ -1198,7 +1121,7 @@ async def get_group_info(
 #=====================LIST_ALL_GROUP_CREATED======================
 #=================================================================
 @app.get(
-    '/all_group_created/{user_id}',
+    '/all_group_created',
     description='list all group created',
     # responses={
     #     status.HTTP_400_BAD_REQUEST: {
@@ -1214,7 +1137,8 @@ async def list_all_groups_created(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     search: Optional[str] = Query(default=None, description='text search'),
-    user_id: str = Path(..., description='ID of user')
+    data2: dict = Depends(valid_headers),
+    # user_id: str = Path(..., description='ID of user')
 ):
     logger().info('===============get_group_info=================')
     # Find a group
@@ -1247,7 +1171,7 @@ async def list_all_groups_created(
             filter.append(query_search)
 
         query_owner = {
-            'owner_id': user_id
+            'owner_id': data2.get('user_id')
         }
         filter.append(query_owner)
         
@@ -1266,12 +1190,14 @@ async def list_all_groups_created(
         num_skip = (page - 1)*limit
         all_group = group_db.get_collection(GROUP).find(query_filter).skip(num_skip).limit(limit)
         all_group_info = []
-        if all_group.count():
+        if all_group.count(True):
             for group in all_group:
                 group['_id'] = str(group['_id'])
-                group['num_members'] = len(group['members']) + 1
-                group['group_label'] = get_label_name(group['group_label'])
-                del group['members']
+                query_participant = {
+                    'group_id': group['_id']
+                }
+                group_members_count = group_db[GROUP_PARTICIPANT].find(query_participant).count()
+                group['num_members'] = group_members_count + 1
                 all_group_info.append(group)
 
         num_group = group_db.get_collection(GROUP).find(query_filter).count()
@@ -1279,7 +1205,7 @@ async def list_all_groups_created(
         num_pages = ceil(num_group/limit)
 
         meta_data = {
-            'count': all_group.count(),
+            'count': all_group.count(True),
             'current_page': page,
             'has_next': (num_pages>page),
             'has_previous': (page>1),
@@ -1298,7 +1224,7 @@ async def list_all_groups_created(
 #=====================LIST_ALL_GROUP_DISCOVER=====================
 #=================================================================
 @app.get(
-    '/all_group_discover/{user_id}',
+    '/all_group_discover',
     description='list all group discover',
     # responses={
     #     status.HTTP_400_BAD_REQUEST: {
@@ -1314,13 +1240,10 @@ async def list_all_groups_discover(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     search: Optional[str] = Query(default=None, description='text search'),
-    user_id: str = Path(..., description='ID of user'),
-    group_label: str = Query(default=None, description='filter by group label'),
+    # user_id: str = Path(..., description='ID of user'),
     group_type: str = Query(default=None, description='filter by group type'),
     group_datetime_created: float = Query(default=None, description='filter by group datetime created'),
-    group_commune: str = Query(default=None, description='xã/phường'),
-    group_district: str = Query(default=None, description='quận/huyện'),
-    group_city: str = Query(default=None, description='tỉnh/thành phố')
+    data2: dict = Depends(valid_headers),
 ):
     logger().info('===============get_group_info=================')
     # Find a group
@@ -1356,12 +1279,6 @@ async def list_all_groups_discover(
                 }
             }
             filter.append(query_search)
-
-        if group_label:
-            query_label = {
-                'group_label': group_label
-            }
-            filter.append(query_label)
         
         query_status = {
             'group_status': GroupStatus.ENABLE
@@ -1383,24 +1300,6 @@ async def list_all_groups_discover(
             }
             filter.append(query_datetime_created)
 
-        if group_city:
-            query_city = {
-                'group_address.group_city': group_city
-            }
-            filter.append(query_city)
-    
-        if group_district:
-            query_district = {
-                'group_address.group_district': group_district
-            }
-            filter.append(query_district)
-    
-        if group_commune:
-            query_commune = {
-                'group_address.group_commune': group_commune
-            }
-            filter.append(query_commune)
-    
         if filter:
             query_filter = {
                 '$and': filter
@@ -1412,11 +1311,14 @@ async def list_all_groups_discover(
         all_group = group_db.get_collection(GROUP).find(query_filter).skip(num_skip).limit(limit)
         all_group_info = []
         logger().info(f'all group count: {all_group.count()}')
-        if all_group.count():
+        if all_group.count(True):
             for group in all_group:
                 group['_id'] = str(group['_id'])
-                group['num_members'] = len(group['members']) + 1
-                group['group_label'] = get_label_name(group['group_label'])
+                query_participant = {
+                    'group_id': group['_id']
+                }
+                group_members_count = group_db[GROUP_PARTICIPANT].find(query_participant).count()
+                group['num_members'] = group_members_count + 1
                 
                 query = {
                     '$and': [
@@ -1424,18 +1326,18 @@ async def list_all_groups_discover(
                             'group_id': group['_id']
                         },
                         {
-                            'user_id': user_id
+                            'user_id': data2.get('user_id')
                         }
                     ] 
                 }
                 invitation = group_db[GROUP_INVITATION].find_one(query)
+                participant = group_db[GROUP_PARTICIPANT].find_one(query)
                 request_join = group_db[GROUP_JOIN_REQUEST].find_one(query)
 
-                group['is_owner'] = (user_id == group.get('owner_id'))
-                group['is_member'] = (user_id in group.get('members'))
+                group['is_owner'] = (data2.get('user_id') == group.get('owner_id'))
+                group['is_member'] = True if participant else False
                 group['is_invited'] = True if invitation else False
                 group['is_requested'] = True if request_join else False
-                del group['members']
                 all_group_info.append(group)
 
         num_group = group_db.get_collection(GROUP).find(query_filter).count()
@@ -1443,7 +1345,7 @@ async def list_all_groups_discover(
         num_pages = ceil(num_group/limit)
 
         meta_data = {
-            'count': all_group.count(),
+            'count': all_group.count(True),
             'current_page': page,
             'has_next': (num_pages>page),
             'has_previous': (page>1),
@@ -1462,7 +1364,7 @@ async def list_all_groups_discover(
 #=======================LIST_ALL_GROUP_JOINED=====================
 #=================================================================
 @app.get(
-    '/all_group_joined/{user_id}',
+    '/all_group_joined',
     description='list all group joined',
     # responses={
     #     status.HTTP_400_BAD_REQUEST: {
@@ -1478,36 +1380,18 @@ async def list_all_groups_joined(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     search: Optional[str] = Query(default=None, description='text search'),
-    user_id: str = Path(..., description='ID of user')
+    data2: dict = Depends(valid_headers),
+    # user_id: str = Path(..., description='ID of user')
 ):
     logger().info('===============get_group_info=================')
     # Find a group
     try:
-        if search:
-            query = {
-                '$and': [
-                    {
-                        'members': {
-                            '$elemMatch': {
-                                '$eq': user_id
-                            }
-                        }
-                    },
-                    {
-                        '$text': {
-                            '$search': search
-                        }
-                    }
-                ]
-            }
-        else:
-            query = {
-                        'members': {
-                            '$elemMatch': {
-                                '$eq': user_id
-                            }
-                        }
-                    }
+        query_group_participant = {
+            'user_id': data2.get('user_id')
+        }
+        list_group_participant = list(group_db[GROUP_PARTICIPANT].find(query_group_participant,{'group_id': 1}))
+        import functools
+        all_group_join = functools.reduce(lambda a, b: a + [ObjectId(b['group_id'])],list_group_participant,[])
         
         filter = []
         if search:
@@ -1518,14 +1402,12 @@ async def list_all_groups_joined(
             }
             filter.append(query_search)
 
-        query_member = {
-            'members': {
-                '$elemMatch': {
-                    '$eq': user_id
-                }
+        query_group = {
+            '_id': {
+                '$in': all_group_join
             }
         }
-        filter.append(query_member)
+        filter.append(query_group)
         
         query_status = {
             'group_status': GroupStatus.ENABLE
@@ -1542,12 +1424,14 @@ async def list_all_groups_joined(
         num_skip = (page - 1)*limit
         all_group = group_db.get_collection(GROUP).find(query_filter).skip(num_skip).limit(limit)
         all_group_info = []
-        if all_group.count():
+        if all_group.count(True):
             for group in all_group:
                 group['_id'] = str(group['_id'])
-                group['num_members'] = len(group['members']) + 1
-                group['group_label'] = get_label_name(group['group_label'])
-                del group['members']
+                query_participant = {
+                    'group_id': group['_id']
+                }
+                group_members_count = group_db[GROUP_PARTICIPANT].find(query_participant).count()
+                group['num_members'] = group_members_count + 1
                 all_group_info.append(group)
 
         num_group = group_db.get_collection(GROUP).find(query_filter).count()
@@ -1555,7 +1439,7 @@ async def list_all_groups_joined(
         num_pages = ceil(num_group/limit)
 
         meta_data = {
-            'count': all_group.count(),
+            'count': all_group.count(True),
             'current_page': page,
             'has_next': (num_pages>page),
             'has_previous': (page>1),

@@ -50,12 +50,12 @@ class DATA_Update_Group(BaseModel):
 
 class DATA_Update_Group_Chat(BaseModel):
     group_id: str = Field(..., description='ID of group')
-    owner_id: str = Field(..., description='ID of owner')
+    # owner_id: str = Field(..., description='ID of owner')
     group_chat_id: str = Field(..., description='ID of group_chat')
 
 class DATA_Update_Group_image(BaseModel):
     group_id: str = Field(..., description='ID of group')
-    owner_id: str = Field(..., description='ID of owner')
+    # owner_id: str = Field(..., description='ID of owner')
     image_type: str = Field(..., description='avatar/cover')
     image_url: str = Field(..., description='image url')
 
@@ -63,7 +63,7 @@ class DATA_Update_Group_image(BaseModel):
 #=========================INVITE_MEMBERS===========================
 #==================================================================
 class DATA_Invite_Members(BaseModel):
-    user_id: str = Field(..., description='ID of owner')
+    # user_id: str = Field(..., description='ID of owner')
     list_user_ids: List[str] = Field(default=[], description='list user_id will be invite to join in group')
 
 #==================================================================
@@ -71,56 +71,56 @@ class DATA_Invite_Members(BaseModel):
 #==================================================================
 class DATA_Accept_invitation(BaseModel):
     invitation_id: str = Field(..., description='ID of invitation')
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #======================REJECT_INVITATION===========================
 #==================================================================
 class DATA_Reject_invitation(BaseModel):
     invitation_id: str = Field(..., description='ID of invitation')
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #======================CANCEL_INVITATION===========================
 #==================================================================
 class DATA_Cancel_invitation(BaseModel):
     invitation_id: str = Field(..., description='ID of invitation')
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #===================SEND_REQUEST_JOIN_GROUP========================
 #==================================================================
 class DATA_Join_Request(BaseModel):
     group_id: str = Field(..., description='ID of group')
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #==================ACCEPT_REQUEST_JOIN_GROUP=======================
 #==================================================================
 class DATA_Accept_Join_Request(BaseModel):
     request_id: str = Field(..., description='ID of group')
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #==================REJECT_REQUEST_JOIN_GROUP=======================
 #==================================================================
 class DATA_Reject_Join_Request(BaseModel):
     request_id: str = Field(..., description='ID of group')
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #==================CANCEL_REQUEST_JOIN_GROUP=======================
 #==================================================================
 class DATA_Cancel_Join_Request(BaseModel):
     request_id: str = Field(..., description='ID of group')
-    user_id: str = Field(..., description='ID of user')
+    # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #===================REMOVE_GROUP_MEMBERS===========================
 #==================================================================
 class DATA_Remove_Members(BaseModel):
     group_id: str = Field(..., description='ID of group')
-    owner_id: str = Field(..., description='ID of owner')
+    # owner_id: str = Field(..., description='ID of owner')
     list_user_ids: List[str] = Field(default=[], description='list user_id will be remove out of group')
 
 #==================================================================
@@ -128,7 +128,7 @@ class DATA_Remove_Members(BaseModel):
 #==================================================================
 class DATA_Delete_Group(BaseModel):
     group_id: str = Field(..., description='ID of group')
-    owner_id: str = Field(..., description='ID of owner')
+    # owner_id: str = Field(..., description='ID of owner')
 
 #==================================================================
 #====================LIST_ALL_GROUP_CREATED========================
