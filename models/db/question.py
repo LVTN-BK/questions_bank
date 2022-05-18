@@ -12,7 +12,7 @@ class Questions_DB(BaseModel):
     tag_id: str = Field(default=None, description='ID of tag')
     level_id: str = Field(default=None, description='ID of level of question')
     is_public: bool = Field(default=False, description='ID of tag')
-    liked: List[str] = Field(default=[], description='ID of tag')
+    # liked: List[str] = Field(default=[], description='ID of tag')
     is_removed: bool = Field(default=False, description='is removed?')
     datetime_created: float = Field(default=datetime.now().timestamp(), description='time create question')
 
@@ -27,5 +27,5 @@ class Questions_Version_DB(BaseModel):
 
 class Answers_DB(BaseModel):
     answer_content: str = Field(..., description='content of answer')
-    answer_image: bool = Field(default=None, description='image of amswer')
+    answer_image: str = Field(default=None, description='image of amswer')
     datetime_created: float = Field(default=datetime.now().timestamp(), description='time create answer')

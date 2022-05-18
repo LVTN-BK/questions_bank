@@ -106,6 +106,21 @@ QUESTIONS = 'questions'
 QUESTIONS_VERSION = 'questions_version'
 ANSWERS = 'answers'
 
+
+############################################
+#exam db
+exams_db = MONGO_CLIENT['exams-db']
+EXAMS = 'exams'
+EXAMS_VERSION = 'exams_version'
+
+
+############################################
+#like db
+likes_db = MONGO_CLIENT['likes-db']
+LIKES = 'likes'
+#create index for like db
+likes_db[LIKES].create_index([('user_id', pymongo.ASCENDING), ('target_id', pymongo.ASCENDING)], unique=True)
+
 LIST_PROVIDER_API = [
 ]
 

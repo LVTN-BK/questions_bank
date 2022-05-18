@@ -51,4 +51,4 @@ class DATA_Create_Fill_Question(BaseModel):
 
 class DATA_Create_Answer(BaseModel):
     answer_content: str = Field(..., description='content of answer')
-    answer_image: bool = Field(default=None, description='image of amswer')
+    answer_image: str = Field(default=None, description='image of amswer')

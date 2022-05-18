@@ -1,22 +1,21 @@
-from fastapi import Path, status, Form
-from fastapi import Body, Depends
-from app.utils.account import send_reset_password_email
-from app.utils.question_utils.question import get_answer
-from configs.logger import logger
-from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
-from models.define.question import ManageQuestionType
-from models.define.user import UserInfo
-from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
-from models.request.question import DATA_Create_Answer, DATA_Create_Fill_Question, DATA_Create_Matching_Question, DATA_Create_Multi_Choice_Question, DATA_Create_Sort_Question
-from pymongo.collection import ReturnDocument
-from starlette.responses import JSONResponse
-from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM, USER_COLLECTION, USERS_PROFILE, app, questions_db
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from pydantic import EmailStr
-from fastapi.encoders import jsonable_encoder
+from app.utils.question_utils.question import get_answer
 from bson import ObjectId
+from configs.logger import logger
+from configs.settings import (ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
+                              app, questions_db)
+from fastapi import Depends, Path, status
+from fastapi.encoders import jsonable_encoder
+from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
+from models.define.question import ManageQuestionType
+from models.request.question import (DATA_Create_Answer,
+                                     DATA_Create_Fill_Question,
+                                     DATA_Create_Matching_Question,
+                                     DATA_Create_Multi_Choice_Question,
+                                     DATA_Create_Sort_Question)
+from starlette.responses import JSONResponse
 
 
 #========================================================
