@@ -126,7 +126,7 @@ likes_db[LIKES].create_index([('user_id', pymongo.ASCENDING), ('target_id', pymo
 #comment db
 comments_db = MONGO_CLIENT['comments-db']
 COMMENTS = 'comments'
-REPLYCOMMENT = 'reply_comment'
+REPLY_COMMENTS = 'reply_comments'
 
 LIST_PROVIDER_API = [
 ]
