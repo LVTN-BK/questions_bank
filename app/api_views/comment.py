@@ -152,6 +152,12 @@ async def remove_comment(
         # remove comment record
         comments_db[COMMENTS].find_one_and_delete(query_remove_comment)
 
+        # delete reply comment
+        query_remove_reply_comment = {
+            'comment_id': data1.get('comment_id')
+        }
+        comments_db[REPLY_COMMENTS].delete_many(query_remove_reply_comment)
+
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
