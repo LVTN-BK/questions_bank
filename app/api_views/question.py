@@ -1,3 +1,4 @@
+from math import ceil
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
@@ -6,7 +7,7 @@ from bson import ObjectId
 from configs.logger import logger
 from configs.settings import (ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db)
-from fastapi import Depends, Path, status
+from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
 from models.define.question import ManageQuestionType
@@ -413,57 +414,228 @@ async def user_get_one_question(
     tags=['questions']
 )
 async def user_get_all_question(
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    search: Optional[str] = Query(default=None, description='text search'),
+    class_id: str = Query(default=None, description='classify by class'),
+    subject_id: str = Query(default=None, description='classify by subject'),
+    chapter_id: str = Query(default=None, description='classify by chapter'),
     data2: dict = Depends(valid_headers)
 ):
     try:
-        result = []
-        # find question
-        questions = questions_db[QUESTIONS].find(
-            {
-                "$and": [
-                    {
-                        'user_id': {
-                            '$eq': data2.get('user_id')
-                        }
-                    },
-                    {
-                        'is_removed': False
-                    }
-                ]
-                        
+        filter_question = [{}]
+        filter_question_version = [{}]
+
+        # =============== search =================
+        if search:
+            query_search = {
+                '$text': {
+                    '$search': search
+                }
             }
-        )
+            filter_question_version.append(query_search)
+        
+        # =============== version =================
+        query_latest_version = {
+            'is_latest': True
+        }
+        filter_question_version.append(query_latest_version)
+
+        # =============== status =================
+        query_question_status = {
+            'is_removed': False
+        }
+        filter_question.append(query_question_status)
+
+        # =============== owner =================
+        query_question_owner = {
+            'user_id': {
+                '$eq': data2.get('user_id')
+            }
+        }
+        filter_question.append(query_question_owner)
+
+        # =============== class =================
+        if class_id:
+            query_question_class = {
+                'class_id': class_id
+            }
+            filter_question.append(query_question_class)
+
+        # =============== subject =================
+        if subject_id:
+            query_question_subject = {
+                'subject_id': subject_id
+            }
+            filter_question.append(query_question_subject)
+
+        # =============== chapter =================
+        if chapter_id:
+            query_question_chapter = {
+                'chapter_id': chapter_id
+            }
+            filter_question.append(query_question_chapter)
+
+        num_skip = (page - 1)*limit
+
+        pipeline = [
+            {
+                '$addFields': {
+                    'question_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'questions_version',
+                    'localField': 'question_id',
+                    'foreignField': 'question_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$and': filter_question_version
+                            }
+                        }
+                    ],
+                    'as': 'question_information'
+                }
+            },
+            {
+                '$unwind': '$question_information'
+            },
+            {
+                '$match': {
+                    '$and': filter_question
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'question_id': 1,
+                    'type': 1,
+                    'level': 1,
+                    'datetime_created': 1,
+                    'question_information.question_content': 1,
+                    'question_information.question_image': 1,
+                    'question_information.answers': 1,
+                    'question_information.correct_answers': 1
+                }
+            },
+            { "$skip": num_skip },
+            { "$limit": limit }
+        ]
+
+        pipeline_all = [
+            {
+                '$addFields': {
+                    'question_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'questions_version',
+                    'localField': 'question_id',
+                    'foreignField': 'question_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$and': filter_question_version
+                            }
+                        }
+                    ],
+                    'as': 'question_information'
+                }
+            },
+            {
+                '$unwind': '$question_information'
+            },
+            {
+                '$match': {
+                    '$and': filter_question
+                }
+            },
+            { '$group': { '_id': None, 'myCount': { '$sum': 1 } } },
+            { '$project': { '_id': 0 } }
+        ]
+
+        result = []
+
+        questions = questions_db[QUESTIONS].aggregate(pipeline)
+        all_questions = questions_db[QUESTIONS].aggregate(pipeline_all)
+
+        # find question
+        # questions = questions_db[QUESTIONS].find(
+        #     {
+        #         "$and": [
+        #             {
+        #                 'user_id': {
+        #                     '$eq': data2.get('user_id')
+        #                 }
+        #             },
+        #             {
+        #                 'is_removed': False
+        #             }
+        #         ]
+                        
+        #     }
+        # )
+        logger().info(type(questions))
+        count_question = all_questions.next()
+        num_question = count_question.get('myCount')
+        num_pages = ceil(num_question/limit)
         
         for question in questions:
-            # find question version
-            question_version = questions_db[QUESTIONS_VERSION].find_one(
-                {
-                    '$and': [
-                        {
-                            'question_id': str(question['_id'])
-                        },
-                        {
-                            'is_latest': True
-                        }
-                    ]
-                }
-            )
-            if question_version:
-                # get answer of question
-                answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
+            # logger().info(question)
+            # get answer of question
+            answers = get_answer(answers=question['question_information'].get('answers'), question_type=question.get('type'))
 
-                logger().info(answers)
-                question_version['answers'] = answers
-                del question['_id']
-                del question_version['_id']
-                question['question_info'] = question_version
-                result.append(question)
-            else:
-                del question['_id']
-                question['question_info'] = {}
-                result.append(question)
+            logger().info(answers)
+            question['question_information']['answers'] = answers
+            result.append(question)
+        
+        meta_data = {
+            'count': num_question,
+            'current_page': page,
+            'has_next': (num_pages>page),
+            'has_previous': (page>1),
+            'next_page_number': (page+1) if (num_pages>page) else None,
+            'num_pages': num_pages,
+            'previous_page_number': (page-1) if (page>1) else None,
+            'valid_page': (page>=1) and (page<=num_pages)
+        }
+            # # find question version
+            # question_version = questions_db[QUESTIONS_VERSION].find_one(
+            #     {
+            #         '$and': [
+            #             {
+            #                 'question_id': str(question['_id'])
+            #             },
+            #             {
+            #                 'is_latest': True
+            #             }
+            #         ]
+            #     }
+            # )
+            # if question_version:
+            #     # get answer of question
+            #     answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
 
-        return JSONResponse(content={'status': 'success', 'data': result},status_code=status.HTTP_200_OK)
+            #     logger().info(answers)
+            #     question_version['answers'] = answers
+            #     del question['_id']
+            #     del question_version['_id']
+            #     question['question_info'] = question_version
+            #     result.append(question)
+            # else:
+            #     del question['_id']
+            #     question['question_info'] = {}
+            #     result.append(question)
+
+        logger().info(result)
+        return JSONResponse(content={'status': 'success', 'data': result, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
