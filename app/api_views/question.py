@@ -2,6 +2,7 @@ from math import ceil
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
+from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_question
 from app.utils.question_utils.question import get_answer
 from bson import ObjectId
 from configs.logger import logger
@@ -682,6 +683,309 @@ async def user_get_all_question(
                     'localField': 'question_object_id',
                     'foreignField': '_id',
                     'pipeline': [
+                        {
+                            '$match': {
+                                '$and': filter_question
+                            }
+                        },
+                        {
+                            '$project': { #project for questions collection
+                                '_id': 0,
+                                'type': 1,
+                                'datetime_created': 1
+                            }
+                        }
+                    ],
+                    'as': 'question_information'
+                }
+            },
+            {
+                '$unwind': '$question_information'
+            },
+            {
+                '$lookup': { # join to find answer of question
+                    'from': 'answers',
+                    'let': {'answers': '$answers'},
+                    'pipeline': [
+                        {
+                            "$addFields": { "answer_id": { "$toString": "$_id" }}
+                        },
+                        {
+                            "$match": { "$expr": { "$in": [ "$answer_id", "$$answers" ] } }
+                        },
+                        {
+                            '$project': { #project for answers infomation
+                                '_id': 0,
+                                'answer_id': 1,
+                                'answer_content': 1,
+                                'answer_image': 1,
+                                'datetime_created': 1
+                            }
+                        }
+                    ],
+                    'as': 'question_answers'
+                }
+            },           
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'question_id': 1,
+                                "question_content": 1,
+                                "question_image": 1,
+                                'question_type': "$question_information.type",
+                                'question_answers': 1,
+                                'question_correct_answers': "$question_answers.corect_answers",
+                                'datetime_created': "$question_information.datetime_created"
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'
+            },
+        ]
+
+        result = []
+
+        # questions = questions_db[QUESTIONS].aggregate(pipeline)
+        questions = questions_db[QUESTIONS_VERSION].aggregate(pipeline)
+        # all_questions = questions_db[QUESTIONS].aggregate(pipeline_all)
+
+        # find question
+        # questions = questions_db[QUESTIONS].find(
+        #     {
+        #         "$and": [
+        #             {
+        #                 'user_id': {
+        #                     '$eq': data2.get('user_id')
+        #                 }
+        #             },
+        #             {
+        #                 'is_removed': False
+        #             }
+        #         ]
+                        
+        #     }
+        # )
+        # logger().info(type(questions2))
+        questions_data = questions.next()
+        # logger().info(questions2.next())
+        
+        # count_question = all_questions.next()
+        # num_question = count_question.get('myCount')
+        # num_pages = ceil(num_question/limit)
+        
+        # for question in questions_data.get('data'):
+        #     # logger().info(question)
+        #     # get answer of question
+        #     answers = get_answer(answers=question['question_information'].get('answers'), question_type=question.get('type'))
+
+        #     logger().info(answers)
+        #     question['question_information']['answers'] = answers
+        #     result.append(question)
+
+        questions_count = questions_data['metadata']['total']
+        num_pages = questions_data.get('metadata').get('page')
+        
+        meta_data = {
+            'count': questions_count,
+            'current_page': page,
+            'has_next': (num_pages>page),
+            'has_previous': (page>1),
+            'next_page_number': (page+1) if (num_pages>page) else None,
+            'num_pages': num_pages,
+            'previous_page_number': (page-1) if (page>1) else None,
+            'valid_page': (page>=1) and (page<=num_pages)
+        }
+            # # find question version
+            # question_version = questions_db[QUESTIONS_VERSION].find_one(
+            #     {
+            #         '$and': [
+            #             {
+            #                 'question_id': str(question['_id'])
+            #             },
+            #             {
+            #                 'is_latest': True
+            #             }
+            #         ]
+            #     }
+            # )
+            # if question_version:
+            #     # get answer of question
+            #     answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
+
+            #     logger().info(answers)
+            #     question_version['answers'] = answers
+            #     del question['_id']
+            #     del question_version['_id']
+            #     question['question_info'] = question_version
+            #     result.append(question)
+            # else:
+            #     del question['_id']
+            #     question['question_info'] = {}
+            #     result.append(question)
+
+        logger().info(result)
+        return JSONResponse(content={'status': 'success', 'data': questions_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+#========================================================
+#===================GROUP_GET_ALL_QUESTION================
+#========================================================
+@app.get(
+    path='/group/get_all_question',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def group_get_all_question(
+    group_id: str = Query(..., description='ID of group'),
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    search: Optional[str] = Query(default=None, description='text search'),
+    class_id: str = Query(default=None, description='classify by class'),
+    subject_id: str = Query(default=None, description='classify by subject'),
+    chapter_id: str = Query(default=None, description='classify by chapter'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check owner of group or member
+        if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
+            content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
+            return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+
+        # get list question of group
+        list_question = get_list_group_question(group_id=group_id)
+
+        filter_question = [{}]
+        filter_question_version = [{}]
+
+        # =============== search =================
+        if search:
+            query_search = {
+                '$text': {
+                    '$search': search
+                }
+            }
+            filter_question_version.append(query_search)
+        
+        # =============== version =================
+        query_latest_version = {
+            'is_latest': True
+        }
+        filter_question_version.append(query_latest_version)
+
+        # =============== status =================
+        query_question_status = {
+            'is_removed': False
+        }
+        filter_question.append(query_question_status)
+
+        # =============== owner =================
+        query_question_owner = {
+            'user_id': {
+                '$eq': data2.get('user_id')
+            }
+        }
+        filter_question.append(query_question_owner)
+
+        # =============== class =================
+        if class_id:
+            query_question_class = {
+                'class_id': class_id
+            }
+            filter_question.append(query_question_class)
+
+        # =============== subject =================
+        if subject_id:
+            query_question_subject = {
+                'subject_id': subject_id
+            }
+            filter_question.append(query_question_subject)
+
+        # =============== chapter =================
+        if chapter_id:
+            query_question_chapter = {
+                'chapter_id': chapter_id
+            }
+            filter_question.append(query_question_chapter)
+
+        num_skip = (page - 1)*limit
+
+        pipeline = [
+            {
+                '$match': {
+                    '$and': filter_question_version
+                }
+            },
+            {
+                '$addFields': { # convert question_version_id in questions_version collection from ObjectId to String(to join with answers collection)
+                    'question_version_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$addFields': { # convert question_id in questions_version collection from string to ObjectId(to join with questions collection)
+                    'question_object_id': {
+                        '$toObjectId': '$question_id'
+                    }
+                }
+            },
+            {
+                '$lookup': { #join with questions collection
+                    'from': 'questions',
+                    'localField': 'question_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$addFields': {
+                                'question_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                "$expr": {
+                                    '$in': ['$question_id', list_question]
+                                }
+                            }
+                        },
                         {
                             '$match': {
                                 '$and': filter_question
