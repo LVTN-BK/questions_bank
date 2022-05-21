@@ -1037,6 +1037,8 @@ async def group_get_all_question(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     search: Optional[str] = Query(default=None, description='text search'),
+    type: Optional[str] = Query(default=None, description='question type'),
+    level: Optional[str] = Query(default=None, description='question level'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -1082,6 +1084,20 @@ async def group_get_all_question(
             }
         }
         filter_question.append(query_question_owner)
+
+        # =============== type =================
+        if type:
+            query_question_type = {
+                'type': type
+            }
+            filter_question.append(query_question_type)
+
+        # =============== level =================
+        if level:
+            query_question_level = {
+                'level': level
+            }
+            filter_question.append(query_question_level)
 
         # =============== class =================
         if class_id:
