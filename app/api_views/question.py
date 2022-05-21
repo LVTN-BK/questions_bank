@@ -1,4 +1,5 @@
 from math import ceil
+import copy
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
@@ -934,7 +935,7 @@ async def user_get_question_classify(
         # get class of subject
         data_return = []
         for subject_id in questions_data['subject']:
-            filter_class = filter_question
+            filter_class = copy.deepcopy(filter_question)
             query_subject = {
                 'subject_id': subject_id
             }
@@ -961,7 +962,7 @@ async def user_get_question_classify(
             subject_data_class = []
             # get chapter of class, subject
             for class_id in questions_class_data['class']:
-                filter_chapter = filter_class
+                filter_chapter = copy.deepcopy(filter_class)
                 query_class = {
                     'class_id': class_id
                 }
