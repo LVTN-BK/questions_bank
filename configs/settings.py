@@ -131,6 +131,14 @@ comments_db = MONGO_CLIENT['comments-db']
 COMMENTS = 'comments'
 REPLY_COMMENTS = 'reply_comments'
 
+
+############################################
+#classify db
+classify_db = MONGO_CLIENT['classify-db']
+SUBJECT = 'subject'
+CLASS = 'class'
+CHAPTER = 'chapter'
+
 LIST_PROVIDER_API = [
 ]
 
