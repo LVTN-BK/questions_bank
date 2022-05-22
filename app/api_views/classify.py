@@ -1,26 +1,16 @@
-from math import ceil
 import copy
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
-from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_answer
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (ANSWERS, CHAPTER, CLASS, QUESTIONS, QUESTIONS_VERSION, SUBJECT, SYSTEM,
+from configs.settings import (CHAPTER, CLASS, SUBJECT,
                               app, classify_db)
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from models.db.classify import Chapters_DB, Class_DB, Subjects_DB
-from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
-from models.define.question import ManageQuestionType
 from models.request.classify import DATA_Create_Chapter, DATA_Create_Class, DATA_Create_Subject
-from models.request.question import (DATA_Create_Answer,
-                                     DATA_Create_Fill_Question,
-                                     DATA_Create_Matching_Question,
-                                     DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question)
+
 from starlette.responses import JSONResponse
 
 

@@ -62,7 +62,7 @@ async def create_multi_choice_question(
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.MULTICHOICE,
             tag_id=data1.get('tag_id'),
-            level_id=data1.get('level_id'),
+            level=data1.get('level'),
         )
 
         logger().info(f'question: {question}')
@@ -129,7 +129,7 @@ async def create_matching_question(
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.MATCHING,
             tag_id=data1.get('tag_id'),
-            level_id=data1.get('level_id'),
+            level=data1.get('level'),
         )
 
         logger().info(f'question: {question}')
@@ -196,7 +196,7 @@ async def create_sort_question(
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.SORT,
             tag_id=data1.get('tag_id'),
-            level_id=data1.get('level_id'),
+            level=data1.get('level'),
         )
 
         logger().info(f'question: {question}')
@@ -263,7 +263,7 @@ async def create_fill_question(
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.FILL,
             tag_id=data1.get('tag_id'),
-            level_id=data1.get('level_id'),
+            level=data1.get('level'),
         )
 
         logger().info(f'question: {question}')

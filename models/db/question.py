@@ -10,7 +10,7 @@ class Questions_DB(BaseModel):
     chapter_id: str = Field(..., description='ID of chapter')
     type: str = Field(..., description='question type')
     tag_id: str = Field(default=None, description='ID of tag')
-    level_id: str = Field(default=None, description='ID of level of question')
+    level: str = Field(default=None, description='level of question')
     is_public: bool = Field(default=False, description='ID of tag')
     # liked: List[str] = Field(default=[], description='ID of tag')
     is_removed: bool = Field(default=False, description='is removed?')
