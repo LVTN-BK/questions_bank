@@ -1077,13 +1077,13 @@ async def group_get_all_question(
         }
         filter_question.append(query_question_status)
 
-        # =============== owner =================
-        query_question_owner = {
-            'user_id': {
-                '$eq': data2.get('user_id')
-            }
-        }
-        filter_question.append(query_question_owner)
+        # # =============== owner =================
+        # query_question_owner = {
+        #     'user_id': {
+        #         '$eq': data2.get('user_id')
+        #     }
+        # }
+        # filter_question.append(query_question_owner)
 
         # =============== type =================
         if type:
@@ -1332,6 +1332,200 @@ async def group_get_all_question(
 
         logger().info(result)
         return JSONResponse(content={'status': 'success', 'data': questions_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+#========================================================
+#===============GROUP_GET_QUESTION_CLASSIFY==============
+#========================================================
+@app.get(
+    path='/group/get_question_classify',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def group_get_question_classify(
+    group_id: str = Query(..., description='ID of group'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        filter_question = [{}]
+
+        # check owner of group or member
+        if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
+            content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
+            return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+
+
+        # get list question of group
+        list_question = get_list_group_question(group_id=group_id)
+
+        # =============== status =================
+        query_question_status = {
+            'is_removed': False
+        }
+        filter_question.append(query_question_status)
+
+        # # =============== owner =================
+        # query_question_owner = {
+        #     'user_id': {
+        #         '$eq': data2.get('user_id')
+        #     }
+        # }
+        # filter_question.append(query_question_owner)
+
+        pipeline = [
+            {
+                '$addFields': {
+                    'question_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$match': {
+                    "$expr": {
+                        '$in': ['$question_id', list_question]
+                    }
+                }
+            },
+            {
+                '$match': {
+                    '$and': filter_question
+                }
+            },
+            {
+                '$group': {
+                    '_id': None,
+                    'subject': {
+                        '$addToSet': '$subject_id'
+                    }
+                }
+            }
+        ]
+
+        result = []
+
+        questions = questions_db[QUESTIONS].aggregate(pipeline)
+        
+        questions_data = questions.next()
+        logger().info(f'questions_data: {questions_data}')
+        # get class of subject
+        data_return = []
+        for subject_id in questions_data['subject']:
+            filter_class = copy.deepcopy(filter_question)
+            query_subject = {
+                'subject_id': subject_id
+            }
+            filter_class.append(query_subject)
+
+            pipeline_class = [
+                {
+                    '$addFields': {
+                        'question_id': {
+                            '$toString': '$_id'
+                        }
+                    }
+                },
+                {
+                    '$match': {
+                        "$expr": {
+                            '$in': ['$question_id', list_question]
+                        }
+                    }
+                },
+                {
+                    '$match': {
+                        '$and': filter_class
+                    }
+                },
+                {
+                    '$group': {
+                        '_id': None,
+                        'class': {
+                            '$addToSet': '$class_id'
+                        }
+                    }
+                }
+            ]
+            questions_class = questions_db[QUESTIONS].aggregate(pipeline_class)
+            questions_class_data = questions_class.next()
+
+            subject_data_class = []
+            # get chapter of class, subject
+            for class_id in questions_class_data['class']:
+                filter_chapter = copy.deepcopy(filter_class)
+                query_class = {
+                    'class_id': class_id
+                }
+                filter_chapter.append(query_class)
+
+                pipeline_chapter = [
+                    {
+                        '$addFields': {
+                            'question_id': {
+                                '$toString': '$_id'
+                            }
+                        }
+                    },
+                    {
+                        '$match': {
+                            "$expr": {
+                                '$in': ['$question_id', list_question]
+                            }
+                        }
+                    },
+                    {
+                        '$match': {
+                            '$and': filter_chapter
+                        }
+                    },
+                    {
+                        '$group': {
+                            '_id': None,
+                            'chapter': {
+                                '$addToSet': '$chapter_id'
+                            }
+                        }
+                    }
+                ]
+                questions_chapter = questions_db[QUESTIONS].aggregate(pipeline_chapter)
+                questions_chapter_data = questions_chapter.next()
+
+                class_data_chapter = []
+                for chapter_id in questions_chapter_data['chapter']:
+                    chapter_info = get_chapter_info(chapter_id=chapter_id)
+                    data_chapter = {
+                        'id': chapter_info.get('_id'),
+                        'name': chapter_info.get('name')
+                    }
+                    class_data_chapter.append(data_chapter)
+                
+                class_info = get_class_info(class_id=class_id)
+                data_class = {
+                    'id': class_info.get('_id'),
+                    'name': class_info.get('name'),
+                    'chapters': class_data_chapter
+                }
+                subject_data_class.append(data_class)
+            
+            subject_info = get_subject_info(subject_id=subject_id)
+            data_subject = {
+                'id': subject_info.get('_id'),
+                'name': subject_info.get('name'),
+                'classes': subject_data_class
+            }
+            data_return.append(data_subject)
+          
+        logger().info(result)
+        return JSONResponse(content={'status': 'success', 'data': data_return},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
