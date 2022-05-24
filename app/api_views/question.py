@@ -989,27 +989,30 @@ async def user_get_question_classify(
                 class_data_chapter = []
                 for chapter_id in questions_chapter_data['chapter']:
                     chapter_info = get_chapter_info(chapter_id=chapter_id)
-                    data_chapter = {
-                        'id': chapter_info.get('_id'),
-                        'name': chapter_info.get('name')
-                    }
-                    class_data_chapter.append(data_chapter)
+                    if chapter_info:
+                        data_chapter = {
+                            'id': chapter_info.get('_id'),
+                            'name': chapter_info.get('name')
+                        }
+                        class_data_chapter.append(data_chapter)
                 
                 class_info = get_class_info(class_id=class_id)
-                data_class = {
-                    'id': class_info.get('_id'),
-                    'name': class_info.get('name'),
-                    'chapters': class_data_chapter
-                }
-                subject_data_class.append(data_class)
+                if class_info:
+                    data_class = {
+                        'id': class_info.get('_id'),
+                        'name': class_info.get('name'),
+                        'chapters': class_data_chapter
+                    }
+                    subject_data_class.append(data_class)
             
             subject_info = get_subject_info(subject_id=subject_id)
-            data_subject = {
-                'id': subject_info.get('_id'),
-                'name': subject_info.get('name'),
-                'classes': subject_data_class
-            }
-            data_return.append(data_subject)
+            if subject_info:
+                data_subject = {
+                    'id': subject_info.get('_id'),
+                    'name': subject_info.get('name'),
+                    'classes': subject_data_class
+                }
+                data_return.append(data_subject)
           
         logger().info(result)
         return JSONResponse(content={'status': 'success', 'data': data_return},status_code=status.HTTP_200_OK)
