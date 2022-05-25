@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Union
 from pydantic import BaseModel, Field
 
+from models.request.exam import SectionQuestion
+
 
 class Exams_DB(BaseModel):
     user_id: str = Field(..., description='ID of user')
@@ -21,5 +23,5 @@ class Exams_Version_DB(BaseModel):
     is_latest: bool = Field(default=True, description='is the newest version of question')
     note: str = Field(default=None, description='content of question')
     time_limit: str = Field(..., description='limit time of exam')
-    questions: List[str] = Field(..., description='answer of question')
+    questions: List[SectionQuestion] = Field(..., description='questions of exam')
     datetime_created: float = Field(default=datetime.now().timestamp(), description='time create question version')

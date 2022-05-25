@@ -112,7 +112,7 @@ questions_db[QUESTIONS_VERSION].create_index([('question_content', 'text')])
 
 ############################################
 #exam db
-exams_db = MONGO_CLIENT['exams-db']
+exams_db = MONGO_CLIENT['questions-db']
 EXAMS = 'exams'
 EXAMS_VERSION = 'exams_version'
 

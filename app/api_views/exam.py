@@ -77,6 +77,82 @@ async def create_exam(
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
 
+# #========================================================
+# #=====================USER_GET_ONE_EXAM==================
+# #========================================================
+# @app.get(
+#     path='/user/get_one_exam/{exam_id}',
+#     responses={
+#         status.HTTP_200_OK: {
+#             'model': ''
+#         },
+#         status.HTTP_403_FORBIDDEN: {
+#             'model': ''
+#         }
+#     },
+#     tags=['exams']
+# )
+# async def user_get_one_exam(
+#     exam_id: str = Path(..., description='ID of exam'),
+#     data2: dict = Depends(valid_headers)
+# ):
+#     try:
+#         # find exam
+#         exam = exams_db[EXAMS].find_one(
+#             {
+#                 "$and": [
+#                     {
+#                         '_id': ObjectId(exam_id)
+#                     },
+#                     {
+#                         'user_id': {
+#                             '$eq': data2.get('user_id')
+#                         }
+#                     },
+#                     {
+#                         'is_removed': False
+#                     }
+#                 ]
+                        
+#             }
+#         )
+#         if not exam:
+#             return JSONResponse(content={'status': 'Exam not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+        
+#         # find exam version
+#         exam_version = exams_db[EXAMS_VERSION].find_one(
+#             {
+#                 '$and': [
+#                     {
+#                         'exam_id': exam_id
+#                     },
+#                     {
+#                         'is_latest': True
+#                     }
+#                 ]
+#             }
+#         )
+#         if not exam_version:
+#             return JSONResponse(content={'status': 'Exam not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+
+#         # get question infomation
+#         all_question = []
+#         for question in exam_version.get('questions'):
+#             question_info = get_question_information_with_version_id(question_version_id=question)
+#             all_question.append(question_info)
+        
+#         exam_version['questions'] = all_question
+#         del exam_version['_id']
+#         del exam['_id']
+#         exam['exam_info'] = exam_version
+
+#         logger().info(exam_version)
+
+#         return JSONResponse(content={'status': 'success', 'data': exam},status_code=status.HTTP_200_OK)
+#     except Exception as e:
+#         logger().error(e)
+#     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
 #========================================================
 #=====================USER_GET_ONE_EXAM==================
 #========================================================
@@ -97,58 +173,208 @@ async def user_get_one_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # find exam
-        exam = exams_db[EXAMS].find_one(
+        
+
+        pipeline = [
             {
-                "$and": [
-                    {
-                        '_id': ObjectId(exam_id)
-                    },
-                    {
-                        'user_id': {
-                            '$eq': data2.get('user_id')
+                '$match': {
+                    "$and": [
+                        {
+                            '_id': ObjectId(exam_id)
+                        },
+                        {
+                            'user_id': {
+                                '$eq': data2.get('user_id')
+                            }
+                        },
+                        {
+                            'is_removed': False
                         }
-                    },
-                    {
-                        'is_removed': False
-                    }
-                ]
-                        
-            }
-        )
-        if not exam:
-            return JSONResponse(content={'status': 'Exam not found!'}, status_code=status.HTTP_404_NOT_FOUND)
-        
-        # find exam version
-        exam_version = exams_db[EXAMS_VERSION].find_one(
+                    ]
+                }
+            },
             {
-                '$and': [
-                    {
-                        'exam_id': exam_id
-                    },
-                    {
-                        'is_latest': True
+                '$addFields': {
+                    'exam_id': {
+                        '$toString': '$_id'
                     }
-                ]
+                }
+            },
+            {
+                "$lookup": {
+                    'from': 'exams_version',
+                    'localField': 'exam_id',
+                    'foreignField': 'exam_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'is_latest': True
+                            }
+                        },
+                        {
+                            '$unwind': '$questions'
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'questions',
+                                'let': {
+                                    'section_question': '$questions.section_questions'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$addFields': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$in': ['$id', '$$section_question']
+                                            }
+                                        }
+                                    },
+                                    # join with questions_version
+                                    {
+                                        '$lookup': {
+                                            'from': 'questions_version',
+                                            'localField': 'id',
+                                            'foreignField': 'question_id',
+                                            'pipeline': [
+                                                {
+                                                    '$match': {
+                                                        'is_latest': True
+                                                    }
+                                                },
+                                                # join with answers
+                                                {
+                                                    '$lookup': {
+                                                        'from': 'answers',
+                                                        'let': {
+                                                            'list_answers': '$answers'
+                                                        },
+                                                        'pipeline': [
+                                                            {
+                                                                '$addFields': {
+                                                                    'answer_id': {
+                                                                        '$toString': '$_id'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$match': {
+                                                                    '$expr': {
+                                                                        '$in': ['$answer_id', '$$list_answers']
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$project': {
+                                                                    '_id': 0,
+                                                                    'answer_id': 1,
+                                                                    'answer_content': 1,
+                                                                    'answer_image': 1,
+                                                                    'datetime_created': 1
+                                                                }
+                                                            }
+                                                        ],
+                                                        'as': 'answers'
+                                                    }
+                                                },
+                                                {
+                                                    '$project': {
+                                                        '_id': 0,
+                                                        'question_version_id': {
+                                                            '$toString': '$_id'
+                                                        },
+                                                        'question_id': 1,
+                                                        'question_content': 1,
+                                                        'question_image': 1,
+                                                        'answers': 1,
+                                                        'correct_answers': 1,
+                                                        'datetime_created': 1
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'question_version'
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'type': 1,
+                                            'level': 1,
+                                            'question_version': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'questions.section_questions'
+                            }
+                        },
+                        {
+                            '$group': {
+                                '_id': {
+                                    '$toString': '$_id'
+                                },
+                                # 'exam_id': '$exam_id',
+                                'exam_title': {
+                                    '$first': '$exam_title'
+                                },
+                                'note': {
+                                    '$first': '$note'
+                                },
+                                'time_limit': {
+                                    '$first': '$time_limit'
+                                },
+                                'questions': {
+                                    '$push': '$questions'
+                                }
+                            }
+                        },
+                        {
+                            '$unwind': '$exam_title'
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_title': 1,
+                                'note': 1,
+                                'time_limit': 1,
+                                'questions': 1
+                            }
+                        }
+                    ],
+                    'as': 'exam_detail'
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    # 'exam_id': {
+                    #     '$toString': '$_id'
+                    # },
+                    'exam_id': 1,
+                    'user_id': 1,
+                    'class_id': 1,
+                    'subject_id': 1,
+                    'tag_id': 1,
+                    'exam_title': '$exam_detail.exam_title',
+                    'note': '$exam_detail.note',
+                    'time_limit': '$exam_detail.time_limit',
+                    'questions': '$exam_detail.questions'
+                    # 'exam_detail': 1
+                }
             }
-        )
-        if not exam_version:
-            return JSONResponse(content={'status': 'Exam not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+        ]
 
-        # get question infomation
-        all_question = []
-        for question in exam_version.get('questions'):
-            question_info = get_question_information_with_version_id(question_version_id=question)
-            all_question.append(question_info)
-        
-        exam_version['questions'] = all_question
-        del exam_version['_id']
-        del exam['_id']
-        exam['exam_info'] = exam_version
+        # find exam
+        exam = exams_db[EXAMS].aggregate(pipeline)
 
-        logger().info(exam_version)
+        logger().info(f'type exam: {type(exam)}')
+        data = exam.next()
 
-        return JSONResponse(content={'status': 'success', 'data': exam},status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
