@@ -437,6 +437,38 @@ async def user_get_one_exam(
                                             }
                                         }
                                     },
+                                    # join with questions db and get question type
+                                    {
+                                        "$lookup": {
+                                            'from': 'questions',
+                                            'let': {
+                                                'question_id': '$question_id'
+                                            },
+                                            'pipeline': [
+                                                {
+                                                    '$addFields': {
+                                                        'question_id': {
+                                                            '$toString': '$_id'
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$match': {
+                                                        '$expr': {
+                                                            '$eq': ['$question_id', '$$question_id']
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$project': {
+                                                        '_id': 0,
+                                                        'question_type': '$type',
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'question_info'
+                                        }
+                                    },
                                     # join with answers
                                     {
                                         '$lookup': {
@@ -481,6 +513,9 @@ async def user_get_one_exam(
                                             'question_id': 1,
                                             'question_content': 1,
                                             'question_image': 1,
+                                            'question_type': {
+                                                '$first': '$question_info.question_type'
+                                            },
                                             'answers': 1,
                                             'correct_answers': 1,
                                             'datetime_created': 1
