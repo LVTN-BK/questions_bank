@@ -11,7 +11,7 @@ from models.db.exam import Exams_DB, Exams_Version_DB
 from models.request.exam import DATA_Create_Exam
 from starlette.responses import JSONResponse
 
-from models.response.exam import UserGetOneExamResponse200, UserGetOneExamResponse403
+from models.response.exam import UserGetAllExamResponse200, UserGetAllExamResponse403, UserGetOneExamResponse200, UserGetOneExamResponse403
 
 
 #========================================================
@@ -617,7 +617,8 @@ async def user_get_one_exam(
                     'exam_title': '$exam_detail.exam_title',
                     'note': '$exam_detail.note',
                     'time_limit': '$exam_detail.time_limit',
-                    'questions': '$exam_detail.questions'
+                    'questions': '$exam_detail.questions',
+                    'datetime_created': 1
                     # 'exam_detail': 1
                 }
             }
@@ -649,10 +650,10 @@ async def user_get_one_exam(
     path='/user/get_all_exam',
     responses={
         status.HTTP_200_OK: {
-            'model': ''
+            'model': UserGetAllExamResponse200
         },
         status.HTTP_403_FORBIDDEN: {
-            'model': ''
+            'model': UserGetAllExamResponse403
         }
     },
     tags=['exams']
