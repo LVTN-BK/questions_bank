@@ -143,6 +143,7 @@ async def create_matching_question(
             question_content=data1.get('question_content'),
             question_image=data1.get('question_image'),
             answers=data1.get('answers'),
+            answers_right=data1.get('answers_right'),
             correct_answers=data1.get('correct_answers'),
         )
         id_question_version = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(questions_version)).inserted_id
@@ -741,7 +742,31 @@ async def user_get_all_question(
                             }
                         }
                     ],
-                    'as': 'question_answers'
+                    'as': 'answers'
+                }
+            },           
+            {
+                '$lookup': { # join to find answer in the right collumn of question (for matching question)
+                    'from': 'answers',
+                    'let': {'answers': '$answers_right'},
+                    'pipeline': [
+                        {
+                            "$addFields": { "answer_id": { "$toString": "$_id" }}
+                        },
+                        {
+                            "$match": { "$expr": { "$in": [ "$answer_id", "$$answers" ] } }
+                        },
+                        {
+                            '$project': { #project for answers infomation
+                                '_id': 0,
+                                'answer_id': 1,
+                                'answer_content': 1,
+                                'answer_image': 1,
+                                'datetime_created': 1
+                            }
+                        }
+                    ],
+                    'as': 'answers_right'
                 }
             },           
             { 
@@ -770,8 +795,9 @@ async def user_get_all_question(
                                 "question_content": 1,
                                 "question_image": 1,
                                 'question_type': "$question_information.type",
-                                'question_answers': 1,
-                                'question_correct_answers': "$question_answers.corect_answers",
+                                'answers': 1,
+                                'answers_right': 1,
+                                'correct_answers': "$question_answers.corect_answers",
                                 'datetime_created': "$question_information.datetime_created"
                             }
                         },
@@ -1205,7 +1231,31 @@ async def group_get_all_question(
                             }
                         }
                     ],
-                    'as': 'question_answers'
+                    'as': 'answers'
+                }
+            },           
+            {
+                '$lookup': { # join to find answer in the right collumn of question (for matching questions)
+                    'from': 'answers',
+                    'let': {'answers': '$answers_right'},
+                    'pipeline': [
+                        {
+                            "$addFields": { "answer_id": { "$toString": "$_id" }}
+                        },
+                        {
+                            "$match": { "$expr": { "$in": [ "$answer_id", "$$answers" ] } }
+                        },
+                        {
+                            '$project': { #project for answers infomation
+                                '_id': 0,
+                                'answer_id': 1,
+                                'answer_content': 1,
+                                'answer_image': 1,
+                                'datetime_created': 1
+                            }
+                        }
+                    ],
+                    'as': 'answers_right'
                 }
             },           
             { 
@@ -1234,7 +1284,8 @@ async def group_get_all_question(
                                 "question_content": 1,
                                 "question_image": 1,
                                 'question_type': "$question_information.type",
-                                'question_answers': 1,
+                                'answers': 1,
+                                'answers_right': 1,
                                 'question_correct_answers': "$question_answers.corect_answers",
                                 'datetime_created': "$question_information.datetime_created"
                             }
@@ -1699,7 +1750,31 @@ async def community_get_all_question(
                             }
                         }
                     ],
-                    'as': 'question_answers'
+                    'as': 'answers'
+                }
+            },           
+            {
+                '$lookup': { # join to find answer in the right of question (for matching question)
+                    'from': 'answers',
+                    'let': {'answers': '$answers_right'},
+                    'pipeline': [
+                        {
+                            "$addFields": { "answer_id": { "$toString": "$_id" }}
+                        },
+                        {
+                            "$match": { "$expr": { "$in": [ "$answer_id", "$$answers" ] } }
+                        },
+                        {
+                            '$project': { #project for answers infomation
+                                '_id': 0,
+                                'answer_id': 1,
+                                'answer_content': 1,
+                                'answer_image': 1,
+                                'datetime_created': 1
+                            }
+                        }
+                    ],
+                    'as': 'answers_right'
                 }
             },           
             { 
@@ -1728,7 +1803,8 @@ async def community_get_all_question(
                                 "question_content": 1,
                                 "question_image": 1,
                                 'question_type': "$question_information.type",
-                                'question_answers': 1,
+                                'answers': 1,
+                                'answers_right': 1,
                                 'question_correct_answers': "$question_answers.corect_answers",
                                 'datetime_created': "$question_information.datetime_created"
                             }
@@ -1747,7 +1823,6 @@ async def community_get_all_question(
             },
         ]
 
-        result = []
 
         questions = questions_db[QUESTIONS_VERSION].aggregate(pipeline)
         
@@ -1767,7 +1842,6 @@ async def community_get_all_question(
             'valid_page': (page>=1) and (page<=num_pages)
         }
 
-        logger().info(result)
         return JSONResponse(content={'status': 'success', 'data': questions_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)

@@ -20,6 +20,7 @@ class QuestionInfo(BaseModel):
     question_image: str = Field(default=None, description='image of question')
     question_type: str = Field(default=None, description='type of question', regex="^(multi_choice|sort|matching|fill)$")
     answers: List[AnswerInfo] = Field(default=None, description='list answer infomation')
+    answers_right: List[AnswerInfo] = Field(default=None, description='list answer infomation (for matching questions)')
     correct_answers: str = Field(default=None, description='correct answer')
     datetime_created: float = Field(default=None, description='time create question')
     question_version_id: str = Field(default=None, description='ID of version of question')

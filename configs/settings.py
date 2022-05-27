@@ -115,7 +115,8 @@ questions_db[QUESTIONS_VERSION].create_index([('question_content', 'text')])
 exams_db = MONGO_CLIENT['questions-db']
 EXAMS = 'exams'
 EXAMS_VERSION = 'exams_version'
-
+#create text index for group name
+questions_db[EXAMS_VERSION].create_index([('exam_title', 'text')])
 
 ############################################
 #like db

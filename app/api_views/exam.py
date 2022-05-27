@@ -1,12 +1,11 @@
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from app.utils.question_utils.question import \
-    get_question_information_with_version_id
+from app.utils.question_utils.question import get_answer, get_question_information_with_version_id
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import EXAMS, EXAMS_VERSION, SYSTEM, app, exams_db
-from fastapi import Depends, Path, status
+from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from models.db.exam import Exams_DB, Exams_Version_DB
 from models.request.exam import DATA_Create_Exam
@@ -175,6 +174,7 @@ async def user_get_one_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
+        start_time = datetime.now()
         
 
         pipeline_v1 = [
@@ -469,6 +469,10 @@ async def user_get_one_exam(
                                             'as': 'question_info'
                                         }
                                     },
+                                    {
+                                        '$unwind': '$question_info'
+                                    },
+
                                     # join with answers
                                     {
                                         '$lookup': {
@@ -504,6 +508,42 @@ async def user_get_one_exam(
                                             'as': 'answers'
                                         }
                                     },
+
+                                    # continue join with answers to get answers_right(matching question)
+                                    {
+                                        '$lookup': {
+                                            'from': 'answers',
+                                            'let': {
+                                                'list_answers': '$answers_right'
+                                            },
+                                            'pipeline': [
+                                                {
+                                                    '$addFields': {
+                                                        'answer_id': {
+                                                            '$toString': '$_id'
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$match': {
+                                                        '$expr': {
+                                                            '$in': ['$answer_id', '$$list_answers']
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$project': {
+                                                        '_id': 0,
+                                                        'answer_id': 1,
+                                                        'answer_content': 1,
+                                                        'answer_image': 1,
+                                                        'datetime_created': 1
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'answers_right'
+                                        }
+                                    },
                                     {
                                         '$project': {
                                             '_id': 0,
@@ -513,10 +553,9 @@ async def user_get_one_exam(
                                             'question_id': 1,
                                             'question_content': 1,
                                             'question_image': 1,
-                                            'question_type': {
-                                                '$first': '$question_info.question_type'
-                                            },
+                                            'question_type': '$question_info.question_type',
                                             'answers': 1,
+                                            'answers_right': 1,
                                             'correct_answers': 1,
                                             'datetime_created': 1
                                         }
@@ -590,6 +629,14 @@ async def user_get_one_exam(
         logger().info(f'type exam: {type(exam)}')
         data = exam.next()
 
+        # for section_idx, section in enumerate(data['questions']):
+        #     for question_idx, question in enumerate(data['questions'][section_idx]['section_questions']):
+        #         question_type = data['questions'][section_idx]['section_questions'][question_idx]['question_type']
+        #         answers = data['questions'][section_idx]['section_questions'][question_idx]['answers']
+        #         data['questions'][section_idx]['section_questions'][question_idx]['answers'] = get_answer(answers=answers, question_type=question_type)
+ 
+        end_time = datetime.now()
+        logger().info(end_time-start_time)
         return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
@@ -611,52 +658,227 @@ async def user_get_one_exam(
     tags=['exams']
 )
 async def user_get_all_exam(
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    search: Optional[str] = Query(default=None, description='text search'),
+    class_id: str = Query(default=None, description='classify by class'),
+    subject_id: str = Query(default=None, description='classify by subject'),
+    chapter_id: str = Query(default=None, description='classify by chapter'),
     data2: dict = Depends(valid_headers)
 ):
     try:
         result = []
         # find exam
-        exams = exams_db[EXAMS].find(
-            {
-                "$and": [
-                    {
-                        'user_id': {
-                            '$eq': data2.get('user_id')
-                        }
-                    },
-                    {
-                        'is_removed': False
-                    }
-                ]
-                        
+        filter_exam = [{}]
+        filter_exam_version = [{}]
+
+        # =============== search =================
+        if search:
+            query_search = {
+                '$text': {
+                    '$search': search
+                }
             }
-        )
+            filter_exam_version.append(query_search)
         
-        for exam in exams:
-            # find exam version
-            exam_version = exams_db[EXAMS_VERSION].find_one(
-                {
-                    '$and': [
+        # =============== version =================
+        query_latest_version = {
+            'is_latest': True
+        }
+        filter_exam_version.append(query_latest_version)
+
+        # =============== status =================
+        query_exam_status = {
+            'is_removed': False
+        }
+        filter_exam.append(query_exam_status)
+
+        # =============== owner =================
+        query_exam_owner = {
+            'user_id': {
+                '$eq': data2.get('user_id')
+            }
+        }
+        filter_exam.append(query_exam_owner)
+
+        # =============== class =================
+        if class_id:
+            query_exam_class = {
+                'class_id': class_id
+            }
+            filter_exam.append(query_exam_class)
+
+        # =============== subject =================
+        if subject_id:
+            query_exam_subject = {
+                'subject_id': subject_id
+            }
+            filter_exam.append(query_exam_subject)
+
+        # =============== chapter =================
+        if chapter_id:
+            query_exam_chapter = {
+                'chapter_id': chapter_id
+            }
+            filter_exam.append(query_exam_chapter)
+
+        num_skip = (page - 1)*limit
+
+        pipeline = [
+            {
+                '$match': {
+                    "$and": filter_exam_version
+                }
+            },
+            {
+                '$addFields': {
+                    'exam_object_id': {
+                        '$toObjectId': '$exam_id'
+                    }
+                }
+            },
+
+            #join with exam
+            {
+                "$lookup": {
+                    'from': 'exams',
+                    'localField': 'exam_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
                         {
-                            'exam_id': str(exam['_id'])
+                            '$match': {
+                                '$and': filter_exam
+                            }
                         },
                         {
-                            'is_latest': True
-                        }
-                    ]
+                            '$project': {
+                                '_id': 0,
+                                'exam_id': 1,
+                                'user_id': 1,
+                                'class_id': 1,
+                                'subject_id': 1,
+                                'tag_id': 1,
+                                'datetime_created': 1
+                            }
+                        },
+                    ],
+                    'as': 'exam_detail'
                 }
-            )
-            if exam_version:
-                del exam['_id']
-                del exam_version['_id']
-                exam['exam_info'] = exam_version
-                result.append(exam)
-            else:
-                del exam['_id']
-                exam['exam_info'] = {}
-                result.append(exam)
+            },
+            {
+                '$unwind': '$exam_detail'
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_id': '$exam_detail.exam_id',
+                                'user_id': '$exam_detail.user_id',
+                                'class_id': '$exam_detail.class_id',
+                                'subject_id': '$exam_detail.subject_id',
+                                'tag_id': '$exam_detail.tag_id',
+                                'exam_title': 1,
+                                'note': 1,
+                                'time_limit': 1,
+                                'questions': 1,
+                                'datetime_created': '$exam_detail.datetime_created'
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'         
+            }
+        ]
 
-        return JSONResponse(content={'status': 'success', 'data': result},status_code=status.HTTP_200_OK)
+        exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
+        
+        exams_data = exams.next()
+
+        exams_count = exams_data['metadata']['total']
+        num_pages = exams_data.get('metadata').get('page')
+        
+        meta_data = {
+            'count': exams_count,
+            'current_page': page,
+            'has_next': (num_pages>page),
+            'has_previous': (page>1),
+            'next_page_number': (page+1) if (num_pages>page) else None,
+            'num_pages': num_pages,
+            'previous_page_number': (page-1) if (page>1) else None,
+            'valid_page': (page>=1) and (page<=num_pages)
+        }
+
+        
+        # for exam in exams:
+        #     result.append(exam)
+
+        # exams = exams_db[EXAMS].find(
+        #     {
+        #         "$and": [
+        #             {
+        #                 'user_id': {
+        #                     '$eq': data2.get('user_id')
+        #                 }
+        #             },
+        #             {
+        #                 'is_removed': False
+        #             }
+        #         ]
+                        
+        #     }
+        # )
+        
+        # for exam in exams:
+        #     # find exam version
+        #     exam_version = exams_db[EXAMS_VERSION].find_one(
+        #         {
+        #             '$and': [
+        #                 {
+        #                     'exam_id': str(exam['_id'])
+        #                 },
+        #                 {
+        #                     'is_latest': True
+        #                 }
+        #             ]
+        #         }
+        #     )
+        #     if exam_version:
+        #         del exam['_id']
+        #         del exam_version['_id']
+        #         exam['exam_info'] = exam_version
+        #         result.append(exam)
+        #     else:
+        #         del exam['_id']
+        #         exam['exam_info'] = {}
+        #         result.append(exam)
+
+        return JSONResponse(content={'status': 'success', 'data': exams_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
