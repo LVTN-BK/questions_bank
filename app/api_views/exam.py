@@ -1696,3 +1696,199 @@ async def group_get_all_exam(
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+#========================================================
+#==================COMMUNITY_GET_ALL_EXAM================
+#========================================================
+@app.get(
+    path='/community/get_all_exam',
+    responses={
+        status.HTTP_200_OK: {
+            'model': UserGetAllExamResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': UserGetAllExamResponse403
+        }
+    },
+    tags=['exams']
+)
+async def community_get_all_exam(
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    search: Optional[str] = Query(default=None, description='text search'),
+    class_id: str = Query(default=None, description='classify by class'),
+    subject_id: str = Query(default=None, description='classify by subject'),
+    chapter_id: str = Query(default=None, description='classify by chapter'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # find exam
+        filter_exam = [{}]
+        filter_exam_version = [{}]
+
+        # =============== search =================
+        if search:
+            query_search = {
+                '$text': {
+                    '$search': search
+                }
+            }
+            filter_exam_version.append(query_search)
+        
+        # =============== version =================
+        query_latest_version = {
+            'is_latest': True
+        }
+        filter_exam_version.append(query_latest_version)
+
+        # =============== status =================
+        query_exam_status = {
+            'is_removed': False
+        }
+        filter_exam.append(query_exam_status)
+
+        # =============== public =================
+        query_exam_public = {
+            'is_public': {
+                '$eq': True
+            }
+        }
+        filter_exam.append(query_exam_public)
+
+        # =============== class =================
+        if class_id:
+            query_exam_class = {
+                'class_id': class_id
+            }
+            filter_exam.append(query_exam_class)
+
+        # =============== subject =================
+        if subject_id:
+            query_exam_subject = {
+                'subject_id': subject_id
+            }
+            filter_exam.append(query_exam_subject)
+
+        # =============== chapter =================
+        if chapter_id:
+            query_exam_chapter = {
+                'chapter_id': chapter_id
+            }
+            filter_exam.append(query_exam_chapter)
+
+        num_skip = (page - 1)*limit
+
+        pipeline = [
+            {
+                '$match': {
+                    "$and": filter_exam_version
+                }
+            },
+            {
+                '$addFields': {
+                    'exam_object_id': {
+                        '$toObjectId': '$exam_id'
+                    }
+                }
+            },
+
+            #join with exam
+            {
+                "$lookup": {
+                    'from': 'exams',
+                    'localField': 'exam_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$and': filter_exam
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_id': 1,
+                                'user_id': 1,
+                                'class_id': 1,
+                                'subject_id': 1,
+                                'tag_id': 1,
+                                'datetime_created': 1
+                            }
+                        },
+                    ],
+                    'as': 'exam_detail'
+                }
+            },
+            {
+                '$unwind': '$exam_detail'
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_id': '$exam_detail.exam_id',
+                                'user_id': '$exam_detail.user_id',
+                                'class_id': '$exam_detail.class_id',
+                                'subject_id': '$exam_detail.subject_id',
+                                'tag_id': '$exam_detail.tag_id',
+                                'exam_title': 1,
+                                'note': 1,
+                                'time_limit': 1,
+                                'questions': 1,
+                                'datetime_created': '$exam_detail.datetime_created'
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'         
+            }
+        ]
+
+        exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
+        
+        exams_data = exams.next()
+
+        exams_count = exams_data['metadata']['total']
+        num_pages = exams_data.get('metadata').get('page')
+        
+        meta_data = {
+            'count': exams_count,
+            'current_page': page,
+            'has_next': (num_pages>page),
+            'has_previous': (page>1),
+            'next_page_number': (page+1) if (num_pages>page) else None,
+            'num_pages': num_pages,
+            'previous_page_number': (page-1) if (page>1) else None,
+            'valid_page': (page>=1) and (page<=num_pages)
+        }
+        
+        return JSONResponse(content={'status': 'success', 'data': exams_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
