@@ -1,7 +1,7 @@
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from app.utils.group_utils.group import check_owner_or_user_of_group
+from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_exam
 from app.utils.question_utils.question import get_answer, get_question_information_with_version_id
 from bson import ObjectId
 from configs.logger import logger
@@ -1261,7 +1261,6 @@ async def user_get_all_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        result = []
         # find exam
         filter_exam = [{}]
         filter_exam_version = [{}]
@@ -1471,6 +1470,227 @@ async def user_get_all_exam(
         #         del exam['_id']
         #         exam['exam_info'] = {}
         #         result.append(exam)
+
+        return JSONResponse(content={'status': 'success', 'data': exams_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+#========================================================
+#====================GROUP_GET_ALL_EXAM==================
+#========================================================
+@app.get(
+    path='/group/get_all_exam',
+    responses={
+        status.HTTP_200_OK: {
+            'model': UserGetAllExamResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': UserGetAllExamResponse403
+        }
+    },
+    tags=['exams']
+)
+async def group_get_all_exam(
+    group_id: str = Query(..., description='ID of group'),
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    search: Optional[str] = Query(default=None, description='text search'),
+    class_id: str = Query(default=None, description='classify by class'),
+    subject_id: str = Query(default=None, description='classify by subject'),
+    chapter_id: str = Query(default=None, description='classify by chapter'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # find exam
+        filter_exam = [{}]
+        filter_exam_version = [{}]
+
+        # check owner of group or member
+        if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
+            content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
+            return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+
+
+        # get list exam of group
+        list_exam = get_list_group_exam(group_id=group_id)
+
+
+        # =============== search =================
+        if search:
+            query_search = {
+                '$text': {
+                    '$search': search
+                }
+            }
+            filter_exam_version.append(query_search)
+        
+        # =============== version =================
+        query_latest_version = {
+            'is_latest': True
+        }
+        filter_exam_version.append(query_latest_version)
+
+        # =============== status =================
+        query_exam_status = {
+            'is_removed': False
+        }
+        filter_exam.append(query_exam_status)
+
+        # # =============== owner =================
+        # query_exam_owner = {
+        #     'user_id': {
+        #         '$eq': data2.get('user_id')
+        #     }
+        # }
+        # filter_exam.append(query_exam_owner)
+
+        # =============== class =================
+        if class_id:
+            query_exam_class = {
+                'class_id': class_id
+            }
+            filter_exam.append(query_exam_class)
+
+        # =============== subject =================
+        if subject_id:
+            query_exam_subject = {
+                'subject_id': subject_id
+            }
+            filter_exam.append(query_exam_subject)
+
+        # =============== chapter =================
+        if chapter_id:
+            query_exam_chapter = {
+                'chapter_id': chapter_id
+            }
+            filter_exam.append(query_exam_chapter)
+
+        num_skip = (page - 1)*limit
+
+        pipeline = [
+            {
+                '$match': {
+                    "$and": filter_exam_version
+                }
+            },
+            {
+                '$addFields': {
+                    'exam_object_id': {
+                        '$toObjectId': '$exam_id'
+                    }
+                }
+            },
+
+            #join with exam
+            {
+                "$lookup": {
+                    'from': 'exams',
+                    'localField': 'exam_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$addFields': {
+                                'exam_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                "$expr": {
+                                    '$in': ['$exam_id', list_exam]
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$and': filter_exam
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_id': 1,
+                                'user_id': 1,
+                                'class_id': 1,
+                                'subject_id': 1,
+                                'tag_id': 1,
+                                'datetime_created': 1
+                            }
+                        },
+                    ],
+                    'as': 'exam_detail'
+                }
+            },
+            {
+                '$unwind': '$exam_detail'
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_id': '$exam_detail.exam_id',
+                                'user_id': '$exam_detail.user_id',
+                                'class_id': '$exam_detail.class_id',
+                                'subject_id': '$exam_detail.subject_id',
+                                'tag_id': '$exam_detail.tag_id',
+                                'exam_title': 1,
+                                'note': 1,
+                                'time_limit': 1,
+                                'questions': 1,
+                                'datetime_created': '$exam_detail.datetime_created'
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'         
+            }
+        ]
+
+        exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
+        
+        exams_data = exams.next()
+
+        exams_count = exams_data['metadata']['total']
+        num_pages = exams_data.get('metadata').get('page')
+        
+        meta_data = {
+            'count': exams_count,
+            'current_page': page,
+            'has_next': (num_pages>page),
+            'has_previous': (page>1),
+            'next_page_number': (page+1) if (num_pages>page) else None,
+            'num_pages': num_pages,
+            'previous_page_number': (page-1) if (page>1) else None,
+            'valid_page': (page>=1) and (page<=num_pages)
+        }
 
         return JSONResponse(content={'status': 'success', 'data': exams_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:

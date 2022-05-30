@@ -1,4 +1,4 @@
-from configs.settings import GROUP_PARTICIPANT, GROUP_QUESTIONS, group_db
+from configs.settings import GROUP_EXAMS, GROUP_PARTICIPANT, GROUP_QUESTIONS, group_db
 from bson import ObjectId
 from fastapi.responses import JSONResponse
 
@@ -26,4 +26,11 @@ def get_list_group_question(group_id: str):
     res = []
     for question in all_question:
         res.append(question.get('question_id'))
+    return res
+
+def get_list_group_exam(group_id: str):
+    all_exam = group_db[GROUP_EXAMS].find({'group_id': group_id}, {'exam_id': 1})
+    res = []
+    for exam in all_exam:
+        res.append(exam.get('exam_id'))
     return res
