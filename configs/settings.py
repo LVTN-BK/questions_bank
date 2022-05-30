@@ -90,6 +90,7 @@ GROUP_INVITATION = 'group_invitation'
 GROUP_PARTICIPANT = 'group_participant'
 GROUP_JOIN_REQUEST = 'group_join_request'
 GROUP_QUESTIONS = 'group_questions'
+GROUP_EXAMS = 'group_exams'
 group_db[GROUP_INVITATION].create_index([('group_id', pymongo.ASCENDING), ('user_id', pymongo.ASCENDING)], unique=True)
 group_db[GROUP_JOIN_REQUEST].create_index([('group_id', pymongo.ASCENDING), ('user_id', pymongo.ASCENDING)], unique=True)
 
