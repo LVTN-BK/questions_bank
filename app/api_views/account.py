@@ -477,7 +477,7 @@ async def apply_reset_password(
         return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Mật khẩu không khớp!'}, status_code=status.HTTP_400_BAD_REQUEST)
     user = SYSTEM[USER_COLLECTION].find_one_and_update(
         filter={
-            'keyonce': {'$eq': keyonce}, 'keyonce_expire_at': {'$gte': datetime.datetime.now().timestamp()}
+            'keyonce': {'$eq': keyonce}, 'keyonce_expire_at': {'$gte': datetime.now().timestamp()}
         },
         update={
             '$set': {
