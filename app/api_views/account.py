@@ -440,10 +440,7 @@ async def reset_password(
         return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Email chưa đăng ký tài khoản!'}, status_code=status.HTTP_404_NOT_FOUND)
     
     # Check if keyonce is not used
-    await send_reset_password_email('support@hspace.biz', email, data={
-        'msg': 'Vui lòng xác nhận địa chỉ email của bạn bằng cách nhập mã xác minh bên dưới. Mã có giá trị trong 30 phút',
-        'keyonce': keyonce
-    })
+    await send_reset_password_email([email], keyonce=keyonce)
     SYSTEM[USER_COLLECTION].find_one_and_update(
         filter={'email': {'$eq': email}},
         update={'$set': {
