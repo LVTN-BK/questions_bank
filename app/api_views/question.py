@@ -63,6 +63,7 @@ async def create_multi_choice_question(
             type=ManageQuestionType.MULTICHOICE,
             tag_id=data1.get('tag_id'),
             level=data1.get('level'),
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'question: {question}')
@@ -77,6 +78,8 @@ async def create_multi_choice_question(
             question_image=data1.get('question_image'),
             answers=data1.get('answers'),
             correct_answers=data1.get('correct_answers'),
+            display=data1.get('display'),
+            datetime_created=datetime.now().timestamp()
         )
         id_question_version = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(questions_version)).inserted_id
 
@@ -130,6 +133,7 @@ async def create_matching_question(
             type=ManageQuestionType.MATCHING,
             tag_id=data1.get('tag_id'),
             level=data1.get('level'),
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'question: {question}')
@@ -145,6 +149,7 @@ async def create_matching_question(
             answers=data1.get('answers'),
             answers_right=data1.get('answers_right'),
             correct_answers=data1.get('correct_answers'),
+            datetime_created=datetime.now().timestamp()
         )
         id_question_version = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(questions_version)).inserted_id
 
@@ -198,6 +203,7 @@ async def create_sort_question(
             type=ManageQuestionType.SORT,
             tag_id=data1.get('tag_id'),
             level=data1.get('level'),
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'question: {question}')
@@ -212,6 +218,8 @@ async def create_sort_question(
             question_image=data1.get('question_image'),
             answers=data1.get('answers'),
             correct_answers=data1.get('correct_answers'),
+            display=data1.get('display'),
+            datetime_created=datetime.now().timestamp()
         )
         id_question_version = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(questions_version)).inserted_id
 
@@ -265,6 +273,7 @@ async def create_fill_question(
             type=ManageQuestionType.FILL,
             tag_id=data1.get('tag_id'),
             level=data1.get('level'),
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'question: {question}')
@@ -279,6 +288,8 @@ async def create_fill_question(
             question_image=data1.get('question_image'),
             answers=data1.get('answers'),
             correct_answers=data1.get('correct_answers'),
+            display=data1.get('display'),
+            datetime_created=datetime.now().timestamp()
         )
         id_question_version = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(questions_version)).inserted_id
 
@@ -316,6 +327,7 @@ async def create_answer(
         answer = Answers_DB(
             answer_content=data1.get('answer_content'),
             answer_image=data1.get('answer_image'),
+            datetime_created=datetime.now().timestamp()
         )
 
 
@@ -798,6 +810,7 @@ async def user_get_all_question(
                                 'answers': 1,
                                 'answers_right': 1,
                                 'correct_answers': "$question_answers.corect_answers",
+                                'display': 1,
                                 'datetime_created': "$question_information.datetime_created"
                             }
                         },
@@ -1287,6 +1300,7 @@ async def group_get_all_question(
                                 'answers': 1,
                                 'answers_right': 1,
                                 'question_correct_answers': "$question_answers.corect_answers",
+                                'display': 1,
                                 'datetime_created': "$question_information.datetime_created"
                             }
                         },
@@ -1806,6 +1820,7 @@ async def community_get_all_question(
                                 'answers': 1,
                                 'answers_right': 1,
                                 'question_correct_answers': "$question_answers.corect_answers",
+                                'display': 1,
                                 'datetime_created': "$question_information.datetime_created"
                             }
                         },
