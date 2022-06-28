@@ -7,3 +7,4 @@ from .api_views.like import *
 from .api_views.comment import *
 from .api_views.classify import *
 from tests.test import *
+from .api_views.storage import *
