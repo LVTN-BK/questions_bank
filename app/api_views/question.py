@@ -77,7 +77,7 @@ async def create_multi_choice_question(
             question_content=data1.get('question_content'),
             question_image=data1.get('question_image'),
             answers=data1.get('answers'),
-            correct_answers=data1.get('correct_answers'),
+            # correct_answers=data1.get('correct_answers'),
             display=data1.get('display'),
             datetime_created=datetime.now().timestamp()
         )
