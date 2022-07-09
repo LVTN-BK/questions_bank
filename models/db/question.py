@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Tuple, Union
+from models.request.question import AnswerMC
 from pydantic import BaseModel, Field
 
 
@@ -9,7 +10,7 @@ class Questions_DB(BaseModel):
     subject_id: str = Field(..., description='ID of subject')
     chapter_id: str = Field(..., description='ID of chapter')
     type: str = Field(..., description='question type')
-    tag_id: List[Dict[str,str]] = Field(default=None, description='ID of tag')
+    tag_id: List[Dict[str,str]] = Field(default=[], description='ID of tag')
     level: str = Field(default=None, description='level of question')
     is_public: bool = Field(default=False, description='ID of tag')
     # liked: List[str] = Field(default=[], description='ID of tag')
@@ -21,7 +22,7 @@ class Questions_Version_DB(BaseModel):
     is_latest: bool = Field(default=True, description='is the newest version of question')
     question_content: str = Field(..., description='content of question')
     # question_image: str = Field(..., description='image of question')
-    answers: Union[List[str], Dict[str, List[str]], List[Dict[str,Union[str, bool]]]] = Field(default=[], description='answer of question')
+    answers: Union[List[str], Dict[str, List[str]], List[AnswerMC]] = Field(default=[], description='answer of question')
     answers_right: List[str] = Field(default=[], description='answer of question')
     sample_answer: str = Field(default="", description='sample answer of fill question')
     # correct_answers: Union[str, List[str], Dict[str, List[str]]] = Field(..., description='correct answer of question')

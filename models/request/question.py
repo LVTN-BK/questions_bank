@@ -24,11 +24,11 @@ class DATA_Create_Multi_Choice_Question(BaseModel):
     class_id: str = Field(..., description='ID of class')
     subject_id: str = Field(..., description='ID of subject')
     chapter_id: str = Field(..., description='ID of chapter')
-    tag_id: List[Tag] = Field(default=None, description='ID of tag')
+    tag_id: List[Tag] = Field(default=[], description='ID of tag')
     level: str = Field(default=None, description='level of question')
     question_content: str = Field(..., description='content of question')
     # question_image: str = Field(default=None, description='image of question')
-    answers: List[Dict[str,Union[str, bool]]] = Field(..., description='list answer of question')
+    answers: List[AnswerMC] = Field(..., description='list answer of question')
     # correct_answers: str = Field(default=None, description='correct answer of question')
     display: DisplayQuestionMC = Field(..., description='display setting of question')
 

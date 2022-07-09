@@ -8,8 +8,3 @@ class ManageQuestionType:
     SORT = 'sort'
     MATCHING = 'matching'
     FILL = 'fill'
-
-class ManageQuestionLevel:
-    HARD = 'hard'
-    MEDIUM = 'medium'
-    EASY = 'easy'
