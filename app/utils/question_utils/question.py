@@ -1,8 +1,36 @@
 from configs.logger import logger
 from models.define.question import ManageQuestionType
-from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_VERSION, questions_db
+from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_VERSION, questions_db, classify_db, TAG_COLLECTION
 from bson import ObjectId
 
+
+def get_list_tag_id_from_input(list_tag: list):
+    try:
+        result = []
+        for tag_object in list_tag:
+            if tag_object.get('isNew'):
+                # upsert tag
+                tag_data = classify_db[TAG_COLLECTION].find_one(
+                    {
+                        'name': tag_object.get('name')
+                    }
+                )
+                if tag_data:
+                    result.append(str(tag_data.get('_id')))
+                else:
+                    insert_id = classify_db[TAG_COLLECTION].insert_one(
+                        {
+                            'name': tag_object.get('name')
+                        }
+                    ).inserted_id
+                    result.append(str(insert_id))
+            else:
+                result.append(tag_object.get('id'))
+            
+        return result
+    except Exception as e:
+        logger().error(e)
+        return []
 
 def get_answer(answers, question_type):
     try:

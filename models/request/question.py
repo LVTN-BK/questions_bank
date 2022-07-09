@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 class Tag(BaseModel):
     id: str = Field(..., description='ID of tag')
+    isNew: bool = Field(..., description='tag is new?')
     name: str = Field(..., description='name of tag')
 
 class DisplayQuestionMC(BaseModel):
@@ -64,7 +65,7 @@ class DATA_Create_Fill_Question(BaseModel):
     class_id: str = Field(..., description='ID of class')
     subject_id: str = Field(..., description='ID of subject')
     chapter_id: str = Field(..., description='ID of chapter')
-    tag_id: List[Tag] = Field(default=None, description='ID of tag')
+    tag_id: List[Tag] = Field(default=[], description='ID of tag')
     level: str = Field(default=None, description='level of question')
     question_content: str = Field(..., description='content of question')
     # question_image: str = Field(default=None, description='image of question')

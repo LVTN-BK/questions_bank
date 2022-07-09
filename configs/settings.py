@@ -140,6 +140,7 @@ classify_db = MONGO_CLIENT['classify-db']
 SUBJECT = 'subject'
 CLASS = 'class'
 CHAPTER = 'chapter'
+TAG_COLLECTION = 'tag'
 
 LIST_PROVIDER_API = [
 ]

@@ -5,7 +5,7 @@ from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
 from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_answer
+from app.utils.question_utils.question import get_answer, get_list_tag_id_from_input
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import (ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
@@ -54,14 +54,14 @@ async def create_multi_choice_question(
             return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
 
         data1 = jsonable_encoder(data1)
-        
+
         question = Questions_DB(
             user_id=data2.get('user_id'),
             class_id=data1.get('class_id'),
             subject_id=data1.get('subject_id'),
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.MULTICHOICE,
-            tag_id=data1.get('tag_id'),
+            tag_id=get_list_tag_id_from_input(data1.get('tag_id')),
             level=data1.get('level'),
             datetime_created=datetime.now().timestamp()
         )
@@ -271,7 +271,7 @@ async def create_fill_question(
             subject_id=data1.get('subject_id'),
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.FILL,
-            tag_id=data1.get('tag_id'),
+            tag_id=get_list_tag_id_from_input(data1.get('tag_id')),
             level=data1.get('level'),
             datetime_created=datetime.now().timestamp()
         )
