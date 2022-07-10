@@ -4,7 +4,7 @@ from app.secure._token import *
 from app.utils._header import valid_headers
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (CHAPTER, CLASS, SUBJECT,
+from configs.settings import (CHAPTER, CLASS, SUBJECT, TAG_COLLECTION,
                               app, classify_db)
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
@@ -224,3 +224,67 @@ async def get_classify(
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+
+#========================================================
+#==========================GET_TAGS======================
+#========================================================
+@app.get(
+    path='/get_tags',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ''
+        }
+    },
+    tags=['classify']
+)
+async def get_tags(
+    search_text: str = Query(default=None, description='search text')
+):
+    try:
+        if search_text:
+            query_filter = {
+                'name': {
+                    '$regex': search_text,
+                    '$options': 'i'
+                }
+            }
+        else:
+            query_filter = {}
+
+        pipeline = [
+            {
+                '$match': query_filter
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'id': {
+                        '$toString': '$_id'
+                    },
+                    'name': 1,
+                }
+            },
+            {
+                '$group': {
+                    '_id': None,
+                    'data': {
+                        '$push': '$$ROOT'
+                    }
+                }
+            }
+        ]
+
+        tags_data = classify_db[TAG_COLLECTION].aggregate(pipeline)
+        result = []
+        if tags_data.alive:
+            result = tags_data.next().get('data')
+
+        return JSONResponse(content={'status': 'success', 'data': result},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+
