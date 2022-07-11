@@ -448,8 +448,9 @@ async def user_get_all_question(
         # =============== search =================
         if search:
             query_search = {
-                '$text': {
-                    '$search': search
+                'question_content': {
+                    '$regex': search,
+                    '$options': 'i'
                 }
             }
             filter_question_version.append(query_search)
@@ -511,184 +512,6 @@ async def user_get_all_question(
 
         num_skip = (page - 1)*limit
 
-        # pipeline = [
-        #     {
-        #         '$addFields': {
-        #             'question_id': {
-        #                 '$toString': '$_id'
-        #             }
-        #         }
-        #     },
-        #     {
-        #         '$lookup': {
-        #             'from': 'questions_version',
-        #             'localField': 'question_id',
-        #             'foreignField': 'question_id',
-        #             'pipeline': [
-        #                 {
-        #                     '$match': {
-        #                         '$and': filter_question_version
-        #                     }
-        #                 }
-        #             ],
-        #             'as': 'question_information'
-        #         }
-        #     },
-        #     {
-        #         '$unwind': '$question_information'
-        #     },
-        #     {
-        #         '$match': {
-        #             '$and': filter_question
-        #         }
-        #     },
-        #     {
-        #         '$project': {
-        #             '_id': 0,
-        #             'question_id': 1,
-        #             'type': 1,
-        #             'level': 1,
-        #             'datetime_created': 1,
-        #             'question_information.question_content': 1,
-        #             'question_information.question_image': 1,
-        #             'question_information.answers': 1,
-        #             'question_information.correct_answers': 1
-        #         }
-        #     },
-        #     { "$skip": num_skip },
-        #     { "$limit": limit }
-        # ]
-
-        # pipeline_all = [
-        #     {
-        #         '$addFields': {
-        #             'question_id': {
-        #                 '$toString': '$_id'
-        #             }
-        #         }
-        #     },
-        #     {
-        #         '$lookup': {
-        #             'from': 'questions_version',
-        #             'localField': 'question_id',
-        #             'foreignField': 'question_id',
-        #             'pipeline': [
-        #                 {
-        #                     '$match': {
-        #                         '$and': filter_question_version
-        #                     }
-        #                 }
-        #             ],
-        #             'as': 'question_information'
-        #         }
-        #     },
-        #     {
-        #         '$unwind': '$question_information'
-        #     },
-        #     {
-        #         '$match': {
-        #             '$and': filter_question
-        #         }
-        #     },
-        #     { '$group': { '_id': None, 'myCount': { '$sum': 1 } } },
-        #     { '$project': { '_id': 0 } }
-        # ]
-
-        # pipeline = [
-        #     {
-        #         '$addFields': {
-        #             'question_id': {
-        #                 '$toString': '$_id'
-        #             }
-        #         }
-        #     },
-        #     {
-        #         '$lookup': {
-        #             'from': 'questions_version',
-        #             'localField': 'question_id',
-        #             'foreignField': 'question_id',
-        #             'pipeline': [
-        #                 {
-        #                     '$match': {
-        #                         '$and': filter_question_version
-        #                     }
-        #                 }
-        #             ],
-        #             'as': 'question_information'
-        #         }
-        #     },
-        #     {
-        #         '$unwind': '$question_information'
-        #     },
-        #     {
-        #         '$match': {
-        #             '$and': filter_question
-        #         }
-        #     },
-                        
-        #     { 
-        #         '$facet' : {
-        #             'metadata': [ 
-        #                 { 
-        #                     '$count': "total" 
-        #                 }, 
-        #                 { 
-        #                     '$addFields': { 
-        #                         'page': {
-        #                             '$toInt': {
-        #                                 '$ceil': {
-        #                                     '$divide': ['$total', limit]
-        #                                 }
-        #                             }
-        #                         }
-        #                     } 
-        #                 } 
-        #             ],
-        #             'data': [ 
-        #                 {
-        #                     '$project': {
-        #                         '_id': 0,
-        #                         'question_id': 1,
-        #                         'type': 1,
-        #                         'level': 1,
-        #                         'datetime_created': 1,
-        #                         'question_information.question_content': 1,
-        #                         'question_information.question_image': 1,
-        #                         'question_information.answers': 1,
-        #                         'question_information.correct_answers': 1
-        #                     }
-        #                 },
-        #                 { 
-        #                     '$skip': num_skip 
-        #                 },
-        #                 { 
-        #                     '$limit': limit 
-        #                 } 
-        #             ] # add projection here wish you re-shape the docs
-        #         } 
-        #     },
-        #     {
-        #         '$unwind': '$metadata'
-        #     },
-        #     # {
-        #     #     '$unwind': '$data'
-        #     # }
-        #     # {
-        #     #     '$group': {
-        #     #         '_id': None,
-        #     #         'metadata': {
-        #     #             '$first': {
-        #     #                 '$first': '$metadata'
-        #     #             }
-        #     #         },
-        #     #         'data': {
-        #     #             '$first': {
-        #     #                 '$first': '$data'
-        #     #             }
-        #     #         }
-        #     #     }
-        #     # }
-        # ]
         pipeline = [
             {
                 '$match': {
@@ -733,55 +556,7 @@ async def user_get_all_question(
             },
             {
                 '$unwind': '$question_information'
-            },
-            {
-                '$lookup': { # join to find answer of question
-                    'from': 'answers',
-                    'let': {'answers': '$answers'},
-                    'pipeline': [
-                        {
-                            "$addFields": { "answer_id": { "$toString": "$_id" }}
-                        },
-                        {
-                            "$match": { "$expr": { "$in": [ "$answer_id", "$$answers" ] } }
-                        },
-                        {
-                            '$project': { #project for answers infomation
-                                '_id': 0,
-                                'answer_id': 1,
-                                'answer_content': 1,
-                                'answer_image': 1,
-                                'datetime_created': 1
-                            }
-                        }
-                    ],
-                    'as': 'answers'
-                }
-            },           
-            {
-                '$lookup': { # join to find answer in the right collumn of question (for matching question)
-                    'from': 'answers',
-                    'let': {'answers': '$answers_right'},
-                    'pipeline': [
-                        {
-                            "$addFields": { "answer_id": { "$toString": "$_id" }}
-                        },
-                        {
-                            "$match": { "$expr": { "$in": [ "$answer_id", "$$answers" ] } }
-                        },
-                        {
-                            '$project': { #project for answers infomation
-                                '_id': 0,
-                                'answer_id': 1,
-                                'answer_content': 1,
-                                'answer_image': 1,
-                                'datetime_created': 1
-                            }
-                        }
-                    ],
-                    'as': 'answers_right'
-                }
-            },           
+            },                    
             { 
                 '$facet' : {
                     'metadata': [ 
@@ -810,7 +585,7 @@ async def user_get_all_question(
                                 'question_type': "$question_information.type",
                                 'answers': 1,
                                 'answers_right': 1,
-                                'correct_answers': "$question_answers.corect_answers",
+                                'sample_answer': 1,
                                 'display': 1,
                                 'datetime_created': "$question_information.datetime_created"
                             }
@@ -829,47 +604,19 @@ async def user_get_all_question(
             },
         ]
 
-        result = []
 
-        # questions = questions_db[QUESTIONS].aggregate(pipeline)
         questions = questions_db[QUESTIONS_VERSION].aggregate(pipeline)
-        # all_questions = questions_db[QUESTIONS].aggregate(pipeline_all)
-
-        # find question
-        # questions = questions_db[QUESTIONS].find(
-        #     {
-        #         "$and": [
-        #             {
-        #                 'user_id': {
-        #                     '$eq': data2.get('user_id')
-        #                 }
-        #             },
-        #             {
-        #                 'is_removed': False
-        #             }
-        #         ]
-                        
-        #     }
-        # )
-        # logger().info(type(questions2))
-        questions_data = questions.next()
-        # logger().info(questions2.next())
         
-        # count_question = all_questions.next()
-        # num_question = count_question.get('myCount')
-        # num_pages = ceil(num_question/limit)
-        
-        # for question in questions_data.get('data'):
-        #     # logger().info(question)
-        #     # get answer of question
-        #     answers = get_answer(answers=question['question_information'].get('answers'), question_type=question.get('type'))
+        result_data = []
+        if questions.alive:
+            questions_data = questions.next()
 
-        #     logger().info(answers)
-        #     question['question_information']['answers'] = answers
-        #     result.append(question)
-
-        questions_count = questions_data['metadata']['total']
-        num_pages = questions_data.get('metadata').get('page')
+            result_data = questions_data['data']
+            questions_count = questions_data['metadata']['total']
+            num_pages = questions_data.get('metadata').get('page')
+        else:
+            questions_count = 0
+            num_pages = 0
         
         meta_data = {
             'count': questions_count,
@@ -881,36 +628,8 @@ async def user_get_all_question(
             'previous_page_number': (page-1) if (page>1) else None,
             'valid_page': (page>=1) and (page<=num_pages)
         }
-            # # find question version
-            # question_version = questions_db[QUESTIONS_VERSION].find_one(
-            #     {
-            #         '$and': [
-            #             {
-            #                 'question_id': str(question['_id'])
-            #             },
-            #             {
-            #                 'is_latest': True
-            #             }
-            #         ]
-            #     }
-            # )
-            # if question_version:
-            #     # get answer of question
-            #     answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
 
-            #     logger().info(answers)
-            #     question_version['answers'] = answers
-            #     del question['_id']
-            #     del question_version['_id']
-            #     question['question_info'] = question_version
-            #     result.append(question)
-            # else:
-            #     del question['_id']
-            #     question['question_info'] = {}
-            #     result.append(question)
-
-        logger().info(result)
-        return JSONResponse(content={'status': 'success', 'data': questions_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
