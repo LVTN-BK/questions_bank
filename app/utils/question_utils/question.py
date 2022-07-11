@@ -204,3 +204,92 @@ def get_question_information_with_version_id(question_version_id: str):
     del question_version['_id']
     
     return question_version
+
+def get_query_filter_questions(search, type, level, class_id, subject_id, chapter_id):
+    filter_question = [{}]
+    filter_question_version = [{}]
+
+    # =============== search =================
+    if search:
+        query_search = {
+            'question_content': {
+                '$regex': search,
+                '$options': 'i'
+            }
+        }
+        filter_question_version.append(query_search)
+    
+    # =============== version =================
+    query_latest_version = {
+        'is_latest': True
+    }
+    filter_question_version.append(query_latest_version)
+
+    # =============== status =================
+    query_question_status = {
+        'is_removed': False
+    }
+    filter_question.append(query_question_status)
+
+    # =============== type =================
+    if type:
+        query_question_type = {
+            'type': type
+        }
+        filter_question.append(query_question_type)
+
+    # =============== level =================
+    if level:
+        query_question_level = {
+            'level': level
+        }
+        filter_question.append(query_question_level)
+
+    # =============== class =================
+    if class_id:
+        query_question_class = {
+            'class_id': class_id
+        }
+        filter_question.append(query_question_class)
+
+    # =============== subject =================
+    if subject_id:
+        query_question_subject = {
+            'subject_id': subject_id
+        }
+        filter_question.append(query_question_subject)
+
+    # =============== chapter =================
+    if chapter_id:
+        query_question_chapter = {
+            'chapter_id': chapter_id
+        }
+        filter_question.append(query_question_chapter)
+
+    return filter_question, filter_question_version
+
+def get_data_and_metadata(aggregate_response, page):
+    result_data = []
+    if aggregate_response.alive:
+        questions_data = aggregate_response.next()
+
+        result_data = questions_data['data']
+        questions_count = questions_data['metadata']['total']
+        num_pages = questions_data.get('metadata').get('page')
+    else:
+        questions_count = 0
+        num_pages = 0
+    
+    meta_data = {
+        'count': questions_count,
+        'current_page': page,
+        'has_next': (num_pages>page),
+        'has_previous': (page>1),
+        'next_page_number': (page+1) if (num_pages>page) else None,
+        'num_pages': num_pages,
+        'previous_page_number': (page-1) if (page>1) else None,
+        'valid_page': (page>=1) and (page<=num_pages)
+    }
+
+    return result_data, meta_data
+

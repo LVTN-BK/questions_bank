@@ -5,7 +5,7 @@ from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
 from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_answer, get_list_tag_id_from_input
+from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import (ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
@@ -442,30 +442,14 @@ async def user_get_all_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        filter_question = [{}]
-        filter_question_version = [{}]
-
-        # =============== search =================
-        if search:
-            query_search = {
-                'question_content': {
-                    '$regex': search,
-                    '$options': 'i'
-                }
-            }
-            filter_question_version.append(query_search)
-        
-        # =============== version =================
-        query_latest_version = {
-            'is_latest': True
-        }
-        filter_question_version.append(query_latest_version)
-
-        # =============== status =================
-        query_question_status = {
-            'is_removed': False
-        }
-        filter_question.append(query_question_status)
+        filter_question, filter_question_version = get_query_filter_questions(
+            search=search,
+            type=type,
+            level=level,
+            class_id=class_id,
+            subject_id=subject_id,
+            chapter_id=chapter_id
+        )
 
         # =============== owner =================
         query_question_owner = {
@@ -475,40 +459,6 @@ async def user_get_all_question(
         }
         filter_question.append(query_question_owner)
 
-        # =============== type =================
-        if type:
-            query_question_type = {
-                'type': type
-            }
-            filter_question.append(query_question_type)
-
-        # =============== level =================
-        if level:
-            query_question_level = {
-                'level': level
-            }
-            filter_question.append(query_question_level)
-
-        # =============== class =================
-        if class_id:
-            query_question_class = {
-                'class_id': class_id
-            }
-            filter_question.append(query_question_class)
-
-        # =============== subject =================
-        if subject_id:
-            query_question_subject = {
-                'subject_id': subject_id
-            }
-            filter_question.append(query_question_subject)
-
-        # =============== chapter =================
-        if chapter_id:
-            query_question_chapter = {
-                'chapter_id': chapter_id
-            }
-            filter_question.append(query_question_chapter)
 
         num_skip = (page - 1)*limit
 
@@ -604,30 +554,9 @@ async def user_get_all_question(
             },
         ]
 
-
         questions = questions_db[QUESTIONS_VERSION].aggregate(pipeline)
-        
-        result_data = []
-        if questions.alive:
-            questions_data = questions.next()
 
-            result_data = questions_data['data']
-            questions_count = questions_data['metadata']['total']
-            num_pages = questions_data.get('metadata').get('page')
-        else:
-            questions_count = 0
-            num_pages = 0
-        
-        meta_data = {
-            'count': questions_count,
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
+        result_data, meta_data = get_data_and_metadata(aggregate_response=questions, page=page)
 
         return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
