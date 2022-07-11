@@ -1,1 +1,1 @@
-web: uvicorn app.main:app --host 0.0.0.0 --port 1706 --reload --reload-dir ./app --reload-dir ./configs --reload-dir ./models --reload-dir ./tests
+web: uvicorn app.main:app --host=0.0.0.0 --port=${PORT:-1706} --reload --reload-dir ./app --reload-dir ./configs --reload-dir ./models --reload-dir ./tests
