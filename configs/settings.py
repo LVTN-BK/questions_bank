@@ -12,6 +12,10 @@ from pymongo import MongoClient
 from configs.tags_metadata import TAGS_METADATA
 from configs.logger import *
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 DEBUG = int(os.environ.get('DEBUG', 1))
 
 # Initial FastAPI app
@@ -56,8 +60,8 @@ app.add_middleware(
 # DB_PORT = os.environ.get('DB_PORT')
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
-MONGO_DEFAULT_USER = os.environ.get('MONGO_DEFAULT_USER')
-MONGO_DEFAULT_PASS = os.environ.get('MONGO_DEFAULT_PASS')
+MONGO_DEFAULT_USER = os.getenv('MONGO_DEFAULT_USER')
+MONGO_DEFAULT_PASS = os.getenv('MONGO_DEFAULT_PASS')
 
 # MONGO_CLIENT = MongoClient(f'mongodb://{MONGO_DEFAULT_USER}:{MONGO_DEFAULT_PASS}@<DB_HOST>:<DB_PORT>/authSource?authSource=admin&authMechanism=SCRAM-SHA-256')
 MONGO_CLIENT = MongoClient(f'mongodb+srv://root:root@cluster0.3n45m.mongodb.net/question-bank?authSource=admin&replicaSet=Cluster0-shard-0&readPreference=primary&appname=MongoDB%20Compass%20Community&ssl=true')
