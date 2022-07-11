@@ -744,72 +744,14 @@ async def group_get_all_question(
         # get list question of group
         list_question = get_list_group_question(group_id=group_id)
 
-        filter_question = [{}]
-        filter_question_version = [{}]
-
-        # =============== search =================
-        if search:
-            query_search = {
-                '$text': {
-                    '$search': search
-                }
-            }
-            filter_question_version.append(query_search)
-        
-        # =============== version =================
-        query_latest_version = {
-            'is_latest': True
-        }
-        filter_question_version.append(query_latest_version)
-
-        # =============== status =================
-        query_question_status = {
-            'is_removed': False
-        }
-        filter_question.append(query_question_status)
-
-        # # =============== owner =================
-        # query_question_owner = {
-        #     'user_id': {
-        #         '$eq': data2.get('user_id')
-        #     }
-        # }
-        # filter_question.append(query_question_owner)
-
-        # =============== type =================
-        if type:
-            query_question_type = {
-                'type': type
-            }
-            filter_question.append(query_question_type)
-
-        # =============== level =================
-        if level:
-            query_question_level = {
-                'level': level
-            }
-            filter_question.append(query_question_level)
-
-        # =============== class =================
-        if class_id:
-            query_question_class = {
-                'class_id': class_id
-            }
-            filter_question.append(query_question_class)
-
-        # =============== subject =================
-        if subject_id:
-            query_question_subject = {
-                'subject_id': subject_id
-            }
-            filter_question.append(query_question_subject)
-
-        # =============== chapter =================
-        if chapter_id:
-            query_question_chapter = {
-                'chapter_id': chapter_id
-            }
-            filter_question.append(query_question_chapter)
+        filter_question, filter_question_version = get_query_filter_questions(
+            search=search,
+            type=type,
+            level=level,
+            class_id=class_id,
+            subject_id=subject_id,
+            chapter_id=chapter_id
+        )
 
         num_skip = (page - 1)*limit
 
@@ -967,88 +909,11 @@ async def group_get_all_question(
             },
         ]
 
-        result = []
-
-        # questions = questions_db[QUESTIONS].aggregate(pipeline)
         questions = questions_db[QUESTIONS_VERSION].aggregate(pipeline)
-        # all_questions = questions_db[QUESTIONS].aggregate(pipeline_all)
-
-        # find question
-        # questions = questions_db[QUESTIONS].find(
-        #     {
-        #         "$and": [
-        #             {
-        #                 'user_id': {
-        #                     '$eq': data2.get('user_id')
-        #                 }
-        #             },
-        #             {
-        #                 'is_removed': False
-        #             }
-        #         ]
-                        
-        #     }
-        # )
-        # logger().info(type(questions2))
-        questions_data = questions.next()
-        # logger().info(questions2.next())
         
-        # count_question = all_questions.next()
-        # num_question = count_question.get('myCount')
-        # num_pages = ceil(num_question/limit)
-        
-        # for question in questions_data.get('data'):
-        #     # logger().info(question)
-        #     # get answer of question
-        #     answers = get_answer(answers=question['question_information'].get('answers'), question_type=question.get('type'))
+        result_data, meta_data = get_data_and_metadata(aggregate_response=questions, page=page)
 
-        #     logger().info(answers)
-        #     question['question_information']['answers'] = answers
-        #     result.append(question)
-
-        questions_count = questions_data['metadata']['total']
-        num_pages = questions_data.get('metadata').get('page')
-        
-        meta_data = {
-            'count': questions_count,
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
-            # # find question version
-            # question_version = questions_db[QUESTIONS_VERSION].find_one(
-            #     {
-            #         '$and': [
-            #             {
-            #                 'question_id': str(question['_id'])
-            #             },
-            #             {
-            #                 'is_latest': True
-            #             }
-            #         ]
-            #     }
-            # )
-            # if question_version:
-            #     # get answer of question
-            #     answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
-
-            #     logger().info(answers)
-            #     question_version['answers'] = answers
-            #     del question['_id']
-            #     del question_version['_id']
-            #     question['question_info'] = question_version
-            #     result.append(question)
-            # else:
-            #     del question['_id']
-            #     question['question_info'] = {}
-            #     result.append(question)
-
-        logger().info(result)
-        return JSONResponse(content={'status': 'success', 'data': questions_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
