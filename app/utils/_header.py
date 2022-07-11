@@ -20,12 +20,12 @@ async def valid_headers(
         HTTPException: if token is not valid
     """
     logger().info('===========valid header===========')
-    logger().info(jsonable_encoder(Authorization))
+    # logger().info(jsonable_encoder(Authorization))
     # authen = jsonable_encoder(Authorization)
     token = Authorization.credentials
     bearer = Authorization.scheme
-    logger().info(token)
-    logger().info(type(token))
+    # logger().info(token)
+    # logger().info(type(token))
     # bearer, token = Authorization.split(' ')
     if is_not_expired(encode_jwt=token):
         data = get_data_from_access_token(encode_jwt=token)
