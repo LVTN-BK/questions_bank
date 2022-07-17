@@ -835,9 +835,42 @@ async def group_get_all_question(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'tag',
+                                'let': {
+                                    'list_tag_id': '$tag_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$in': ['$id', '$$list_tag_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'tags_info'
+                            }
+                        },
+                        {
                             '$project': { #project for questions collection
                                 '_id': 0,
                                 'type': 1,
+                                'tags_info': 1,
                                 'datetime_created': 1
                             }
                         }
@@ -874,6 +907,7 @@ async def group_get_all_question(
                                 "question_content": 1,
                                 "question_image": 1,
                                 'question_type': "$question_information.type",
+                                'tags_info': "$question_information.tags_info",
                                 'answers': 1,
                                 'answers_right': 1,
                                 'sample_answer': 1,
