@@ -140,7 +140,7 @@ REPLY_COMMENTS = 'reply_comments'
 
 ############################################
 #classify db
-classify_db = MONGO_CLIENT['classify-db']
+classify_db = MONGO_CLIENT['questions-db']
 SUBJECT = 'subject'
 CLASS = 'class'
 CHAPTER = 'chapter'
