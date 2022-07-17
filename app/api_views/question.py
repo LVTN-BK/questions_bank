@@ -412,6 +412,94 @@ async def user_get_one_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
+
+        pipeline = [
+            {
+                '$match': {
+                    '_id': ObjectId(question_id)
+                }
+            },
+            {
+                '$set': {
+                    'question_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'tag',
+                    'let': {
+                        'list_tag_id': '$tag_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$in': ['$id', '$$list_tag_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'tags_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'questions_version',
+                    'localField': 'question_id',
+                    'foreignField': 'question_id',
+                    'pipeline': [
+                        {
+                            '$match' : {
+                                'is_latest': True
+                            }
+                        }
+                    ],
+                    'as': 'ques_ver'
+                }
+            },
+            {
+                '$unwind': '$ques_ver'
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'question_id': 1,
+                    "question_content": '$ques_ver.question_content',
+                    "question_image": '$ques_ver.question_image',
+                    'question_type': "$type",
+                    'tags_info': "$tags_info",
+                    'answers': '$ques_ver.answers',
+                    'answers_right': '$ques_ver.answers_right',
+                    'sample_answer': '$ques_ver.sample_answer',
+                    'display': '$ques_ver.display',
+                    'datetime_created': "$datetime_created"
+                }
+            }
+        ]
+        question_info = questions_db[QUESTIONS].aggregate(pipeline)
+        if question_info.alive:
+            question_data = question_info.next()
+            return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
+        else:
+            return JSONResponse(content={'status': 'not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+
+
         # find question
         question = questions_db[QUESTIONS].find_one(
             {
