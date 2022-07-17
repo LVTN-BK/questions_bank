@@ -635,7 +635,7 @@ async def user_get_all_question(
                             }
                         },
                         {
-                            '$lookup': {
+                            '$lookup': { #join with tag collection
                                 'from': 'tag',
                                 'let': {
                                     'list_tag_id': '$tag_id'
