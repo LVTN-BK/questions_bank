@@ -479,6 +479,10 @@ async def user_get_one_question(
             {
                 '$project': {
                     '_id': 0,
+                    'user_id': 1,
+                    'class_id': 1,
+                    'subject_id': 1,
+                    'chapter_id': 1,
                     'question_id': 1,
                     "question_content": '$ques_ver.question_content',
                     "question_image": '$ques_ver.question_image',
