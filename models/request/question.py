@@ -75,3 +75,7 @@ class DATA_Create_Fill_Question(BaseModel):
 class DATA_Create_Answer(BaseModel):
     answer_content: str = Field(..., description='content of answer')
     answer_image: str = Field(default=None, description='image of amswer')
+
+
+class DATA_Delete_Question(BaseModel):
+    list_question_ids: List[str] = Field(..., description='List ID of question'),

@@ -1,5 +1,6 @@
 from math import ceil
 import copy
+from typing import List
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
@@ -18,7 +19,7 @@ from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question)
 from starlette.responses import JSONResponse
 
 
@@ -342,6 +343,54 @@ async def create_answer(
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+
+
+#========================================================
+#=====================DELETE_QUESTIONS===================
+#========================================================
+@app.delete(
+    path='/delete_questions',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def delete_questions(
+    list_question_ids: List[str] = Query(..., description='List ID of question'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        data = []
+        # find question
+        for question_id in list_question_ids:
+            question_del = questions_db[QUESTIONS].find_one_and_delete(
+                {
+                    "_id": ObjectId(question_id),
+                    'user_id': data2.get('user_id')       
+                }
+            )
+
+            if question_del:
+                data.append(question_id)
+        
+                # find question version
+                question_version = questions_db[QUESTIONS_VERSION].delete_many(
+                    {
+                        'question_id': question_id
+                    }
+                )
+
+        return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+
 
 #========================================================
 #===================USER_GET_ONE_QUESTION================
