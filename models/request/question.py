@@ -40,9 +40,9 @@ class DATA_Create_Sort_Question(BaseModel):
     tag_id: List[Tag] = Field(default=None, description='ID of tag')
     level: str = Field(default=None, description='level of question')
     question_content: str = Field(..., description='content of question')
-    question_image: str = Field(default=None, description='image of question')
+    # question_image: str = Field(default=None, description='image of question')
     answers: List[str] = Field(..., description='list answer of question')
-    correct_answers: List[str] = Field(..., description='correct answer of question')
+    sample_answer: List[str] = Field(..., description='correct answer of question')
     display: DisplayQuestionS = Field(..., description='display setting of question')
 
 # class MatchingAnswer(BaseModel):
