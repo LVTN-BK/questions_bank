@@ -149,7 +149,7 @@ async def create_matching_question(
             question_image=data1.get('question_image'),
             answers=data1.get('answers'),
             answers_right=data1.get('answers_right'),
-            correct_answers=data1.get('correct_answers'),
+            sample_answer=data1.get('sample_answer'),
             datetime_created=datetime.now().timestamp()
         )
         id_question_version = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(questions_version)).inserted_id
