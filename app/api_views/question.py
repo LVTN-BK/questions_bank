@@ -132,7 +132,7 @@ async def create_matching_question(
             subject_id=data1.get('subject_id'),
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.MATCHING,
-            tag_id=data1.get('tag_id'),
+            tag_id=get_list_tag_id_from_input(data1.get('tag_id')),
             level=data1.get('level'),
             datetime_created=datetime.now().timestamp()
         )
@@ -202,7 +202,7 @@ async def create_sort_question(
             subject_id=data1.get('subject_id'),
             chapter_id=data1.get('chapter_id'),
             type=ManageQuestionType.SORT,
-            tag_id=data1.get('tag_id'),
+            tag_id=get_list_tag_id_from_input(data1.get('tag_id')),
             level=data1.get('level'),
             datetime_created=datetime.now().timestamp()
         )

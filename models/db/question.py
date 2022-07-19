@@ -24,9 +24,9 @@ class Questions_Version_DB(BaseModel):
     # question_image: str = Field(..., description='image of question')
     answers: Union[List[str], Dict[str, List[str]], List[AnswerMC]] = Field(default=[], description='answer of question')
     answers_right: List[str] = Field(default=[], description='answer of question')
-    sample_answer: str = Field(default="", description='sample answer of fill question')
+    sample_answer: Union[str, List[str], Dict[str, List[str]]] = Field(default="", description='sample answer of fill question')
     # correct_answers: Union[str, List[str], Dict[str, List[str]]] = Field(..., description='correct answer of question')
-    display: Dict[str, int] = Field(default=None, description='question display setting')
+    display: Union[Dict, int] = Field(default=None, description='question display setting')
     datetime_created: float = Field(..., description='time create question version')
 
 class Answers_DB(BaseModel):
