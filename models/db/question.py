@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Tuple, Union
-from models.request.question import AnswerMC
+from models.request.question import AnswerM, AnswerMC, DisplayQuestionIP, DisplayQuestionMC, DisplayQuestionS
 from pydantic import BaseModel, Field
 
 
@@ -22,11 +22,11 @@ class Questions_Version_DB(BaseModel):
     is_latest: bool = Field(default=True, description='is the newest version of question')
     question_content: str = Field(..., description='content of question')
     # question_image: str = Field(..., description='image of question')
-    answers: Union[List[str], Dict[str, List[str]], List[AnswerMC]] = Field(default=[], description='answer of question')
-    answers_right: List[str] = Field(default=[], description='answer of question')
-    sample_answer: Union[str, List[str], Dict[str, List[str]]] = Field(default="", description='sample answer of fill question')
+    answers: Union[List[AnswerM], List[str], List[AnswerMC]] = Field(default=[], description='answer of question')
+    answers_right: List[AnswerM] = Field(default=[], description='answer right for matching question')
+    sample_answer: Union[str, List[str], List[Tuple[str, str]]] = Field(default="", description='sample answer of fill question')
     # correct_answers: Union[str, List[str], Dict[str, List[str]]] = Field(..., description='correct answer of question')
-    display: Union[Dict, int] = Field(default=None, description='question display setting')
+    display: Union[DisplayQuestionMC, DisplayQuestionS, DisplayQuestionIP] = Field(default=None, description='question display setting')
     datetime_created: float = Field(..., description='time create question version')
 
 class Answers_DB(BaseModel):
