@@ -10,6 +10,10 @@ class DisplayQuestionMC(BaseModel):
     num_column: int = Field(..., description='number of column')
     spacing: int = Field(..., description='spacing')
 
+class DisplayQuestionM(BaseModel):
+    row_space: int = Field(..., description='row space')
+    column_space: int = Field(..., description='column space')
+
 class AnswerMC(BaseModel): # multichoice
     content: str = Field(..., description='content of answer')
     isCorrect: bool = Field(..., description='is correct answer')
@@ -65,6 +69,7 @@ class DATA_Create_Matching_Question(BaseModel):
     answers_right: List[AnswerM] = Field(..., description='answer in the right collumn of question (for matching questions)')
     # sample_answer: Dict[str, List[str]] = Field(..., description='correct answer of question')
     sample_answer: List[Tuple[str, str]] = Field(..., description='correct answer of question')
+    display: DisplayQuestionM = Field(..., description='display setting of question')
 
 class DATA_Create_Fill_Question(BaseModel):
     class_id: str = Field(..., description='ID of class')
