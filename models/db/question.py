@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Tuple, Union
-from models.request.question import AnswerM, AnswerMC, DisplayQuestionIP, DisplayQuestionMC, DisplayQuestionS
+from models.request.question import AnswerM, AnswerMC, DisplayQuestionIP, DisplayQuestionM, DisplayQuestionMC, DisplayQuestionS
 from pydantic import BaseModel, Field
 
 
@@ -26,7 +26,7 @@ class Questions_Version_DB(BaseModel):
     answers_right: List[AnswerM] = Field(default=[], description='answer right for matching question')
     sample_answer: Union[str, List[str], List[Tuple[str, str]]] = Field(default="", description='sample answer of fill question')
     # correct_answers: Union[str, List[str], Dict[str, List[str]]] = Field(..., description='correct answer of question')
-    display: Union[DisplayQuestionMC, DisplayQuestionS, DisplayQuestionIP] = Field(default=None, description='question display setting')
+    display: Union[DisplayQuestionMC, DisplayQuestionS, DisplayQuestionIP, DisplayQuestionM] = Field(default=None, description='question display setting')
     datetime_created: float = Field(..., description='time create question version')
 
 class Answers_DB(BaseModel):
