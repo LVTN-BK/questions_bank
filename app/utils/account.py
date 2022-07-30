@@ -99,7 +99,7 @@ async def send_verify_email(to_emails, keyonce: str):
 
     try:
         service = build('gmail', 'v1', credentials=creds)
-        url = ''
+        url = f'https://question-bank-be.herokuapp.com/verify_email?email={to_emails}&key_verify={keyonce}'
         msg = 'Vui lòng xác nhận địa chỉ email của bạn bằng cách nhấp vào đường link bên dưới.'
         html = f"""
         <html>
@@ -109,7 +109,7 @@ async def send_verify_email(to_emails, keyonce: str):
             <p>{msg}</p>
         </div><br>
         <div style="text-align:center">
-            <h1><b>{keyonce}</b></h1><br>
+            <h1><b>{url}</b></h1><br>
         </div>
         </body>
         </html>

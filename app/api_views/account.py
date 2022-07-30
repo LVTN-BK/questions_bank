@@ -1,6 +1,6 @@
 from fastapi import status, Form
 from fastapi import Body, Depends, Query
-from app.utils.account import send_reset_password_email
+from app.utils.account import send_reset_password_email, send_verify_email
 from models.define.user import UserInfo
 from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
 from pymongo.collection import ReturnDocument
@@ -116,6 +116,7 @@ async def create_system_account(
 
     import secrets
     keyonce = secrets.token_urlsafe(12)
+    send_verify_email(to_emails=email, keyonce=keyonce)
 
     user = User(
         name=name,
@@ -171,6 +172,8 @@ async def create_system_account(
         {'email': {'$eq': email}},
         query_update
     )
+
+    
 
     return JSONResponse(content={
         'status': 'Created',
