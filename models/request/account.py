@@ -21,8 +21,8 @@ class DATA_Reset_Password(BaseModel):
     email: EmailStr = Field(..., description='Email khôi phục mật khẩu')
 
 class DATA_Apply_Reset_Password(BaseModel):
-    keyonce: str = Field(..., description='Mã một lần để khôi phục mật khẩu'),
-    password: str = Field(..., description='Mật khẩu lần một'),
-    re_password: str = Field(..., description='Mật khẩu lần hai'),
+    keyonce: str = Field(..., description='Mã một lần để khôi phục mật khẩu')
+    password: str = Field(..., description='Mật khẩu lần một')
+    re_password: str = Field(..., description='Mật khẩu lần hai')
 
 
