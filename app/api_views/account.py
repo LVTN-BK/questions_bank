@@ -116,7 +116,7 @@ async def create_system_account(
 
     import secrets
     keyonce = secrets.token_urlsafe(12)
-    await send_verify_email(to_emails=email, keyonce=keyonce)
+    # await send_verify_email(to_emails=email, keyonce=keyonce)
 
     user = User(
         name=name,
