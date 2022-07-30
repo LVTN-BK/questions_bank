@@ -2,7 +2,7 @@ from fastapi import status, Form
 from fastapi import Body, Depends, Query
 from app.utils.account import send_reset_password_email, send_verify_email
 from models.define.user import UserInfo
-from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
+from models.request.account import DATA_Apply_Reset_Password, DATA_Reset_Password, DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
 from configs.settings import SYSTEM, USER_COLLECTION, USERS_PROFILE, app
@@ -441,7 +441,7 @@ async def update_password(
     tags=['account']
 )
 async def reset_password(
-    email: EmailStr = Form(..., description='Email khôi phục mật khẩu'),
+    data: DATA_Reset_Password
 ):
     """ 
         Khôi phục lại mật khẩu, hệ thống gửi mail kèm theo mã để khôi phục lại mật khẩu
@@ -453,15 +453,15 @@ async def reset_password(
     expire_at_timestamp = expire_in.timestamp()
 
     user = SYSTEM[USER_COLLECTION].find_one(
-        filter={'email': {'$eq': email}}
+        filter={'email': {'$eq': data.email}}
     )
     if not user:
         return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Email chưa đăng ký tài khoản!'}, status_code=status.HTTP_404_NOT_FOUND)
     
     # Check if keyonce is not used
-    await send_reset_password_email([email], keyonce=keyonce)
+    # await send_reset_password_email([data.email], keyonce=keyonce)
     SYSTEM[USER_COLLECTION].find_one_and_update(
-        filter={'email': {'$eq': email}},
+        filter={'email': {'$eq': data.email}},
         update={'$set': {
                 'keyonce': keyonce,
                 'keyonce_expire_at': expire_at_timestamp
@@ -487,21 +487,19 @@ async def reset_password(
     tags=['account']
 )
 async def apply_reset_password(
-    keyonce: str = Form(..., description='Mã một lần để khôi phục mật khẩu'),
-    password: str = Form(..., description='Mật khẩu lần một'),
-    re_password: str = Form(..., description='Mật khẩu lần hai'),
+    data: DATA_Apply_Reset_Password
 ):
     """Khôi phục lại mật khẩu"""
-    if password != re_password:
+    if data.password != data.re_password:
         return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Mật khẩu không khớp!'}, status_code=status.HTTP_400_BAD_REQUEST)
     user = SYSTEM[USER_COLLECTION].find_one_and_update(
         filter={
-            'keyonce': {'$eq': keyonce}, 'keyonce_expire_at': {'$gte': datetime.now().timestamp()}
+            'keyonce': {'$eq': data.keyonce}, 'keyonce_expire_at': {'$gte': datetime.now().timestamp()}
         },
         update={
             '$set': {
                 'tokens': [],
-                'hashed_password': get_password_hash(password),
+                'hashed_password': get_password_hash(data.password),
             },
             '$unset': {
                 'keyonce': '',
