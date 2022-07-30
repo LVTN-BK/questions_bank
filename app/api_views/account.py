@@ -1,5 +1,5 @@
 from fastapi import status, Form
-from fastapi import Body, Depends
+from fastapi import Body, Depends, Query
 from app.utils.account import send_reset_password_email
 from models.define.user import UserInfo
 from models.request.account import DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
@@ -114,6 +114,9 @@ async def create_system_account(
     # key = Fernet.generate_key()
     # fernet = Fernet(key)
 
+    import secrets
+    keyonce = secrets.token_urlsafe(12)
+
     user = User(
         name=name,
         # token=token,
@@ -121,7 +124,8 @@ async def create_system_account(
         email=email,
         hashed_password=get_password_hash(password),
         # encrypt_password=fernet.encrypt(password.encode()), #pass
-        # encrypt_key=key,                                     #key
+        # encrypt_key=key,  
+        key_verify=keyonce,                                   #key
         datetime_created=datetime.now()
     )
 
@@ -505,3 +509,63 @@ async def apply_reset_password(
     if not user:
         return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Mã hết thời gian hoặc không tồn tại!'}, status_code=status.HTTP_400_BAD_REQUEST)
     return JSONResponse(content={'status': 'Thành công!', 'msg': 'Mật khẩu đã được thiết lập lại!'}, status_code=status.HTTP_200_OK)
+
+
+
+#===========================================
+#=================VERIFY_EMAIL==============
+#===========================================
+@app.post(
+    path='/verify_email',
+    responses={
+        status.HTTP_200_OK: {
+            'model': LoginResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': LoginResponse403
+        }
+    },
+    tags=['system_account']
+)
+async def verify_email(
+    email: EmailStr = Query(...), 
+    key_verify: str = Query(...)
+):
+      
+    try:
+        user = SYSTEM['users'].find_one_and_update(
+            {
+                'email': {
+                    '$eq': email
+                },
+                'key_verify': key_verify
+            },
+            {
+                '$set': {
+                    'is_verified': True
+                }
+            },
+            return_document=ReturnDocument.AFTER
+        )
+        if user is None:
+            msg = 'Link không tồn tại!'
+            return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+        else:
+            user = SYSTEM[USER_COLLECTION].find_one_and_update(
+                filter={
+                    'email': {
+                        '$eq': email
+                    }
+                },
+                update={
+                    '$unset': {
+                        'key_verify': ''
+                    }
+                }
+            )
+            return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except:
+        msg = 'Link không tồn tại!'
+        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+
+

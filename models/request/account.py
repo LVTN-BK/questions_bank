@@ -16,3 +16,5 @@ class DATA_Update_Email(BaseModel):
 class DATA_Update_Password(BaseModel):
     old_password: str = Field(..., description='old password')
     new_password: str = Field(..., description='new password')
+
+
