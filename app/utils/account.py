@@ -73,7 +73,7 @@ async def send_reset_password_email(to_emails, keyonce: str):
 
 
 
-async def send_verify_email(to_emails, keyonce: str):
+async def send_verify_email(to_emails: str, keyonce: str):
     """Create and send an email message
     Print the returned  message id
     Returns: Message object, including message id
@@ -115,7 +115,7 @@ async def send_verify_email(to_emails, keyonce: str):
         </html>
         """
         message = MIMEText(html, 'html')
-        message['To'] = (', ').join(to_emails)
+        message['To'] = to_emails
         message['From'] = 'hotro.qb@gmail.com'
         message['Subject'] = 'Reset Password - Question Banks'
 
