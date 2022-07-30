@@ -37,9 +37,20 @@ async def login_system(
     email: EmailStr = Body(...), 
     password: str = Body(...)
 ):
-    user = SYSTEM['users'].find_one({'email': {'$eq': email}})
+    user = SYSTEM['users'].find_one(
+        {
+            'email': {
+                '$eq': email
+            },
+            'is_verified': True
+        }
+    )
     if user is None:
-        return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
+        msg = 'Tài khoản không tồn tại hoặc chưa xác thực!'
+        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+    # Check verify email
+    ###############################################
+
     try:
         if verify_password(password, user.get('hashed_password')):
             # Create new access token for user
@@ -69,7 +80,8 @@ async def login_system(
                                 status_code=status.HTTP_200_OK)
     except:
         pass
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+    msg = 'Tài khoản hoặc mật khẩu không đúng!'
+    return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #==============CREATE_SYSTEM_ACCOUNT========
