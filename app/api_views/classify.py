@@ -184,6 +184,11 @@ async def get_classify(
                                             },
                                             'name': 1
                                         }
+                                    },
+                                    {
+                                        '$sort': {
+                                            'name': 1
+                                        }
                                     }
                                 ],
                                 'as': 'chapters'
