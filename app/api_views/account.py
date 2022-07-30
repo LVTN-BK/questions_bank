@@ -515,7 +515,7 @@ async def apply_reset_password(
 #===========================================
 #=================VERIFY_EMAIL==============
 #===========================================
-@app.post(
+@app.get(
     path='/verify_email',
     responses={
         status.HTTP_200_OK: {
