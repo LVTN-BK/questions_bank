@@ -21,3 +21,9 @@ class GroupMember(BaseModel):
     inviter_id: str = Field(default=None)
     datetime_created: float= Field(...)
 
+class GroupQuestion(BaseModel):
+    group_id:str= Field(...)
+    question_id: bool = Field(...)
+    sharer_id: str = Field(...)
+    datetime_created: float= Field(...)
+

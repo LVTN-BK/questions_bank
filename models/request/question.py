@@ -93,3 +93,8 @@ class DATA_Delete_Question(BaseModel):
 
 class DATA_Share_Question_To_Community(BaseModel):
     question_id: str = Field(..., description='ID of question')
+
+
+class DATA_Share_Question_To_Group(BaseModel):
+    question_id: str = Field(..., description='ID of question')
+    group_id: str = Field(..., description='ID of group')

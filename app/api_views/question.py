@@ -10,17 +10,18 @@ from app.utils.question_utils.question import get_answer, get_data_and_metadata,
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
-                              app, questions_db)
+from configs.settings import (ANSWERS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
+                              app, questions_db, group_db)
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
+from models.db.group import GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
 from models.define.question import ManageQuestionType
 from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Share_Question_To_Community)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group)
 from starlette.responses import JSONResponse
 
 
@@ -1501,5 +1502,49 @@ async def share_question_to_community(
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+#========================================================
+#=====================QUESTIONS_SHARE====================
+#========================================================
+@app.post(
+    path='/share_question_to_group',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - share']
+)
+async def share_question_to_group(
+    data: DATA_Share_Question_To_Group,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check owner of question
+        if not check_owner_of_question(user_id=data2.get('user_id'), question_id=data.question_id):
+            raise Exception('user is not owner of question!!!')
+
+        # check member of group
+        if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+            raise Exception('user is not member of group!!!')
+
+        # add question to group:
+        group_question = GroupQuestion(
+            group_id=data.group_id,
+            question_id=data.question_id,
+            sharer_id=data2.get('user_id'),
+            datetime_created=datetime.now().timestamp()
+        )
+        
+        insert = group_db[GROUP_QUESTIONS].insert_one(jsonable_encoder(group_question))
+
+        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
