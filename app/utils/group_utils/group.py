@@ -1,6 +1,10 @@
+from datetime import datetime
+from configs.logger import logger
 from configs.settings import GROUP_EXAMS, GROUP_PARTICIPANT, GROUP_QUESTIONS, group_db
 from bson import ObjectId
 from fastapi.responses import JSONResponse
+from models.db.group import GroupMember
+from fastapi.encoders import jsonable_encoder
 
 
 def check_owner_or_user_of_group(user_id: str, group_id: str):
@@ -34,3 +38,21 @@ def get_list_group_exam(group_id: str):
     for exam in all_exam:
         res.append(exam.get('exam_id'))
     return res
+
+def insert_group_participant(user_id: str, group_id: str, is_owner: bool = False, inviter_id: str = None):
+    try:
+        data = GroupMember(
+            user_id = user_id, 
+            group_id = group_id, 
+            is_owner=is_owner,
+            inviter_id = inviter_id, 
+            datetime_created = datetime.now().timestamp()
+        )
+        insert = group_db[GROUP_PARTICIPANT].insert_one(jsonable_encoder(data))
+           
+    except (Exception, ) as e:
+        logger().info("Error: ", e.__str__())
+        raise Exception(str(e))
+
+
+

@@ -5,7 +5,7 @@ from importlib.metadata import metadata
 from json import JSONEncoder
 from math import ceil
 from typing import List, Optional, Union
-from models.db.group import Group_DB
+from models.db.group import Group_DB, GroupMember
 
 import pymongo
 import requests
@@ -65,6 +65,17 @@ async def create_group(
         group_id = group_db[GROUP].insert_one(json_data).inserted_id
         
         logger().info(group_id)
+
+        #insert menber in group participant collection
+        mem = GroupMember(
+            user_id = data2.get('user_id'),
+            group_id = str(group_id),
+            is_owner = True,
+            datetime_created = datetime.now().timestamp()
+        )
+        
+        insert = group_db[GROUP_PARTICIPANT].insert_one(jsonable_encoder(mem))
+
 
         return JSONResponse(content={'status': 'Done', 'data':{'group_id': str(group_id)}}, status_code=status.HTTP_200_OK)
     except Exception:

@@ -12,3 +12,12 @@ class Group_DB(BaseModel):
     datetime_created: float = Field(default=datetime.now().timestamp(), description='time create group')
     datetime_updated: float = Field(default=None, description='last time update group')
     group_status: str = Field(default='enable', description='status of group', enum=['enable', 'disable'])
+
+
+class GroupMember(BaseModel):
+    user_id: str= Field(...)
+    group_id:str= Field(...)
+    is_owner: bool = Field(default=False)
+    inviter_id: str = Field(default=None)
+    datetime_created: float= Field(...)
+

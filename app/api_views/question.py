@@ -7,6 +7,7 @@ from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
 from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_question
 from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions
+from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import (ANSWERS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
@@ -19,7 +20,7 @@ from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Share_Question_To_Community)
 from starlette.responses import JSONResponse
 
 
@@ -1458,5 +1459,47 @@ async def community_get_all_question(
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+
+
+#========================================================
+#=====================QUESTIONS_SHARE====================
+#========================================================
+@app.post(
+    path='/share_question_to_community',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - share']
+)
+async def share_question_to_community(
+    data: DATA_Share_Question_To_Community,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check owner of question
+        if not check_owner_of_question(user_id=data2.get('user_id'), question_id=data.question_id):
+            raise Exception('user is not owner of question!!!')
+
+        # update question:
+        check = questions_db[QUESTIONS].update_one(
+            {
+                '_id': ObjectId(data.question_id)
+            },
+            {
+                '$set': {
+                    'is_public': True
+                }
+            }
+        )
+
+        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 
 

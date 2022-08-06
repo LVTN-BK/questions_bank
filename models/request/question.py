@@ -88,4 +88,8 @@ class DATA_Create_Answer(BaseModel):
 
 
 class DATA_Delete_Question(BaseModel):
-    list_question_ids: List[str] = Field(..., description='List ID of question'),
+    list_question_ids: List[str] = Field(..., description='List ID of question')
+
+
+class DATA_Share_Question_To_Community(BaseModel):
+    question_id: str = Field(..., description='ID of question')
