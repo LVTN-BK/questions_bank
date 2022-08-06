@@ -57,7 +57,7 @@ async def create_group(
             group_name=data.group_name,
             group_description=data.group_description,
             group_type=data.group_type,
-            group_avatar=data.group_avatar,
+            # group_avatar=data.group_avatar,
             group_cover_image=data.group_cover_image
         )
         json_data = jsonable_encoder(group_data)
@@ -114,6 +114,8 @@ async def update_group(
                 update_data['group_description'] = data.group_description
             if data.group_type is not None:
                 update_data['group_type'] = data.group_type
+            if data.group_cover_image is not None:
+                update_data['group_cover_image'] = data.group_cover_image
          
             # #Group_avatar
             # if data.group_avatar is not None:
@@ -160,7 +162,8 @@ async def update_group(
         }
     },
     description='Update group image',
-    tags=['Group']
+    tags=['Group'],
+    deprecated=True
 )
 async def update_group_image(
     data: DATA_Update_Group_image,

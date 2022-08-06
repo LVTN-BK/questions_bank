@@ -17,7 +17,7 @@ class DATA_Create_Group(BaseModel):
     group_description: Optional[str] = Field(default=None, description='description of group')
     # group_address: Optional[GroupAddress] = Field(default=None, description='group address')
     group_type: str = Field(default='public', enum=['public', 'private'])
-    group_avatar: HttpUrl = Field(..., description='avatar of group')
+    # group_avatar: HttpUrl = Field(..., description='avatar of group')
     group_cover_image: HttpUrl = Field(default=None, description='cover image of group')
     
 #==================================================================
@@ -46,7 +46,7 @@ class DATA_Update_Group(BaseModel):
     group_type: Optional[str] = Field(default='public', enum=['public', 'private'])
     # group_label: Optional[str] = Field(default=None, description='label of group')
     # group_avatar: Optional[str] = Field(..., description='avatar of group')
-    # group_cover_image: Optional[str] = Field(default=None, description='cover image of group')
+    group_cover_image: Optional[str] = Field(default=None, description='cover image of group')
 
 class DATA_Update_Group_Chat(BaseModel):
     group_id: str = Field(..., description='ID of group')
