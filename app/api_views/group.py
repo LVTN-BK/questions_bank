@@ -749,7 +749,7 @@ async def user_cancel_request_join_group(
         query_request = {
             '$and': [
                 {
-                    '_id': ObjectId(data.request_id)
+                    'group_id': ObjectId(data.group_id)
                 },
                 {
                     'user_id': data2.get('user_id')

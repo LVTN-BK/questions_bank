@@ -112,7 +112,8 @@ class DATA_Reject_Join_Request(BaseModel):
 #==================CANCEL_REQUEST_JOIN_GROUP=======================
 #==================================================================
 class DATA_Cancel_Join_Request(BaseModel):
-    request_id: str = Field(..., description='ID of group')
+    group_id: str = Field(..., description='ID of group')
+    # request_id: str = Field(..., description='ID of group')
     # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
