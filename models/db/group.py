@@ -23,7 +23,7 @@ class GroupMember(BaseModel):
 
 class GroupQuestion(BaseModel):
     group_id:str= Field(...)
-    question_id: bool = Field(...)
+    question_id: str = Field(...)
     sharer_id: str = Field(...)
     datetime_created: float= Field(...)
 

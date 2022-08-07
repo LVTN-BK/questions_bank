@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from pymongo import ReturnDocument
 from app.utils.group_info import get_one_group_info, get_one_group_name_and_avatar
 
-from configs import GROUP, GROUP_INVITATION, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, app, LIST_PROVIDER_API, group_db
+from configs import GROUP, GROUP_INVITATION, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, app, group_db
 from models.define.group import GroupStatus, GroupType, UpdateGroupImage
 from models.request.group import DATA_Accept_Join_Request, DATA_Accept_invitation, DATA_Cancel_Join_Request, DATA_Cancel_invitation, DATA_Create_Group, DATA_Delete_Group, DATA_Group_Label, DATA_Group_created, DATA_Invite_Members, DATA_Join_Request, DATA_Reject_Join_Request, DATA_Reject_invitation, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_Chat, DATA_Update_Group_image
 # import response models

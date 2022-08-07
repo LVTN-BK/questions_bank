@@ -9,8 +9,8 @@ class TargetData(BaseModel):
     # user_id: str = Field(default=None, description='ID of user')
     # user_name: str = Field(default=None, description='name of user')
     group_id: str = Field(default=None, description='ID of group')
-    group_name: str = Field(default=None, description='name of group')
-    post_id: str = Field(default=None, description='ID of post')
+    exam_id: str = Field(default=None, description='name of group')
+    question_id: str = Field(default=None, description='ID of post')
     comment_id: str = Field(default=None, description='ID of comment')
 
 class DATA_Create_Noti_List_User(BaseModel):

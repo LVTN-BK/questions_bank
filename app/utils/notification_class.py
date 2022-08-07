@@ -1,11 +1,10 @@
 from typing import Dict, List, Union
 from bson import ObjectId
 from app.utils.check_noti_setting import get_list_user_id_enable_noti_type
-from configs import GROUP_PROVIDER_API
+from app.utils.group_utils.group import get_group_members_id_except_user, get_list_group_member_id
 from fastapi import WebSocket
 
 import requests
-from configs import LIST_PROVIDER_API
 from fastapi import status
 
 from configs.logger import logger          
@@ -14,51 +13,9 @@ class NotificationsManage:
     def __init__(self):
         self.connections: Dict[str, List[WebSocket]] = {}
     
-    async def get_group_members_id(self, group_id):
+    def get_active_group_members_websocket(self, group_id:str) -> List[WebSocket]:
         try:
-            check_data = {
-                'group_id': group_id,
-            }
-            logger().info(f'check_data: {check_data}')
-            response = requests.post(GROUP_PROVIDER_API[0], data=check_data)
-            logger().info(response)
-            if response.status_code != status.HTTP_200_OK:
-                return []
-            else:
-                return response.json().get('data')
-        except Exception as e:
-            logger().info(e)
-            return []
-    
-    async def get_group_members_id_except_user(self, group_id: str, user_id: str, noti_type: str=None):
-        try:
-            #get list group members
-            check_data = {
-                'group_id': group_id,
-            }
-            response = requests.get(GROUP_PROVIDER_API['list_group_members'], 
-                params=check_data
-            )
-            logger().info(response.status_code)
-            logger().info(response.json())
-            if response.status_code == 200:
-                members = response.json().get('data').get('members')
-                members.remove(user_id)
-                logger().info(f'members: {members}')
-                if noti_type:
-                    #filter user_id enable notification with noti_type
-                    get_list_user_id_enable_noti_type(list_users=members, noti_type=noti_type)
-                logger().info(f'members after filter: {members}')
-                return members
-            else:
-                return []
-        except Exception as e:
-            logger().error(e)
-            return []
-    
-    async def get_active_group_members_websocket(self, group_id) -> List[WebSocket]:
-        try:
-            all_group_members = await self.get_group_members_id(group_id)
+            all_group_members = get_list_group_member_id(group_id=group_id)
             active_members = []
             for uid in all_group_members:
                 if uid in self.connections.keys():
@@ -70,8 +27,11 @@ class NotificationsManage:
             logger().error(e)
             return []
     
-    async def get_active_list_specific_user_websocket(self, list_user_id) -> List[WebSocket]:
+    def get_active_list_specific_user_websocket(self, list_user_id:List[str], noti_type: str=None) -> List[WebSocket]:
         try:
+            # filter user enable with notification type
+            get_list_user_id_enable_noti_type(list_users=list_user_id, noti_type=noti_type)
+
             active_members = []
             for uid in list_user_id:
                 if uid in self.connections.keys():
@@ -84,9 +44,12 @@ class NotificationsManage:
             logger().error(e)
             return []
     
-    async def get_active_group_members_websocket_except_user(self, group_id, user_id, noti_type: str=None) -> List[WebSocket]:
+    def get_active_group_members_websocket_except_user(self, group_id, user_id, noti_type: str=None) -> List[WebSocket]:
         try:
-            all_group_members = await self.get_group_members_id_except_user(group_id=group_id, user_id=user_id, noti_type=noti_type)
+            all_group_members = get_group_members_id_except_user(group_id=group_id, user_id=user_id)
+
+            # filter user enable with notification type
+            get_list_user_id_enable_noti_type(list_users=all_group_members, noti_type=noti_type)
             active_members = []
             for uid in all_group_members:
                 if uid in self.connections.keys():
@@ -103,60 +66,62 @@ class NotificationsManage:
         if not self.connections[user_id]:
             del self.connections[user_id]
     
-    async def broadcast_notification_to_group_active_members(self, group_id, json_data):
+    def broadcast_notification_to_group_active_members(self, group_id, json_data):
         try:
-            active_members = await self.get_active_group_members_websocket(group_id)
+            active_members = self.get_active_group_members_websocket(group_id)
             logger().info(f'active_member: {active_members}')
             for connection in active_members:
                 try:
-                    await connection.send_json(json_data)
+                    connection.send_json(json_data)
                 except Exception:
                     pass
         except Exception as e:
             logger().info(f'Error occurs {e.args}')
     
-    async def broadcast_notification_to_group_active_members_except_user(self, group_id, user_id, json_data, noti_type: str=None):
+    def broadcast_notification_to_group_active_members_except_user(self, group_id, user_id, json_data, noti_type: str=None):
         try:
-            active_members = await self.get_active_group_members_websocket_except_user(group_id=group_id, user_id=user_id, noti_type=noti_type)
+            # get websocket
+            active_members = self.get_active_group_members_websocket_except_user(group_id=group_id, user_id=user_id, noti_type=noti_type)
             logger().info(f'active_member: {active_members}')
             for connection in active_members:
                 try:
-                    await connection.send_json(json_data)
+                    connection.send_json(json_data)
                 except Exception:
                     pass
         except Exception as e:
             logger().info(f'Error occurs {e.args}')
     
-    async def broadcast_notification_to_list_specific_user(self, receive_ids, json_data):
+    def broadcast_notification_to_list_specific_user(self, receive_ids:List[str], json_data,  noti_type: str=None):
         try:
-            active_members = await self.get_active_list_specific_user_websocket(receive_ids)
+            # get websocket
+            active_members = self.get_active_list_specific_user_websocket(list_user_id=receive_ids, noti_type=noti_type)
             logger().info(f'active_member: {active_members}')
             for connection in active_members:
                 try:
-                    await connection.send_json(json_data)
+                    connection.send_json(json_data)
                 except Exception:
                     pass
         except Exception as e:
             logger().info(f'Error occurs {e.args}')
 
-    async def broadcast_message_to_all_active_members(self, json_data):
+    def broadcast_message_to_all_active_members(self, json_data):
         try:
             logger().info(self.connections.items())
             for uid, conn in self.connections.items():
                 logger().info(f'uid: {uid}')
                 logger().info(f'conn: {conn}')
                 for con in conn:
-                    await con.send_json(json_data)
+                    con.send_json(json_data)
         except Exception as e:
             logger().info(f'Error occurs {e}')
 
-    async def connect(self, websocket:WebSocket,user_id, token: str):
+    def connect(self, websocket:WebSocket,user_id):
         logger().info('################################################')
-        await websocket.accept()
-        check_data = {
-            'user_id': user_id,
-            'token': token
-        }
+        websocket.accept()
+        # check_data = {
+        #     'user_id': user_id,
+        #     'token': token
+        # }
         # response = requests.post(LIST_PROVIDER_API[1], check_data)
         # if response.status_code != status.HTTP_200_OK:
         #     await websocket.send_json(response.json())

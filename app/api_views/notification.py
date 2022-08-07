@@ -13,7 +13,7 @@ from pymongo import ReturnDocument
 from app.utils.check_noti_setting import get_list_user_id_enable_noti_type
 from app.utils.notification_content import get_notification_content
 
-from configs import GROUP_PROVIDER_API, NOTI_COLLECTION, NOTI_SETTING_COLLECTION, app, noti_db, LIST_PROVIDER_API
+from configs import NOTI_COLLECTION, NOTI_SETTING_COLLECTION, app, noti_db
 from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User
 # import response models
 from models.response import *
@@ -34,9 +34,9 @@ async def noti_sys_establish_connection(
         # token: str = Query(..., description='Token for authenticate from main service')
 ):
     try:
-        token='111'
+        # token='111'
         # Accept the connection
-        connect = await notification_manage.connect(websocket=websocket,user_id=user_id,token=token)
+        connect = await notification_manage.connect(websocket=websocket,user_id=user_id)
         logger().info(f'system connection: {notification_manage.connections}')
         # Always listen for receiving data from client
         if connect:
@@ -182,7 +182,8 @@ async def create_notification_to_group_members_except_user(
             'description': 'When notification successfully created!'
         }
     },
-    tags=['Notification']
+    tags=['Notification'],
+    deprecated=True
 )
 async def create_notification_to_list_specific_user(
         data: DATA_Create_Noti_List_User
@@ -198,7 +199,7 @@ async def create_notification_to_list_specific_user(
     # insert to DB
     json_data = {
         'sender_id': data.sender_id,
-        'receive_ids': data.list_users,
+        'receiver_ids': data.list_users,
         'noti_type': data.noti_type,
         'content': content,
         'target': jsonable_encoder(data.target),
@@ -208,11 +209,11 @@ async def create_notification_to_list_specific_user(
     _id = noti_db['notification'].insert_one(json_data).inserted_id
 
     json_data['_id'] = str(json_data['_id'])
-    del json_data['receive_ids']
+    del json_data['receiver_ids']
     del json_data['seen_ids']
 
     # Broastcast to active user:
-    await notification_manage.broadcast_notification_to_list_specific_user(receive_ids=data.list_users, json_data=json_data)
+    notification_manage.broadcast_notification_to_list_specific_user(receive_ids=data.list_users, json_data=json_data)
 
     return JSONResponse(content={'status': 'success', 'noti_id': str(_id)}, status_code=status.HTTP_200_OK)
 

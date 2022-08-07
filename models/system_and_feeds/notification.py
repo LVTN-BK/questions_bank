@@ -23,11 +23,11 @@ class Notification(BaseModel):
 
 class NotificationTypeManage:
     COMMENT = 'Comment'
-    SHARE = 'Share'
+    GROUP_SHARE_QUESTION = 'group_share_question'
     LOGGIN = 'Loggin'
     
 
 class NotificationContentManage:
     COMMENT = 'đã bình luận vào đề thi của bạn'
-    SHARE = 'đã chia sẻ đề thi của bạn'
+    GROUP_SHARE_QUESTION = 'Bạn đã chia sẻ thành công một câu hỏi vào nhóm'
     LOGGIN = 'vừa đăng nhập thành công'

@@ -74,7 +74,7 @@ USERS_PROFILE = 'users_profile'
 
 ##############################################
 # notification db
-noti_db = MONGO_CLIENT['notification-db']
+noti_db = MONGO_CLIENT['questions-db']
 NOTI_COLLECTION = 'notification'
 NOTI_SETTING_COLLECTION = 'notification_setting'
 
@@ -145,12 +145,3 @@ SUBJECT = 'subject'
 CLASS = 'class'
 CHAPTER = 'chapter'
 TAG_COLLECTION = 'tag'
-
-LIST_PROVIDER_API = [
-]
-
-FEED_PROVIDER_API = [
-]
-
-GROUP_PROVIDER_API = {
-}

@@ -5,8 +5,8 @@ def get_notification_content(noti_type: str):
     content = ''
     if noti_type == NotificationTypeManage.COMMENT:
         content = NotificationContentManage.COMMENT
-    elif noti_type == NotificationTypeManage.SHARE:
-        content = NotificationContentManage.SHARE
+    elif noti_type == NotificationTypeManage.GROUP_SHARE_QUESTION:
+        content = NotificationContentManage.GROUP_SHARE_QUESTION
     elif noti_type == NotificationTypeManage.LOGGIN:
         content = NotificationContentManage.LOGGIN
     return content
