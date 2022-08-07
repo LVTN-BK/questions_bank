@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from pymongo import ReturnDocument
 from app.utils.check_noti_setting import get_list_user_id_enable_noti_type
 from app.utils.notification_content import get_notification_content
+from app.utils.question_utils.question import get_data_and_metadata
 
 from configs import NOTI_COLLECTION, NOTI_SETTING_COLLECTION, app, noti_db
 from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User
@@ -60,7 +61,7 @@ async def noti_sys_establish_connection(
 #=========================GET_ALL_NOTIFICATION====================
 #=================================================================
 @app.get(
-    '/notification/{user_id}/all',
+    '/user_all_notification',
     responses={
         status.HTTP_200_OK: {
             'model': AllNotificationResponse200,
@@ -74,51 +75,136 @@ async def noti_sys_establish_connection(
     description='get all notification of user',
     tags=['Notification']
 )
-async def all_notifications(
+async def user_all_notification(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     user_id: str = Query(..., description='ID of user')
 ):
     # Find all noti
-    query = {
-        'receive_ids': {
-            '$elemMatch':{
-                '$eq': user_id
-            }
-        }
-    }
+    # query = {
+    #     'receive_ids': {
+    #         '$elemMatch':{
+    #             '$eq': user_id
+    #         }
+    #     }
+    # }
 
     try:
         num_skip = (page - 1)*limit
-        all_noti = []
-        noti = noti_db[NOTI_COLLECTION].find(query, {'sender_id': 1, 'noti_type': 1, 'target': 1, 'content': 1, 'seen_ids': 1,'datetime_created': 1}).sort('datetime_created', -1).skip(num_skip).limit(limit)
+        pipeline=[
+            {
+                '$match': {
+                    '$and': [
+                        {
+                            '$expr': {
+                                '$in': [user_id, '$receiver_ids']
+                            }
+                        },
+                        {
+                            'receive_ids': {
+                                '$not': {
+                                    '$elemMatch': {
+                                        '$eq': user_id
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        },
+                        {
+                            '$set': {
+                                '_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        }, 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': '$_id',
+                                'sender_id': 1,
+                                'is_read': {
+                                    '$in': [user_id, '$seen_ids']
+                                },
+                                "noti_type": 1,
+                                "content": 1,
+                                'target': 1,
+                                'datetime_created': 1
+                            }
+                        }  
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'
+            },
+        ]
 
-        logger().info(noti.count(True))
-        if noti.count(True):
-            for ele in noti:
-                ele['_id'] = str(ele['_id'])
-                ele['is_read'] = (user_id in ele['seen_ids'])
-                del ele['seen_ids']
-                all_noti.append(ele)
-        num_noti = noti_db[NOTI_COLLECTION].find(query).count()
-        num_pages = ceil(num_noti/limit)
+        list_notification = noti_db[NOTI_COLLECTION].aggregate(pipeline)
+        result_data, meta_data = get_data_and_metadata(aggregate_response=list_notification, page=page)
 
-        logger().info(noti.count(True))
-        meta_data = {
-            'count': noti.count(True),
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
 
-        return JSONResponse(content={'status': 'success', 'data': all_noti, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
+        
+        # all_noti = []
+        # noti = noti_db[NOTI_COLLECTION].find(query, {'sender_id': 1, 'noti_type': 1, 'target': 1, 'content': 1, 'seen_ids': 1,'datetime_created': 1}).sort('datetime_created', -1).skip(num_skip).limit(limit)
+
+        # logger().info(noti.count(True))
+        # if noti.count(True):
+        #     for ele in noti:
+        #         ele['_id'] = str(ele['_id'])
+        #         ele['is_read'] = (user_id in ele['seen_ids'])
+        #         del ele['seen_ids']
+        #         all_noti.append(ele)
+        # num_noti = noti_db[NOTI_COLLECTION].find(query).count()
+        # num_pages = ceil(num_noti/limit)
+
+        # logger().info(noti.count(True))
+        # meta_data = {
+        #     'count': noti.count(True),
+        #     'current_page': page,
+        #     'has_next': (num_pages>page),
+        #     'has_previous': (page>1),
+        #     'next_page_number': (page+1) if (num_pages>page) else None,
+        #     'num_pages': num_pages,
+        #     'previous_page_number': (page-1) if (page>1) else None,
+        #     'valid_page': (page>=1) and (page<=num_pages)
+        # }
+
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().info(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #===========CREATE_NOTIFICATION_TO_GROUP_MEMBERS_EXCEPT_USER======
@@ -170,7 +256,7 @@ async def create_notification_to_group_members_except_user(
         return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
-#=================================================================
+#==========================DEPRECATED=============================
 #==================CREATE_NOTIFICATION_TO_LIST_USER===============
 #=================================================================
 @app.post(
