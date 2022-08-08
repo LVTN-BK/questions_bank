@@ -116,7 +116,7 @@ async def create_system_account(
 
     import secrets
     keyonce = secrets.token_urlsafe(12)
-    # await send_verify_email(to_emails=email, keyonce=keyonce)
+    await send_verify_email(to_email=email, keyonce=keyonce)
 
     user = User(
         name=name,
@@ -459,7 +459,7 @@ async def reset_password(
         return JSONResponse(content={'status': 'Lỗi!', 'msg': 'Email chưa đăng ký tài khoản!'}, status_code=status.HTTP_404_NOT_FOUND)
     
     # Check if keyonce is not used
-    # await send_reset_password_email([data.email], keyonce=keyonce)
+    await send_reset_password_email(to_email=data.email, keyonce=keyonce)
     SYSTEM[USER_COLLECTION].find_one_and_update(
         filter={'email': {'$eq': data.email}},
         update={'$set': {

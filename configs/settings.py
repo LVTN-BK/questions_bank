@@ -59,6 +59,7 @@ app.add_middleware(
 # DB_HOST = os.environ.get('DB_HOST')
 # DB_PORT = os.environ.get('DB_PORT')
 SECRET_KEY = os.environ.get('SECRET_KEY')
+MAIL_API_KEY = os.environ.get('MAIL_API_KEY')
 
 MONGO_DEFAULT_USER = os.getenv('MONGO_DEFAULT_USER')
 MONGO_DEFAULT_PASS = os.getenv('MONGO_DEFAULT_PASS')
