@@ -216,7 +216,7 @@ async def update_group_image(
 #======================INVITE_USERS_TO_GROUP======================
 #=================================================================
 @app.post(
-    '/invite_members_to_group/{group_id}',
+    '/invite_user_to_group',
     responses={
         status.HTTP_200_OK: {
             'model': AddUserResponse200,
@@ -234,16 +234,16 @@ async def update_group_image(
 async def invite_users_to_group(
     data: DATA_Invite_Members,
     data2: dict = Depends(valid_headers),
-    group_id: str = Path(...)
+    # group_id: str = Path(...)
 ):
     try:
         # Find a group
-        query = {'_id': ObjectId(group_id)}
+        query = {'_id': ObjectId(data.group_id)}
         group = group_db.get_collection('group').find_one(query)
         if group:
             # check owner of group or member
             query_member = {
-                'group_id': group_id,
+                'group_id': data.group_id,
                 'user_id': data2.get('user_id')
             }
             member_group = group_db[GROUP_PARTICIPANT].find_one(query_member)
@@ -258,7 +258,7 @@ async def invite_users_to_group(
             for uid in data.list_user_ids:
                 logger().info(uid)
                 json_data = {
-                    'group_id': group_id,
+                    'group_id': data.group_id,
                     'inviter_id': data2.get('user_id'),
                     'user_id': uid,
                     'datetime_created': datetime.now().timestamp()

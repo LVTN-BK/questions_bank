@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pymongo import ReturnDocument
 from app.utils.check_noti_setting import get_list_user_id_enable_noti_type
+from app.utils.group_utils.group import get_group_members_id_except_user
 from app.utils.notification_content import get_notification_content
 from app.utils.question_utils.question import get_data_and_metadata
 
@@ -226,7 +227,7 @@ async def create_notification_to_group_members_except_user(
     logger().info('===============create_notification=================')
     try:
         # insert to DB
-        receive_ids = await notification_manage.get_group_members_id_except_user(group_id=data.group_id, user_id=data.user_id, noti_type=data.noti_type)
+        receive_ids = get_group_members_id_except_user(group_id=data.group_id, user_id=data.user_id)
         
         #get notification content
         content = get_notification_content(noti_type=data.noti_type)

@@ -63,7 +63,7 @@ class DATA_Update_Group_image(BaseModel):
 #=========================INVITE_MEMBERS===========================
 #==================================================================
 class DATA_Invite_Members(BaseModel):
-    # user_id: str = Field(..., description='ID of owner')
+    group_id: str = Field(..., description='ID of group')
     list_user_ids: List[str] = Field(default=[], description='list user_id will be invite to join in group')
 
 #==================================================================

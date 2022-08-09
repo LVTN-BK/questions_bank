@@ -54,14 +54,14 @@ def insert_group_participant(user_id: str, group_id: str, is_owner: bool = False
         logger().info("Error: ", e.__str__())
         raise Exception(str(e))
 
-async def get_list_group_member_id(group_id: str):
+def get_list_group_member_id(group_id: str):
     all_group_member = group_db[GROUP_PARTICIPANT].find({'group_id': group_id}, {'user_id': 1})
     res = []
     for question in all_group_member:
         res.append(question.get('user_id'))
     return res
 
-async def get_group_members_id_except_user(group_id: str, user_id: str):
+def get_group_members_id_except_user(group_id: str, user_id: str):
     try:
         #get list group members
         all_group_member = group_db[GROUP_PARTICIPANT].find({'group_id': group_id}, {'user_id': 1})
