@@ -5,6 +5,7 @@ from importlib.metadata import metadata
 from json import JSONEncoder
 from math import ceil
 from typing import List, Optional, Union
+from app.utils.question_utils.question import get_data_and_metadata
 from models.db.group import Group_DB, GroupMember
 
 import pymongo
@@ -445,7 +446,7 @@ async def group_cancel_invitation(
 #===================GROUP_LIST_INVITATION_SENT====================
 #=================================================================
 @app.get(
-    '/group_list_invitation_sent/{group_id}',
+    '/group_list_invitation_sent',
     responses={
         status.HTTP_200_OK: {
             'model': RequestJoinGroupResponse200,
@@ -461,7 +462,7 @@ async def group_list_invitation_sent(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     # user_id: str = Query(..., description='id of user(owner of group)'),
-    group_id: str = Path(..., description='id of group'),
+    group_id: str = Query(..., description='id of group'),
     data2: dict = Depends(valid_headers),
 ):
     try:
@@ -529,41 +530,120 @@ async def user_list_invitation(
     # user_id: str = Path(..., description='id of user')
 ):
     try:
-        # find group
-        query = {'user_id': data2.get('user_id')}
         num_skip = (page - 1)*limit
-        list_invitation = group_db[GROUP_INVITATION].find(query).skip(num_skip).limit(limit)
-        result = []
-        if list_invitation.count(True):
-            for invitation in list_invitation:
-                invitation['_id'] = str(invitation['_id'])
-                group_info = get_one_group_name_and_avatar(group_id=invitation['group_id'])
-                if group_info:
-                    invitation['group'] = group_info
-                    del invitation['group_id']
-                    del invitation['user_id']
-                    result.append(invitation)
-                #maybe remove invitation if group not found
-                ###########################################
-
-        num_invitation = group_db[GROUP_INVITATION].find(query).count()
-        logger().info(f'num invitation: {num_invitation}')
-        num_pages = ceil(num_invitation/limit)
-
-        meta_data = {
-            'count': list_invitation.count(True),
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
-        return JSONResponse(content={'status': 'success', 'data': result, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
+        pipeline = [
+            {
+                '$match': {
+                    'user_id': data2.get('user_id')
+                }
+            },
+            {
+                '$set': {
+                    'group_id_obj': {
+                        '$toObjectId': '$group_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group',
+                    'localField': 'group_id_obj',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'group_id': {
+                                    '$toString': '$_id'
+                                },
+                                'group_name': 1,
+                                'group_type': 1,
+                                'group_cover_image': 1
+                            }
+                        }
+                    ],
+                    'as': 'group_info'
+                }
+            },
+            {
+                '$unwind': '$group_info'
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'inviter_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': 1,
+                                'avatar': 1
+                            }
+                        }
+                    ],
+                    'as': 'inviter_info'
+                }
+            },
+            {
+                '$unwind': '$inviter_info'
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'id': {
+                        '$toString': '$_id'
+                    },
+                    'group_info': 1,
+                    'inviter_info': 1,
+                    'datetime_created': 1
+                }
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$sort': {
+                                'id': 1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'
+            },
+        ]
+        
+        invitation_data = group_db[GROUP_INVITATION].aggregate(pipeline)
+        result_data, meta_data = get_data_and_metadata(aggregate_response=invitation_data, page=page)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #======================SEND_REQUEST_JOIN_GROUP====================

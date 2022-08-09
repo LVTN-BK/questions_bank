@@ -69,8 +69,8 @@ MONGO_CLIENT = MongoClient(f'mongodb+srv://root:root@cluster0.3n45m.mongodb.net/
 
 ################################################
 # user
-SYSTEM = MONGO_CLIENT['user-db']
-user_db = MONGO_CLIENT['user-db']
+SYSTEM = MONGO_CLIENT['group-db']
+user_db = MONGO_CLIENT['group-db']
 USER_COLLECTION = 'users'
 USERS_PROFILE = 'users_profile'
 
