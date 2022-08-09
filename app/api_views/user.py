@@ -1,16 +1,9 @@
-import copy
-from app.secure._password import *
-from app.secure._token import *
-from app.utils._header import valid_headers
-from bson import ObjectId
 from app.utils.group_utils.group import get_list_group_member_id
 from app.utils.question_utils.question import get_data_and_metadata
 from configs.logger import logger
 from configs.settings import USERS_PROFILE, app, user_db
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
-from models.db.classify import Chapters_DB, Class_DB, Subjects_DB
-from models.request.classify import DATA_Create_Chapter, DATA_Create_Class, DATA_Create_Subject
 
 from starlette.responses import JSONResponse
 
