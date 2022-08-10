@@ -6,7 +6,7 @@ from json import JSONEncoder
 from math import ceil
 from typing import List, Optional, Union
 from app.utils.question_utils.question import get_data_and_metadata
-from models.db.group import Group_DB, GroupMember
+from models.db.group import Group_DB, GroupInvitation, GroupMember
 
 import pymongo
 import requests
@@ -154,7 +154,7 @@ async def update_group(
         logger().error(e)
         return JSONResponse(content={'status': 'Bad request'}, status_code=status.HTTP_400_BAD_REQUEST)
 
-#==================================================================
+#==========================DEPRECATED==============================
 #======================UPDATE_GROUP_IMAGE==========================
 #==================================================================
 @app.post(
@@ -248,7 +248,7 @@ async def invite_users_to_group(
                 'user_id': data2.get('user_id')
             }
             member_group = group_db[GROUP_PARTICIPANT].find_one(query_member)
-            if (group.get('owner_id') != data2.get('user_id')) and not member_group:
+            if not member_group:
                 content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
                 return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
 
@@ -257,34 +257,32 @@ async def invite_users_to_group(
 
             list_broadcast_user=[]
             for uid in data.list_user_ids:
-                logger().info(uid)
-                json_data = {
-                    'group_id': data.group_id,
-                    'inviter_id': data2.get('user_id'),
-                    'user_id': uid,
-                    'datetime_created': datetime.now().timestamp()
-                }
-                logger().info(uid)
-                try:
-                    group_db[GROUP_INVITATION].insert_one(json_data)
-                    list_broadcast_user.append(uid)
-                except Exception as e:
-                    logger().error(e)
+                invitation_data = GroupInvitation(
+                    group_id= data.group_id,
+                    inviter_id= data2.get('user_id'),
+                    user_id= uid,
+                    datetime_created= datetime.now().timestamp()
+                )
+                logger().info(f'uid: {uid}')
+                group_db[GROUP_INVITATION].insert_one(jsonable_encoder(invitation_data))
+                list_broadcast_user.append(uid)
+
             data = {
-                'group_name': group.get('group_name')
+                'group_name': group.get('group_name'),
+                'list_user_ids': list_broadcast_user
             }
-            return JSONResponse(content={'status': 'success', 'data': data, 'list_ids': list_broadcast_user}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={'status': 'success', 'data': data}, status_code=status.HTTP_200_OK)
         else:
-            return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+            return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
-#=========================ACCEPT_INVITATION=======================
+#=====================USER_ACCEPT_INVITATION======================
 #=================================================================
 @app.post(
-    '/accept_invitation',
+    '/user_accept_invitation',
     responses={
         status.HTTP_200_OK: {
             'model': AcceptInvitationResponse200,
@@ -293,10 +291,10 @@ async def invite_users_to_group(
             'model': AcceptInvitationResponse404,
         }
     },
-    description='accept invitation',
+    description='user accept invitation',
     tags=['Group - Invitation']
 )
-async def accept_invitation(
+async def user_accept_invitation(
     data: DATA_Accept_invitation,
     data2: dict = Depends(valid_headers),
 ):
@@ -318,12 +316,13 @@ async def accept_invitation(
         group = group_db[GROUP].find_one(query_group)
         if group:
             #add to group participant
-            json_data = {
-                'group_id': invitation.get('group_id'),
-                'user_id': data2.get('user_id'),
-                'datetime_created': datetime.now().timestamp()
-            }
-            result = group_db[GROUP_PARTICIPANT].insert_one(json_data).inserted_id
+            mem_data = GroupMember(
+                group_id= invitation.get('group_id'),
+                user_id= invitation.get('user_id'),
+                inviter_id= invitation.get('inviter_id'),
+                datetime_created= datetime.now().timestamp()
+            )
+            result = group_db[GROUP_PARTICIPANT].insert_one(jsonable_encoder(mem_data)).inserted_id
 
             # delete invitation
             group_db[GROUP_INVITATION].find_one_and_delete(query_invitation)
@@ -331,9 +330,7 @@ async def accept_invitation(
             data = {
                 'group_id': invitation.get('group_id'),
                 'group_name': group.get('group_name'),
-                'owner_id': group.get('owner_id'),
                 'inviter_id': invitation.get('inviter_id'),
-                'group_chat_id': group.get('group_chat_id'),
                 'participant_id': str(result)
             }
 
@@ -344,7 +341,7 @@ async def accept_invitation(
     except Exception as e:
         logger().error(e)
         msg = str(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #======================USER_REJECT_INVITATION=====================
@@ -410,29 +407,23 @@ async def group_cancel_invitation(
     try:
         #find invitation
         query_invitation = {
-            '_id': ObjectId(data.invitation_id)
+            '_id': ObjectId(data.invitation_id),
         }
         invitation = group_db[GROUP_INVITATION].find_one(query_invitation,{'group_id':1, 'user_id':1})
         if not invitation:
             msg = 'invitation not found'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
         
-        # Find a group
-        query = {'_id': ObjectId(invitation.get('group_id'))}
-        group = group_db[GROUP].find_one(query,{'owner_id': 1})
-        logger().info(f'group: {group}')
-        if group:
-            #check owner of group
-            if data2.get('user_id') != group.get('owner_id'):
-                msg = 'not owner of group'
-                return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
-
-        else:
-            #delete invitation
-            group_db[GROUP_INVITATION].find_one_and_delete(query_invitation)
-            
-            msg = 'group not found'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+        # check owner of group
+        query = {
+            'group_id': invitation.get('group_id'),
+            'user_id': data2.get('user_id'),
+            'is_owner': True
+        }
+        group_mem = group_db[GROUP_PARTICIPANT].find_one(query)
+        if not group_mem:
+            msg = 'Error, user is not owner of group!!!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
         
         # delete invitation
         group_db[GROUP_INVITATION].find_one_and_delete(query_invitation)
@@ -440,7 +431,7 @@ async def group_cancel_invitation(
         return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #===================GROUP_LIST_INVITATION_SENT====================
@@ -466,46 +457,142 @@ async def group_list_invitation_sent(
     data2: dict = Depends(valid_headers),
 ):
     try:
-        # find group
-        query = {'_id': ObjectId(group_id)}
-        group = group_db[GROUP].find_one(query,{'owner_id':1})
-        if group:
-            #check owner of group
-            if data2.get('user_id') != group.get('owner_id'):
-                return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
-
-            #get list request
-            query_invitation = {
-                'group_id': group_id
-            }
-            num_skip = (page - 1)*limit
-            list_invitation = group_db[GROUP_INVITATION].find(query_invitation).skip(num_skip).limit(limit)
-            result = []
-            if list_invitation.count(True):
-                for invitation in list_invitation:
-                    invitation['_id'] = str(invitation['_id'])
-                    result.append(invitation)
-
-            num_invitation = group_db[GROUP_INVITATION].find(query).count()
-            logger().info(f'num invitation: {num_invitation}')
-            num_pages = ceil(num_invitation/limit)
-
-            meta_data = {
-                'count': list_invitation.count(True),
-                'current_page': page,
-                'has_next': (num_pages>page),
-                'has_previous': (page>1),
-                'next_page_number': (page+1) if (num_pages>page) else None,
-                'num_pages': num_pages,
-                'previous_page_number': (page-1) if (page>1) else None,
-                'valid_page': (page>=1) and (page<=num_pages)
-            }
-            return JSONResponse(content={'status': 'success', 'data': result, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
-        else:
-            return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        num_skip = (page - 1)*limit
+        pipeline = [
+            {
+                '$match': {
+                    'group_id': group_id
+                }
+            },
+            {
+                '$set': {
+                    'group_id_obj': {
+                        '$toObjectId': '$group_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group',
+                    'localField': 'group_id_obj',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'group_id': {
+                                    '$toString': '$_id'
+                                },
+                                'group_name': 1,
+                                'group_type': 1,
+                                'group_cover_image': 1
+                            }
+                        }
+                    ],
+                    'as': 'group_info'
+                }
+            },
+            {
+                '$unwind': '$group_info'
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'inviter_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': 1,
+                                'avatar': 1
+                            }
+                        }
+                    ],
+                    'as': 'inviter_info'
+                }
+            },
+            {
+                '$unwind': '$inviter_info'
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': 1,
+                                'avatar': 1
+                            }
+                        }
+                    ],
+                    'as': 'user_info'
+                }
+            },
+            {
+                '$unwind': '$user_info'
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'id': {
+                        '$toString': '$_id'
+                    },
+                    'group_info': 1,
+                    'inviter_info': 1,
+                    'user_info': 1,
+                    'datetime_created': 1
+                }
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$sort': {
+                                'id': 1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'
+            },
+        ]
+        
+        invitation_data = group_db[GROUP_INVITATION].aggregate(pipeline)
+        result_data, meta_data = get_data_and_metadata(aggregate_response=invitation_data, page=page)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed','msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #=======================USER_LIST_INVITATION======================
@@ -685,10 +772,11 @@ async def send_request_join_group(
 
             return JSONResponse(content={'status': 'success', 'request_id': str(request_id)}, status_code=status.HTTP_200_OK)
         else:
-            return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+            msg='group not found!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #==================GROUP_ACCEPT_REQUEST_JOIN_GROUP================
@@ -730,12 +818,12 @@ async def group_accept_request_join_group(
                 return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
             
             #add to group members
-            json_data = {
-                'group_id': request_join.get('group_id'),
-                'user_id': request_join.get('user_id'),
-                'datetime_created': datetime.now().timestamp()
-            }
-            request_id = group_db[GROUP_PARTICIPANT].insert_one(json_data).inserted_id
+            mem_data = GroupMember(
+                group_id= request_join.get('group_id'),
+                user_id= request_join.get('user_id'),
+                datetime_created= datetime.now().timestamp()
+            )
+            request_id = group_db[GROUP_PARTICIPANT].insert_one(jsonable_encoder(mem_data)).inserted_id
 
             #remove request join
             group_db[GROUP_JOIN_REQUEST].find_one_and_delete(query_request)
@@ -750,7 +838,7 @@ async def group_accept_request_join_group(
             return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #==================GROUP_REJECT_REQUEST_JOIN_GROUP================
@@ -993,31 +1081,138 @@ async def user_list_request_join_group(
     tags=['Group']
 )
 async def list_group_members(
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    search: str = Query(default=None, description='search text'),
     group_id: str = Query(..., description='id of group'),
     data2: dict = Depends(valid_headers),
 ):
     try:
-        # find group
-        
-        query = {'_id': ObjectId(group_id)}
-        group = group_db[GROUP].find_one(query,{'owner_id':1})
-        if group:
-            del group['_id']
-            query_group_participant = {
-                'group_id': group_id
+        if search:
+            query_search = {
+                '$or': [
+                    {
+                        'name': {
+                            '$regex': search,
+                            '$options': 'i'
+                        }
+                    },
+                    {
+                        'email': {
+                            '$regex': search,
+                            '$options': 'i'
+                        }
+                    }
+                ]
             }
-            list_members = list(group_db[GROUP_PARTICIPANT].find(query_group_participant))
-            import functools
-            result = functools.reduce(lambda a, b: a + [b['user_id']],list_members,[])
-
-            group['members'] = result
-
-            return JSONResponse(content={'status': 'success', 'data': group}, status_code=status.HTTP_200_OK)
         else:
-            return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+            query_search = {}
+        
+        num_skip = (page - 1)*limit
+        pipeline = [
+            {
+                '$match': {
+                    'group_id': group_id
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$match': query_search
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': 1,
+                                'avatar': 1
+                            }
+                        }
+                    ],
+                    'as': 'user_info'
+                }
+            },
+            {
+                '$unwind': '$user_info'
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'inviter_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': 1,
+                                'avatar': 1
+                            }
+                        }
+                    ],
+                    'as': 'inviter_info'
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'user_info': 1,
+                    'is_owner': 1,
+                    'group_id': 1,
+                    'inviter_info': {
+                        '$first': '$inviter_info'
+                    },
+                    'datetime_created': 1
+                }
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$sort': {
+                                'user_info.name': 1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'
+            },
+        ]
+        
+        members_data = group_db[GROUP_PARTICIPANT].aggregate(pipeline)
+        result_data, meta_data = get_data_and_metadata(aggregate_response=members_data, page=page)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #=======================REMOVE_GROUP_MEMBERS======================
