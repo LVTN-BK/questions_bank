@@ -12,6 +12,7 @@ class Group_DB(BaseModel):
     datetime_created: float = Field(default=datetime.now().timestamp(), description='time create group')
     datetime_updated: float = Field(default=None, description='last time update group')
     group_status: str = Field(default='enable', description='status of group', enum=['enable', 'disable'])
+    is_deleted: bool = Field(default=False, description='group is deleted?')
 
 
 class GroupMember(BaseModel):

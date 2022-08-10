@@ -936,7 +936,7 @@ async def user_cancel_request_join_group(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
 
-#=================================================================
+#======================NEED_TO_FIX=============================
 #=================GROUP_LIST_REQUEST_JOIN_GROUP===================
 #=================================================================
 @app.get(
@@ -965,8 +965,8 @@ async def group_list_request_join_group(
         group = group_db[GROUP].find_one(query,{'owner_id':1})
         if group:
             #check owner of group
-            if data2.get('user_id') != group.get('owner_id'):
-                return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+            # if data2.get('user_id') != group.get('owner_id'):
+            #     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 
             #get list request
             query_request = {
@@ -1164,7 +1164,12 @@ async def list_group_members(
                     'is_owner': 1,
                     'group_id': 1,
                     'inviter_info': {
-                        '$first': '$inviter_info'
+                        '$ifNull': [
+                            {
+                                '$first': '$inviter_info'
+                            },
+                            None
+                        ]
                     },
                     'datetime_created': 1
                 }
@@ -1239,18 +1244,14 @@ async def group_remove_members(
 ):
     logger().info('===============group_remove_members=================')
     try:
-        # Find a group
-        query = {'_id': ObjectId(data.group_id)}
-        group = group_db.get_collection('group').find_one(query)
-        if group:
-            # check owner of group
-            if group.get('owner_id') != data2.get('user_id'):
-                content = {'status': 'Failed', 'msg': 'User is not the owner of group'}
-                return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
-            
-            logger().info('========add user========')
-            logger().info(f'========list user: {data.list_user_ids}========')
-
+        # check owner of group
+        query_mem = {
+            'group_id': data.group_id,
+            'user_id': data2.get('user_id'),
+            'is_owner': True
+        }
+        mem_data = group_db[GROUP_PARTICIPANT].find_one(query_mem)
+        if mem_data:
             #remove member in group_participant
             query_remove_participant = {
                 '$and': [
@@ -1266,23 +1267,20 @@ async def group_remove_members(
             }
             group_db[GROUP_PARTICIPANT].delete_many(query_remove_participant)
 
-            #request remove list user out of group chat
-            #################################################
-            #################################################
-            #################################################
-                
             #broadcast to list user(notification)
             #############################################
             #############################################
             #############################################
             return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
         else:
-            return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+            msg = 'Error, user is not owner of group!!!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
-#=================================================================
+#==========================NEED_TO_FIX============================
 #==========================DELETE_GROUP===========================
 #=================================================================
 @app.delete(
@@ -1299,7 +1297,8 @@ async def group_remove_members(
             'model': DeleteGroupResponse200
         }
     },
-    tags=['Group']
+    tags=['Group'],
+    deprecated=True
 )
 async def remove_group(
     data: DATA_Delete_Group,
@@ -1531,46 +1530,26 @@ async def list_all_groups_discover(
     search: Optional[str] = Query(default=None, description='text search'),
     # user_id: str = Path(..., description='ID of user'),
     group_type: str = Query(default=None, description='filter by group type'),
-    group_datetime_created: float = Query(default=None, description='filter by group datetime created'),
+    # group_datetime_created: float = Query(default=None, description='filter by group datetime created'),
     data2: dict = Depends(valid_headers),
 ):
     logger().info('===============get_group_info=================')
     # Find a group
     try:
-        # query = {
-        #     '$and': [
-        #         {
-        #             'owner_id': {
-        #                 '$ne': user_id
-        #             }
-        #         },
-        #         {
-        #             'members': {
-        #                 '$ne': user_id
-        #             }
-        #         }
-        #     ]
-        # }
-        # if search:
-        #     query_group = {
-        #                 '$text': {
-        #                     '$search': search
-        #                 }
-        #             }
-        # else:
-        #     query_group = {}
-
         filter = []
         if search:
             query_search = {
-                '$text': {
-                    '$search': search
+                'group_name': {
+                    '$regex': search,
+                    '$options': 'i',
                 }
             }
             filter.append(query_search)
+
         
         query_status = {
-            'group_status': GroupStatus.ENABLE
+            'group_status': GroupStatus.ENABLE,
+            'is_deleted': False
         }
         filter.append(query_status)  
 
@@ -1580,14 +1559,14 @@ async def list_all_groups_discover(
             }
             filter.append(query_type)
 
-        if group_datetime_created:
-            query_datetime_created = {
-                'datetime_created': {
-                    '$gt': group_datetime_created,
-                    '$lt': group_datetime_created + 86400
-                }
-            }
-            filter.append(query_datetime_created)
+        # if group_datetime_created:
+        #     query_datetime_created = {
+        #         'datetime_created': {
+        #             '$gt': group_datetime_created,
+        #             '$lt': group_datetime_created + 86400
+        #         }
+        #     }
+        #     filter.append(query_datetime_created)
 
         if filter:
             query_filter = {
@@ -1597,57 +1576,194 @@ async def list_all_groups_discover(
             query_filter = {}
 
         num_skip = (page - 1)*limit
-        all_group = group_db.get_collection(GROUP).find(query_filter).skip(num_skip).limit(limit)
-        all_group_info = []
-        logger().info(f'all group count: {all_group.count()}')
-        if all_group.count(True):
-            for group in all_group:
-                group['_id'] = str(group['_id'])
-                query_participant = {
-                    'group_id': group['_id']
+        pipeline = [
+            {
+                '$match': query_filter
+            },
+            {
+                '$set': {
+                    '_id': {'$toString': '$_id'}
                 }
-                group_members_count = group_db[GROUP_PARTICIPANT].find(query_participant).count()
-                group['num_members'] = group_members_count + 1
-                
-                query = {
-                    '$and': [
+            },
+            {
+                '$lookup': {
+                    'from': 'group_participant',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
                         {
-                            'group_id': group['_id']
+                            '$match': {
+                                '$expr': {
+                                    '$and': [
+                                        { '$eq': ['$user_id', data2.get('user_id')] },
+                                        { '$eq': ['$group_id', '$$id']}
+                                    ]
+                                }
+                            }
                         },
                         {
-                            'user_id': data2.get('user_id')
+                            '$set': {
+                                '_id': {'$toString': '$_id'},
+                            }
                         }
-                    ] 
+                    ],
+                    'as': 'members_participant'
                 }
-                invitation = group_db[GROUP_INVITATION].find_one(query)
-                participant = group_db[GROUP_PARTICIPANT].find_one(query)
-                request_join = group_db[GROUP_JOIN_REQUEST].find_one(query)
-
-                group['is_owner'] = (data2.get('user_id') == group.get('owner_id'))
-                group['is_member'] = True if participant else False
-                group['is_invited'] = True if invitation else False
-                group['is_requested'] = True if request_join else False
-                all_group_info.append(group)
-
-        num_group = group_db.get_collection(GROUP).find(query_filter).count()
-        logger().info(f'num group: {num_group}')
-        num_pages = ceil(num_group/limit)
-
-        meta_data = {
-            'count': all_group.count(True),
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
-        
-        return JSONResponse(content={'status': 'success', 'data': all_group_info, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
+            },
+            {
+                '$set': {
+                    'is_member': {
+                        '$ne': ['$members_participant', []]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_invitation',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$and': [
+                                        { '$eq': ['$user_id', data2.get('user_id')] },
+                                        { '$eq': ['$group_id', '$$id']}
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'invitation'
+                }
+            },
+            {
+                '$set': {
+                    'is_invited': {
+                        '$ne': ['$invitation', []]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_join_request',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$and': [
+                                        { '$eq': ['$user_id', data2.get('user_id')] },
+                                        { '$eq': ['$group_id', '$$id']}
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'request_join'
+                }
+            },
+            {
+                '$set': {
+                    'is_requested': {
+                        '$ne': ['$request_join', []]
+                    }
+                }
+            },
+            {
+                '$match': {
+                    'is_member': False
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_participant',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        {
+                            '$set': {
+                                '_id': {'$toString': '$_id'},
+                            }
+                        }
+                    ],
+                    'as':'member_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'member_count': {
+                        '$size': '$member_in_group'
+                    } 
+                }
+            },
+            {
+                '$project': {
+                    'member_in_group': 0,
+                    'owner_id': 0,
+                    'group_status': 0,
+                    'members_participant': 0,
+                    'invitation': 0,
+                    'request_join': 0,
+                    'is_approved': 0,
+                    'is_deleted': 0
+                }
+            },
+            {
+                '$facet': {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [
+                        {
+                            '$sort': {
+                                'group_name': 1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip
+                        },
+                        { 
+                            '$limit': limit 
+                        }
+                    ]
+                }
+            },
+            {
+                '$unwind': '$metadata'         
+            }
+        ]
+        group_data = group_db[GROUP].aggregate(pipeline)
+        result_data, meta_data = get_data_and_metadata(aggregate_response=group_data, page=page)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Bad Requests!'}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'Bad Requests!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #=======================LIST_ALL_GROUP_JOINED=====================
