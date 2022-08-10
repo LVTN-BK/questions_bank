@@ -1003,7 +1003,7 @@ async def group_list_request_join_group(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
 
-#=================================================================
+#=========================NEED_TO_FIX=============================
 #====================USER_LIST_REQUEST_JOIN_GROUP=================
 #=================================================================
 @app.get(
@@ -1353,7 +1353,7 @@ async def remove_group(
     else:
         return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
 
-#=================================================================
+#==========================NEED_TO_FIX============================
 #=========================GET_GROUP_INFO==========================
 #=================================================================
 @app.get(
@@ -1405,7 +1405,7 @@ async def get_group_info(
         logger().error(e)
         return JSONResponse(content={'status': 'Bad Requests!'}, status_code=status.HTTP_400_BAD_REQUEST)
 
-#=================================================================
+#=======================DEPRECATED============================
 #=====================LIST_ALL_GROUP_CREATED======================
 #=================================================================
 @app.get(
@@ -1419,7 +1419,8 @@ async def get_group_info(
     #         'model': AllGroupResponse200
     #     }
     # },
-    tags=['Group']
+    tags=['Group'],
+    deprecated=True
 )
 async def list_all_groups_created(
     page: int = Query(default=1, description='page number'),
