@@ -382,7 +382,7 @@ async def group_list_request_join_group(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
-#=========================NEED_TO_FIX=============================
+#=========================DEPRECATED==============================
 #====================USER_LIST_REQUEST_JOIN_GROUP=================
 #=================================================================
 @app.get(
@@ -396,7 +396,8 @@ async def group_list_request_join_group(
         }
     },
     description='list of requests to join the group that the user has submitted',
-    tags=['Group - Request Join']
+    tags=['Group - Request Join'],
+    deprecated=True
 )
 async def user_list_request_join_group(
     page: int = Query(default=1, description='page number'),
