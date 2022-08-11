@@ -153,3 +153,13 @@ class DATA_Group_By_Admin(BaseModel):
 class DATA_update_group_status(BaseModel):
     group_id: str = Field(..., description='group id')
     group_status: str = Field(..., description='enable/disable')
+
+
+
+#==================================================================
+#===================USER_LEAVE_GROUP===========================
+#==================================================================
+class DATA_Leave_Group(BaseModel):
+    group_id: str = Field(..., description='ID of group')
+    # owner_id: str = Field(..., description='ID of owner')
+

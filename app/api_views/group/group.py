@@ -18,7 +18,7 @@ from app.utils.group_info import get_one_group_info, get_one_group_name_and_avat
 
 from configs import GROUP, GROUP_INVITATION, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, app, group_db
 from models.define.group import GroupStatus, GroupType, UpdateGroupImage
-from models.request.group import DATA_Accept_Join_Request, DATA_Accept_invitation, DATA_Cancel_Join_Request, DATA_Cancel_invitation, DATA_Create_Group, DATA_Delete_Group, DATA_Group_Label, DATA_Group_created, DATA_Invite_Members, DATA_Join_Request, DATA_Reject_Join_Request, DATA_Reject_invitation, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_Chat, DATA_Update_Group_image
+from models.request.group import DATA_Accept_Join_Request, DATA_Accept_invitation, DATA_Cancel_Join_Request, DATA_Cancel_invitation, DATA_Create_Group, DATA_Delete_Group, DATA_Group_Label, DATA_Group_created, DATA_Invite_Members, DATA_Join_Request, DATA_Leave_Group, DATA_Reject_Join_Request, DATA_Reject_invitation, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_Chat, DATA_Update_Group_image
 # import response models
 from models.response import *
 
@@ -1111,3 +1111,67 @@ async def list_all_groups_joined(
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Bad Requests!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+#=================================================================
+#=======================USER_LEAVE_GROUP==========================
+#=================================================================
+@app.post(
+    '/user_leave_group',
+    description='user leave group',
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            'model': RemoveMemberResponse404,
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': RemoveMemberResponse403,
+        },
+        status.HTTP_200_OK: {
+            'model': RemoveMemberResponse200,
+        }
+    },
+    tags=['Group']
+)
+async def user_leave_group(
+    data: DATA_Leave_Group,
+    data2: dict = Depends(valid_headers),
+):
+    logger().info('===============user_leave_group=================')
+    """
+    
+    """
+    try:
+        # delete mem
+        query_mem = {
+            'group_id': data.group_id,
+            'user_id': data2.get('user_id'),
+        }
+        mem_data = group_db[GROUP_PARTICIPANT].find_one_and_delete(query_mem)
+        if mem_data:
+            # check if group still have participant
+            count_mem = group_db[GROUP_PARTICIPANT].find({'group_id': data.group_id}).count()
+            if not count_mem:
+                # remove group
+                group_db[GROUP].update_one({'_id': ObjectId(data.group_id)}, {'$set': {'is_deleted': True}})
+                msg = 'no members left, group is removed!'
+                return JSONResponse(content={'status': 'success', 'msg': msg}, status_code=status.HTTP_200_OK)
+
+            # check user is group owner
+            if mem_data.get('is_owner'):
+                # update new owner
+                new_owner = group_db[GROUP_PARTICIPANT].find_one_and_update({'group_id': data.group_id}, {'$set': {'is_owner': True}}, sort=[('datetime_created', -1)])
+                ################################################
+                # broadcast to new owner
+                ################################################
+
+            return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+        else:
+            msg = 'Error, user is not member of group!!!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+
