@@ -247,7 +247,7 @@ async def user_cancel_request_join_group(
 #=================GROUP_LIST_REQUEST_JOIN_GROUP===================
 #=================================================================
 @app.get(
-    '/group_list_request_join_group',
+    '/group_list_request_join_group/{group_id}',
     responses={
         status.HTTP_200_OK: {
             'model': RequestJoinGroupResponse200,
@@ -263,7 +263,7 @@ async def group_list_request_join_group(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     # user_id: str = Query(..., description='id of user(owner of group)'),
-    group_id: str = Query(..., description='id of group'),
+    group_id: str = Path(..., description='id of group'),
     data2: dict = Depends(valid_headers),
 ):
     try:
