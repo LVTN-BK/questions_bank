@@ -75,6 +75,7 @@ async def search_user_not_in_group(
                     '_id': 0,
                     'user_id': 1,
                     'name': 1,
+                    'email': 1,
                     'avatar': 1
                 }
             },
