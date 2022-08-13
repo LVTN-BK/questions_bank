@@ -854,8 +854,68 @@ async def list_all_groups_discover(
             },
             {
                 '$set': {
-                    'member_count': {
+                    'num_members': {
                         '$size': '$member_in_group'
+                    } 
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_questions',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        # {
+                        #     '$set': {
+                        #         '_id': {'$toString': '$_id'},
+                        #     }
+                        # }
+                    ],
+                    'as':'questions_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'num_questions': {
+                        '$size': '$questions_in_group'
+                    } 
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_exams',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        # {
+                        #     '$set': {
+                        #         '_id': {'$toString': '$_id'},
+                        #     }
+                        # }
+                    ],
+                    'as':'exams_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'num_exams': {
+                        '$size': '$exams_in_group'
                     } 
                 }
             },
@@ -865,6 +925,8 @@ async def list_all_groups_discover(
                     'owner_id': 0,
                     'group_status': 0,
                     'members_participant': 0,
+                    'questions_in_group': 0,
+                    'exams_in_group': 0,
                     'invitation': 0,
                     'request_join': 0,
                     'is_approved': 0,
@@ -1051,8 +1113,68 @@ async def list_all_groups_joined(
             },
             {
                 '$set': {
-                    'member_count': {
+                    'num_members': {
                         '$size': '$member_in_group'
+                    } 
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_questions',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        # {
+                        #     '$set': {
+                        #         '_id': {'$toString': '$_id'},
+                        #     }
+                        # }
+                    ],
+                    'as':'questions_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'num_questions': {
+                        '$size': '$questions_in_group'
+                    } 
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_exams',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        # {
+                        #     '$set': {
+                        #         '_id': {'$toString': '$_id'},
+                        #     }
+                        # }
+                    ],
+                    'as':'exams_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'num_exams': {
+                        '$size': '$exams_in_group'
                     } 
                 }
             },
@@ -1062,6 +1184,8 @@ async def list_all_groups_joined(
                     'owner_id': 0,
                     'group_status': 0,
                     'members_participant': 0,
+                    'questions_in_group': 0,
+                    'exams_in_group': 0,
                     'invitation': 0,
                     'request_join': 0,
                     'is_approved': 0,
