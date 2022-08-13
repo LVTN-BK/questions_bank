@@ -525,34 +525,235 @@ async def get_group_info(
     logger().info('===============get_group_info=================')
     # Find a group
     try:
-        group_info = get_one_group_info(group_id)
-        if group_info:
-            query = {
-                '$and': [
-                    {
-                        'group_id': group_id
-                    },
-                    {
-                        'user_id': data2.get('user_id')
+        query_filter = {
+            '$and': [
+                {
+                    'group_id': group_id
+                },
+                {
+                    'user_id': data2.get('user_id')
+                }
+            ] 
+        }
+
+        pipeline = [
+            {
+                '$match': query_filter
+            },
+            {
+                '$set': {
+                    '_id': {'$toString': '$_id'}
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_participant',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$and': [
+                                        { '$eq': ['$user_id', data2.get('user_id')] },
+                                        { '$eq': ['$group_id', '$$id']}
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            '$set': {
+                                '_id': {'$toString': '$_id'},
+                            }
+                        }
+                    ],
+                    'as': 'members_participant'
+                }
+            },
+            {
+                '$set': {
+                    'is_member': {
+                        '$ne': ['$members_participant', []]
                     }
-                ] 
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_invitation',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$and': [
+                                        { '$eq': ['$user_id', data2.get('user_id')] },
+                                        { '$eq': ['$group_id', '$$id']}
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'invitation'
+                }
+            },
+            {
+                '$set': {
+                    'is_invited': {
+                        '$ne': ['$invitation', []]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_join_request',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$and': [
+                                        { '$eq': ['$user_id', data2.get('user_id')] },
+                                        { '$eq': ['$group_id', '$$id']}
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'request_join'
+                }
+            },
+            {
+                '$set': {
+                    'is_requested': {
+                        '$ne': ['$request_join', []]
+                    }
+                }
+            },
+            {
+                '$match': {
+                    'is_member': False
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_participant',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        {
+                            '$set': {
+                                '_id': {'$toString': '$_id'},
+                            }
+                        }
+                    ],
+                    'as':'member_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'num_members': {
+                        '$size': '$member_in_group'
+                    } 
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_questions',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        # {
+                        #     '$set': {
+                        #         '_id': {'$toString': '$_id'},
+                        #     }
+                        # }
+                    ],
+                    'as':'questions_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'num_questions': {
+                        '$size': '$questions_in_group'
+                    } 
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_exams',
+                    'let': {
+                        'id': '$_id'
+                    }, 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$group_id', '$$id']
+                                }
+                            }
+                        },
+                        # {
+                        #     '$set': {
+                        #         '_id': {'$toString': '$_id'},
+                        #     }
+                        # }
+                    ],
+                    'as':'exams_in_group'
+                }
+            },
+            {
+                '$set': {
+                    'num_exams': {
+                        '$size': '$exams_in_group'
+                    } 
+                }
+            },
+            {
+                '$project': {
+                    'member_in_group': 0,
+                    'owner_id': 0,
+                    'group_status': 0,
+                    'members_participant': 0,
+                    'questions_in_group': 0,
+                    'exams_in_group': 0,
+                    'invitation': 0,
+                    'request_join': 0,
+                    'is_approved': 0,
+                    'is_deleted': 0
+                }
             }
-            invitation = group_db[GROUP_INVITATION].find_one(query)
-            participant = group_db[GROUP_PARTICIPANT].find_one(query)
-            request_join = group_db[GROUP_JOIN_REQUEST].find_one(query)
-
-            group_info['is_owner'] = (data2.get('user_id') == group_info.get('owner_id'))
-            group_info['is_member'] = True if participant else False
-            group_info['is_invited'] = True if invitation else False
-            group_info['is_requested'] = True if request_join else False
-
-            return JSONResponse(content={'status': 'success', 'data': group_info}, status_code=status.HTTP_200_OK)
+        ]
+        group_data = group_db[GROUP].aggregate(pipeline)
+        if group_data.alive:
+            result_data = group_data.next()
+            return JSONResponse(content={'status': 'success', 'data': result_data}, status_code=status.HTTP_200_OK)
         else:
-            msg = 'group not found'
-            return JSONResponse(content={'status': 'Not Found!', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+            msg = 'group not found!'
+            return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Bad Requests!'}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=======================DEPRECATED============================
 #=====================LIST_ALL_GROUP_CREATED======================
