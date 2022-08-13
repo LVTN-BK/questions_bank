@@ -527,18 +527,15 @@ async def get_group_info(
     try:
         query_filter = {
             '$and': [
-                {
-                    '_id': ObjectId(group_id)
-                },
-                {
-                    'user_id': data2.get('user_id')
-                }
+                
             ] 
         }
 
         pipeline = [
             {
-                '$match': query_filter
+                '$match': {
+                    '_id': ObjectId(group_id)
+                }
             },
             {
                 '$set': {
@@ -569,6 +566,13 @@ async def get_group_info(
                         }
                     ],
                     'as': 'members_participant'
+                }
+            },
+            {
+                '$set': {
+                    'is_owner': {
+                        '$first': '$members_participant.is_owner'
+                    }
                 }
             },
             {
@@ -632,11 +636,6 @@ async def get_group_info(
                     'is_requested': {
                         '$ne': ['$request_join', []]
                     }
-                }
-            },
-            {
-                '$match': {
-                    'is_member': False
                 }
             },
             {
@@ -745,6 +744,7 @@ async def get_group_info(
             }
         ]
         group_data = group_db[GROUP].aggregate(pipeline)
+        logger().info(group_data.alive)
         if group_data.alive:
             result_data = group_data.next()
             return JSONResponse(content={'status': 'success', 'data': result_data}, status_code=status.HTTP_200_OK)
