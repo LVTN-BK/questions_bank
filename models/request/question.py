@@ -98,3 +98,18 @@ class DATA_Share_Question_To_Community(BaseModel):
 class DATA_Share_Question_To_Group(BaseModel):
     question_id: str = Field(..., description='ID of question')
     group_id: str = Field(..., description='ID of group')
+
+
+class DATA_Update_Question(BaseModel):
+    question_id: str = Field(..., description='ID of question')
+    class_id: str = Field(default=None, description='ID of class')
+    subject_id: str = Field(default=None, description='ID of subject')
+    chapter_id: str = Field(default=None, description='ID of chapter')
+    tag_id: List[Tag] = Field(default=None, description='ID of tag')
+    level: str = Field(default=None, description='level of question')
+    question_content: str = Field(default=None, description='content of question')
+    answers: Union[List[AnswerM], List[AnswerMC], List[str]] = Field(default=None, description='answer of question')
+    answers_right: List[AnswerM] = Field(default=None, description='answer in the right collumn of question (for matching questions)')
+    sample_answer: Union[List[Tuple[str, str]], str, List[str]] = Field(default=None, description='correct answer of question')
+    display: Union[DisplayQuestionM, DisplayQuestionIP, DisplayQuestionS, DisplayQuestionMC] = Field(default=None, description='display setting of question')
+

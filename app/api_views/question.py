@@ -23,7 +23,7 @@ from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
 from starlette.responses import JSONResponse
 
 from models.system_and_feeds.notification import NotificationTypeManage
@@ -311,7 +311,7 @@ async def create_fill_question(
         logger().error(e)
     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
 
-#========================================================
+#======================DEPRECATED========================
 #=====================CREATE_ANSWER======================
 #========================================================
 @app.post(
@@ -324,7 +324,8 @@ async def create_fill_question(
             'model': ''
         }
     },
-    tags=['questions']
+    tags=['questions'],
+    deprecated=True
 )
 async def create_answer(
     data1: DATA_Create_Answer,
@@ -1742,5 +1743,141 @@ async def share_question_to_group(
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+
+#========================================================
+#========================UPDATE_QUESTION==================
+#========================================================
+@app.put(
+    path='/update_question',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def update_question(
+    data1: DATA_Update_Question,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check owner of question
+        data1 = jsonable_encoder(data1)
+        query_question = {}
+        if data1.get('class_id'):
+            query_class = {
+                'class_id': data1.get('class_id')
+            }
+            query_question.update(query_class)
+        if data1.get('subject_id'):
+            query_subject = {
+                'subject_id': data1.get('subject_id')
+            }
+            query_question.update(query_subject)
+        if data1.get('chapter_id'):
+            query_chapter = {
+                'chapter_id': data1.get('chapter_id')
+            }
+            query_question.update(query_chapter)
+        if data1.get('tag_id'):
+            query_tag = {
+                'tag_id': get_list_tag_id_from_input(data1.get('tag_id'))
+            }
+            query_question.update(query_tag)
+        if data1.get('level'):
+            query_level = {
+                'level': data1.get('level')
+            }
+            query_question.update(query_level)
+        query_question.update(
+            {
+                'datetime_updated': datetime.now().timestamp()
+            }
+        )
+
+        # update question collection
+        update_question = questions_db[QUESTIONS].find_one_and_update(
+            {
+                '_id': ObjectId(data1.get('question_id')),
+                'user_id': data2.get('user_id')
+            },
+            {
+                '$set': query_question
+            }
+        )
+        if not update_question:
+            msg = 'not your question!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+        # find last version of question
+        question_version_info = questions_db[QUESTIONS_VERSION].find_one({
+            'question_id': data1.get('question_id'),
+            'is_latest': True
+        })
+        if not question_version_info:
+            msg = 'question version not found!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        
+        query_question_version = {}
+        if data1.get('question_content') != question_version_info.get('question_content'):
+            query_question_content = {
+                'question_content': data1.get('question_content')
+            }
+            query_question_version.update(query_question_content)
+        if data1.get('answers') != question_version_info.get('answers'):
+            query_answers = {
+                'answers': data1.get('answers')
+            }
+            query_question_version.update(query_answers)
+        if data1.get('answers_right') != question_version_info.get('answers_right'):
+            query_answers_right = {
+                'answers_right': data1.get('answers_right')
+            }
+            query_question_version.update(query_answers_right)
+        if data1.get('sample_answer') != question_version_info.get('sample_answer'):
+            query_sample_answer = {
+                'sample_answer': data1.get('sample_answer')
+            }
+            query_question_version.update(query_sample_answer)
+        if data1.get('display') != question_version_info.get('display'):
+            query_display = {
+                'display': data1.get('display')
+            }
+            query_question_version.update(query_display)
+
+        if query_question_version:
+            # update older version status
+            up_question_version = questions_db[QUESTIONS_VERSION].find_one_and_update({
+                'question_id': data1.get('question_id'),
+                'is_latest': True
+            },
+            {
+                '$set': {
+                    'is_latest': False
+                }
+            })
+
+            # insert new version
+            query_version_name = {
+                'version_name': question_version_info.get('version_name') + 1,
+                'datetime_created': datetime.now().timestamp()
+            }
+            query_question_version.update(query_version_name)
+
+            del question_version_info['_id']
+            question_version_info.update(query_question_version)
+            question_version_info = questions_db[QUESTIONS_VERSION].insert_one(question_version_info)
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
 
 

@@ -16,9 +16,11 @@ class Questions_DB(BaseModel):
     # liked: List[str] = Field(default=[], description='ID of tag')
     is_removed: bool = Field(default=False, description='is removed?')
     datetime_created: float = Field(..., description='time create question')
+    datetime_updated: float = Field(default=None, description='time update question')
 
 class Questions_Version_DB(BaseModel):
     question_id: str = Field(..., description='ID of question')
+    version_name: int = Field(default=1, description='name of version')
     is_latest: bool = Field(default=True, description='is the newest version of question')
     question_content: str = Field(..., description='content of question')
     # question_image: str = Field(..., description='image of question')

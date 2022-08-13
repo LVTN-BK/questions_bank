@@ -528,7 +528,7 @@ async def get_group_info(
         query_filter = {
             '$and': [
                 {
-                    'group_id': group_id
+                    '_id': ObjectId(group_id)
                 },
                 {
                     'user_id': data2.get('user_id')
