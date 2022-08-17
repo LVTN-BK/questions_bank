@@ -69,8 +69,8 @@ MONGO_CLIENT = MongoClient(f'mongodb+srv://root:root@cluster0.3n45m.mongodb.net/
 
 ################################################
 # user
-SYSTEM = MONGO_CLIENT['group-db']
-user_db = MONGO_CLIENT['group-db']
+SYSTEM = MONGO_CLIENT['questions-db']
+user_db = MONGO_CLIENT['questions-db']
 USER_COLLECTION = 'users'
 USERS_PROFILE = 'users_profile'
 
@@ -89,7 +89,7 @@ noti_db[NOTI_SETTING_COLLECTION].create_index([('user_id', pymongo.ASCENDING), (
 
 #############################################
 # group db
-group_db = MONGO_CLIENT['group-db']
+group_db = MONGO_CLIENT['questions-db']
 GROUP = 'group'
 GROUP_LABEL = 'group_label'
 GROUP_INVITATION = 'group_invitation'
