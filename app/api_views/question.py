@@ -684,6 +684,135 @@ async def question_more_detail(
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
+#=================GET_QUESTION_BY_VERSION================
+#========================================================
+@app.get(
+    path='/get_question_by_version',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def get_question_by_version(
+    version_id: int = Query(..., description='question version'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+
+        pipeline = [
+            {
+                '$match': {
+                    '_id': ObjectId(version_id)
+                }
+            },
+            {
+                '$addFields': { # convert question_version_id in questions_version collection from ObjectId to String(to join with answers collection)
+                    'question_version_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$addFields': { # convert question_id in questions_version collection from string to ObjectId(to join with questions collection)
+                    'question_object_id': {
+                        '$toObjectId': '$question_id'
+                    }
+                }
+            },
+            {
+                '$lookup': { #join with questions collection
+                    'from': 'questions',
+                    'localField': 'question_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'is_removed': False
+                            }
+                        },
+                        {
+                            '$lookup': { #join with tag collection
+                                'from': 'tag',
+                                'let': {
+                                    'list_tag_id': '$tag_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$in': ['$id', '$$list_tag_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'tags_info'
+                            }
+                        },
+                        {
+                            '$project': { #project for questions collection
+                                '_id': 0,
+                                'type': 1,
+                                'level': 1,
+                                'tags_info': 1,
+                                'datetime_created': 1
+                            }
+                        }
+                    ],
+                    'as': 'question_information'
+                }
+            },
+            {
+                '$unwind': '$question_information'
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'question_id': 1,
+                    "question_content": 1,
+                    'level': "$question_information.level",
+                    'question_type': "$question_information.type",
+                    'tags_info': "$question_information.tags_info",
+                    'answers': 1,
+                    'answers_right': 1,
+                    'sample_answer': 1,
+                    'display': 1,
+                    'datetime_created': "$question_information.datetime_created"
+                }
+            }
+        ]
+
+        question_data = questions_db[QUESTIONS_VERSION].aggregate(pipeline)
+        if question_data.alive:
+            result_data = question_data.next()
+        else:
+            msg = 'question not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+
+        return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
 #===================USER_GET_ALL_QUESTION================
 #========================================================
 @app.get(
@@ -865,7 +994,7 @@ async def user_get_all_question(
         return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #================USER_GET_QUESTION_CLASSIFY==============
