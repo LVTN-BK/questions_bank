@@ -499,6 +499,7 @@ async def user_get_one_question(
                     'chapter_id': 1,
                     'level': 1,
                     'question_id': 1,
+                    'version_name': '$ques_ver.version_name',
                     "question_content": '$ques_ver.question_content',
                     "question_image": '$ques_ver.question_image',
                     'question_type': "$type",
@@ -699,7 +700,7 @@ async def question_more_detail(
     tags=['questions']
 )
 async def get_question_by_version(
-    version_id: int = Query(..., description='question version'),
+    version_id: str = Query(..., description='question version'),
     data2: dict = Depends(valid_headers)
 ):
     try:
@@ -787,6 +788,7 @@ async def get_question_by_version(
                 '$project': {
                     '_id': 0,
                     'question_id': 1,
+                    'version_name': 1,
                     "question_content": 1,
                     'level': "$question_information.level",
                     'question_type': "$question_information.type",
