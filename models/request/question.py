@@ -111,5 +111,5 @@ class DATA_Update_Question(BaseModel):
     answers: Union[List[AnswerM], List[AnswerMC], List[str]] = Field(default=None, description='answer of question')
     answers_right: List[AnswerM] = Field(default=None, description='answer in the right collumn of question (for matching questions)')
     sample_answer: Union[List[Tuple[str, str]], str, List[str]] = Field(default=None, description='correct answer of question')
-    display: Union[DisplayQuestionM, DisplayQuestionIP, DisplayQuestionS, DisplayQuestionMC] = Field(default=None, description='display setting of question')
+    display: Union[DisplayQuestionM, DisplayQuestionS, DisplayQuestionIP, DisplayQuestionMC] = Field(default=None, description='display setting of question')
 
