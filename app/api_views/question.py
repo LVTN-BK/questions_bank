@@ -377,27 +377,32 @@ async def delete_questions(
         data = []
         # find question
         for question_id in list_question_ids:
-            question_del = questions_db[QUESTIONS].find_one_and_delete(
+            question_del = questions_db[QUESTIONS].find_one_and_update(
                 {
                     "_id": ObjectId(question_id),
                     'user_id': data2.get('user_id')       
+                },
+                {
+                    '$set': {
+                        'is_removed': True
+                    }
                 }
             )
 
             if question_del:
                 data.append(question_id)
         
-                # find question version
-                question_version = questions_db[QUESTIONS_VERSION].delete_many(
-                    {
-                        'question_id': question_id
-                    }
-                )
+                # # find question version
+                # question_version = questions_db[QUESTIONS_VERSION].delete_many(
+                #     {
+                #         'question_id': question_id
+                #     }
+                # )
 
         return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
@@ -424,7 +429,8 @@ async def user_get_one_question(
         pipeline = [
             {
                 '$match': {
-                    '_id': ObjectId(question_id)
+                    '_id': ObjectId(question_id),
+                    'is_removed': False
                 }
             },
             {
@@ -491,6 +497,7 @@ async def user_get_one_question(
                     'class_id': 1,
                     'subject_id': 1,
                     'chapter_id': 1,
+                    'level': 1,
                     'question_id': 1,
                     "question_content": '$ques_ver.question_content',
                     "question_image": '$ques_ver.question_image',
@@ -509,60 +516,11 @@ async def user_get_one_question(
             question_data = question_info.next()
             return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
         else:
-            return JSONResponse(content={'status': 'not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+            return JSONResponse(content={'status': 'question not found!'}, status_code=status.HTTP_404_NOT_FOUND)
 
-
-        # find question
-        question = questions_db[QUESTIONS].find_one(
-            {
-                "$and": [
-                    {
-                        '_id': ObjectId(question_id)
-                    },
-                    {
-                        'user_id': {
-                            '$eq': data2.get('user_id')
-                        }
-                    },
-                    {
-                        'is_removed': False
-                    }
-                ]
-                        
-            }
-        )
-        if not question:
-            return JSONResponse(content={'status': 'Question not found!'}, status_code=status.HTTP_404_NOT_FOUND)
-        
-        # find question version
-        question_version = questions_db[QUESTIONS_VERSION].find_one(
-            {
-                '$and': [
-                    {
-                        'question_id': question_id
-                    },
-                    {
-                        'is_latest': True
-                    }
-                ]
-            }
-        )
-        if not question_version:
-            return JSONResponse(content={'status': 'Question not found!'}, status_code=status.HTTP_404_NOT_FOUND)
-
-        # get answer of question
-        answers = get_answer(answers=question_version.get('answers'), question_type=question.get('type'))
-
-        logger().info(answers)
-        question_version['answers'] = answers
-        del question['_id']
-        del question_version['_id']
-        question['question_info'] = question_version
-
-        return JSONResponse(content={'status': 'success', 'data': question},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #===================USER_GET_ALL_QUESTION================
@@ -678,6 +636,7 @@ async def user_get_all_question(
                             '$project': { #project for questions collection
                                 '_id': 0,
                                 'type': 1,
+                                'level': 1,
                                 'tags_info': 1,
                                 'datetime_created': 1
                             }
@@ -714,6 +673,7 @@ async def user_get_all_question(
                                 'question_id': 1,
                                 "question_content": 1,
                                 "question_image": 1,
+                                'level': "$question_information.level",
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
                                 'answers': 1,
