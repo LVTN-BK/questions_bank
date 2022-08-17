@@ -127,7 +127,7 @@ questions_db[EXAMS_VERSION].create_index([('exam_title', 'text')])
 
 ############################################
 #like db
-likes_db = MONGO_CLIENT['likes-db']
+likes_db = MONGO_CLIENT['questions-db']
 LIKES = 'likes'
 #create index for like db
 likes_db[LIKES].create_index([('user_id', pymongo.ASCENDING), ('target_id', pymongo.ASCENDING)], unique=True)
@@ -135,7 +135,7 @@ likes_db[LIKES].create_index([('user_id', pymongo.ASCENDING), ('target_id', pymo
 
 ############################################
 #comment db
-comments_db = MONGO_CLIENT['comments-db']
+comments_db = MONGO_CLIENT['questions-db']
 COMMENTS = 'comments'
 REPLY_COMMENTS = 'reply_comments'
 

@@ -523,6 +523,167 @@ async def user_get_one_question(
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
+#===================QUESTION_MORE_DETAIL=================
+#========================================================
+@app.get(
+    path='/question_more_detail/{question_id}',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def question_more_detail(
+    question_id: str = Path(..., description='ID of question'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        pipeline = [
+            {
+                '$match': {
+                    '_id': ObjectId(question_id),
+                    'is_removed': False
+                }
+            },
+            {
+                '$set': {
+                    'question_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'author_data'
+                }
+            },
+            {
+                '$set': {
+                    'author_info': {
+                        '$ifNull': [{'$first': '$author_data'}, None]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'likes',
+                    'localField': 'question_id',
+                    'foreignField': 'target_id',
+                    'as': 'likes_data'
+                }
+            },
+            {
+                '$set': {
+                    'num_likes': {
+                        '$size': '$likes_data'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'likes',
+                    'localField': 'question_id',
+                    'foreignField': 'target_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'user_id': data2.get('user_id')
+                            }
+                        }
+                    ],
+                    'as': 'user_like'
+                }
+            },
+            {
+                '$set': {
+                    'is_liked': {
+                        '$ne': ['$user_like', []]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'comments',
+                    'localField': 'question_id',
+                    'foreignField': 'target_id',
+                    'as': 'comments_data'
+                }
+            },
+            {
+                '$set': {
+                    'num_comments': {
+                        '$size': '$comments_data'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'questions_version',
+                    'localField': 'question_id',
+                    'foreignField': 'question_id',
+                    'pipeline': [
+                        {
+                            '$project' : {
+                                '_id': 0,
+                                'version_id': {
+                                    '$toString': '$_id'
+                                },
+                                # 'question_id': 1,
+                                'version_name': 1
+                            }
+                        }
+                    ],
+                    'as': 'question_version'
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'question_id': 1,
+                    'author_info': 1,
+                    'num_comments': 1,
+                    'num_likes': 1,
+                    'is_liked': 1,
+                    'question_version': 1,
+                }
+            }
+        ]
+        question_info = questions_db[QUESTIONS].aggregate(pipeline)
+        if question_info.alive:
+            question_data = question_info.next()
+            return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
+        else:
+            return JSONResponse(content={'status': 'question not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
 #===================USER_GET_ALL_QUESTION================
 #========================================================
 @app.get(

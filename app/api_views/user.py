@@ -124,3 +124,69 @@ async def search_user_not_in_group(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
+
+#========================================================
+#===================GET_USER_INFO========================
+#========================================================
+@app.get(
+    path='/get_user_info',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ''
+        }
+    },
+    tags=['User']
+)
+async def get_user_info(
+    user_id: str = Query(..., description='ID of user')
+):
+    try:
+        pipeline = [
+            {
+                '$match': {
+                    'user_id': user_id
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'user_id': 1,
+                    'name': {
+                        '$ifNull': ['$name', None]
+                    },
+                    'email': {
+                        '$ifNull': ['$email', None]
+                    },
+                    'avatar': {
+                        '$ifNull': ['$avatar', None]
+                    },
+                    'address': {
+                        '$ifNull': ['$address', None]
+                    },
+                    'birthday': {
+                        '$ifNull': ['$birthday', None]
+                    },
+                    'gender': {
+                        '$ifNull': ['$gender', None]
+                    },
+                    'phone': {
+                        '$ifNull': ['$phone', None]
+                    },
+                }
+            }
+        ]
+
+        user_data = user_db[USERS_PROFILE].aggregate(pipeline)
+        if user_data.alive:
+            result_data = user_data.next()
+        else:
+            msg = 'user not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg},status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
