@@ -1,11 +1,11 @@
 from fastapi import status, Form
 from fastapi import Body, Depends, Query
-from app.utils.account import send_reset_password_email, send_verify_email
+from app.utils.account import send_reset_password_email, send_verify_email, send_verify_update_email
 from models.define.user import UserInfo
-from models.request.account import DATA_Apply_Reset_Password, DATA_Reset_Password, DATA_Update_Account, DATA_Update_Email, DATA_Update_Password
+from models.request.account import DATA_Accept_Update_Email, DATA_Apply_Reset_Password, DATA_Reset_Password, DATA_Update_Account, DATA_Update_Password, DATA_Verify_Update_Email
 from pymongo.collection import ReturnDocument
 from starlette.responses import JSONResponse
-from configs.settings import SYSTEM, USER_COLLECTION, USERS_PROFILE, app
+from configs.settings import SYSTEM, USER_COLLECTION, USERS_PROFILE, app, user_db
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
@@ -298,10 +298,10 @@ async def update_avatar(
         return JSONResponse(content={'status': 'Failed!'}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
-#=================UPDATE_EMAIL==============
+#=============VERIFY_UPDATE_EMAIL===========
 #===========================================
-@app.put(
-    path='/update_email',
+@app.post(
+    path='/verify_update_email',
     responses={
         status.HTTP_200_OK: {
             'model': CreateAccountResponse200
@@ -312,34 +312,118 @@ async def update_avatar(
     }, 
     tags=['system_account']
 )
-async def update_email(
-    data1: DATA_Update_Email,
+async def verify_update_email(
+    data1: DATA_Verify_Update_Email,
     data2: dict = Depends(valid_headers)
 ):
     logger().info('=====================update_email======================')
-    user = SYSTEM['users'].find_one({'email': {'$eq': data2.get('email')}})
-    data1 = jsonable_encoder(data1)
-    if user is None:
-        return JSONResponse(content={'status': 'Email not exist'}, status_code=status.HTTP_403_FORBIDDEN)
+        
     try:
+        new_email_usage = user_db[USER_COLLECTION].find_one({'email': {'$eq': data1.new_email}})
+        data1 = jsonable_encoder(data1)
+        if new_email_usage:
+            msg = 'email exist in system!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+        user = SYSTEM['users'].find_one({'email': {'$eq': data2.get('email')}})
+
         if verify_password(data1.get('password'), user.get('hashed_password')):
+            # store key update email to db
+            import secrets
+            keyonce = secrets.token_urlsafe(6)
+            expire_in = datetime.now() + timedelta(minutes=30)
+            expire_at_timestamp = expire_in.timestamp()
+            data_update_email = {
+                'keyonce': keyonce,
+                'keyonce_expire_at': expire_at_timestamp,
+                'new_email': data1.get('new_email')
+            }
+            user_db[USER_COLLECTION].find_one_and_update(
+                {
+                    '_id': user.get('_id')
+                },
+                {
+                    '$set': {
+                        'data_update_email': data_update_email
+                    }
+                }
+            )
+
+            # send key to new email
+            await send_verify_update_email(to_email=data1.get('new_email'), keyonce=keyonce)
+
+            return JSONResponse(
+                content={
+                    'status': 'success'
+                },
+                status_code=status.HTTP_200_OK
+            )
+        else:
+            msg = 'Sai mật khẩu!'
+            return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#===========================================
+#=============ACCEPT_UPDATE_EMAIL===========
+#===========================================
+@app.put(
+    path='/accept_update_email',
+    responses={
+        status.HTTP_200_OK: {
+            'model': CreateAccountResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': CreateAccountResponse403
+        }
+    }, 
+    tags=['system_account']
+)
+async def accept_update_email(
+    data1: DATA_Accept_Update_Email,
+    data2: dict = Depends(valid_headers)
+):
+    logger().info('=====================update_email======================')
+        
+    try:
+        user = SYSTEM['users'].find_one({'email': {'$eq': data2.get('email')}})
+
+        data_update_email = user.get('data_update_email')
+        if not data_update_email:
+            msg = 'user not request update email yet!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+        new_email_usage = user_db[USER_COLLECTION].find_one({'email': {'$eq': data_update_email.get('new_email')}})
+        if new_email_usage:
+            msg = 'email exist in system!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+        if data_update_email.get('keyonce_expire_at') < datetime.now().timestamp():
+            msg = 'key update email is expired!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        elif data1.key_update_email == data_update_email.get('keyonce'):
             # Create new access token for user
             # secret_key = user.get('secret_key')
             access_token= create_access_token(
                 data={
-                    'email': data1.get('email'),
+                    'email': data_update_email.get('new_email'),
                     'user_id': str(user.get('_id'))
                 }
             )
 
             # update in user table
             user = SYSTEM['users'].find_one_and_update(
-                {'email': {'$eq': data2.get('email')}},
+                {'_id': user.get('_id')},
                 {
                     '$set': {
-                        'email': data1.get('email'),
+                        'email': data_update_email.get('new_email'),
                         'token.access_token': access_token,
                         # 'secret_key': secret_key
+                    },
+                    '$unset': {
+                        'data_update_email': ''
                     }
                 },
                 return_document=ReturnDocument.AFTER
@@ -348,7 +432,7 @@ async def update_email(
             # update in user information table
             query_update = {
                 '$set': {
-                    'email': data1.get('email')
+                    'email': data_update_email.get('new_email')
                 }
             }
             SYSTEM[USERS_PROFILE].find_one_and_update(
@@ -359,7 +443,7 @@ async def update_email(
             data = {
                 'access_token': access_token, 
                 # 'secret_key': secret_key,
-                'email': data1.get('email')
+                'email': data_update_email.get('new_email')
             }
             msg = 'update email successfully'
             return JSONResponse(
@@ -370,10 +454,12 @@ async def update_email(
                 },
                 status_code=status.HTTP_200_OK
             )
-    except Exception as Argument:
-        logging.exception("Error occurred")
-    msg = 'maybe password was wrong'
-    return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        else:
+            msg = 'key is not correct'
+            return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #================UPDATE_PASSWORD============
@@ -446,10 +532,9 @@ async def reset_password(
     """ 
         Khôi phục lại mật khẩu, hệ thống gửi mail kèm theo mã để khôi phục lại mật khẩu
     """
-    import datetime
     import secrets
     keyonce = secrets.token_urlsafe(6)
-    expire_in = datetime.datetime.now() + datetime.timedelta(minutes=30)
+    expire_in = datetime.now() + timedelta(minutes=30)
     expire_at_timestamp = expire_in.timestamp()
 
     user = SYSTEM[USER_COLLECTION].find_one(

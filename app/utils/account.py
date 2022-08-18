@@ -182,3 +182,31 @@ async def send_verify_email(to_email: str, keyonce: str):
         # pprint(api_response)
     except ApiException as e:
         logger().error("Exception when calling SMTPApi->send_transac_email: %s\n" % e)
+
+
+async def send_verify_update_email(to_email: str, keyonce: str):
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+    subject = "Update Email - Question Banks"
+    msg = 'Vui lòng xác nhận địa chỉ email mới của bạn bằng cách nhập mã xác minh bên dưới.'
+    html_content = f"""
+        <html>
+        <head></head>
+        <body>
+        <div style="text-align:center">
+            <p>{msg}</p>
+        </div><br>
+        <div style="text-align:center">
+            <h1><b>{keyonce}</b></h1><br>
+        </div>
+        </body>
+        </html>
+        """
+    sender = {"name":"Questions Bank","email":"hotro.qb@gmail.com"}
+    to = [{"email":to_email}]
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(to=to, html_content=html_content, sender=sender, subject=subject)
+
+    try:
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        # pprint(api_response)
+    except ApiException as e:
+        logger().error("Exception when calling SMTPApi->send_transac_email: %s\n" % e)
