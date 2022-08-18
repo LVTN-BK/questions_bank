@@ -63,6 +63,19 @@ async def send_request_join_group(
         query = {'_id': ObjectId(data.group_id)}
         group = group_db[GROUP].find_one(query)
         if group:
+            # check group is public
+            if group.get('group_type') == GroupType.PUBLIC:
+                #add to group members
+                mem_data = GroupMember(
+                    group_id= data.group_id,
+                    user_id= data2.get('user_id'),
+                    datetime_created= datetime.now().timestamp()
+                )
+                participant_id = group_db[GROUP_PARTICIPANT].insert_one(jsonable_encoder(mem_data)).inserted_id
+
+                msg = 'join group successful!!!'
+                return JSONResponse(content={'status': 'success', 'msg': msg}, status_code=status.HTTP_200_OK)
+
             json_data = {
                 'group_id': data.group_id,
                 'user_id': data2.get('user_id'),
