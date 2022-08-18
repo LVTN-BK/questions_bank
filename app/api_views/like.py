@@ -106,7 +106,7 @@ async def unlike(
 async def question_get_list_like(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    question_id: int = Query(..., description='ID of question'),
+    question_id: str = Query(..., description='ID of question'),
     data2: dict = Depends(valid_headers)
 ):
     try:
@@ -226,7 +226,7 @@ async def question_get_list_like(
 async def exam_get_list_like(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    exam_id: int = Query(..., description='ID of exam'),
+    exam_id: str = Query(..., description='ID of exam'),
     data2: dict = Depends(valid_headers)
 ):
     try:
