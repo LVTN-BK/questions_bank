@@ -37,21 +37,19 @@ async def login_system(
     email: EmailStr = Body(...), 
     password: str = Body(...)
 ):
-    user = SYSTEM['users'].find_one(
-        {
-            'email': {
-                '$eq': email
-            },
-            'is_verified': True
-        }
-    )
-    if user is None:
-        msg = 'Tài khoản không tồn tại hoặc chưa xác thực!'
-        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
-    # Check verify email
-    ###############################################
-
     try:
+        user = SYSTEM['users'].find_one(
+            {
+                'email': {
+                    '$eq': email
+                },
+                'is_verified': True
+            }
+        )
+        if user is None:
+            msg = 'Tài khoản không tồn tại hoặc chưa xác thực!'
+            return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        
         if verify_password(password, user.get('hashed_password')):
             # Create new access token for user
             # secret_key = user.get('secret_key')
@@ -78,10 +76,12 @@ async def login_system(
             # user_info_return = UserInfo(id=str(user.get('_id')), avatar=user_info.get('avatar'))
             return JSONResponse(content={'token': user.get('token'), 'user': user_info},
                                 status_code=status.HTTP_200_OK)
-    except:
-        pass
-    msg = 'Tài khoản hoặc mật khẩu không đúng!'
-    return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        else:
+            msg = 'Tài khoản hoặc mật khẩu không đúng!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #==============CREATE_SYSTEM_ACCOUNT========
@@ -102,83 +102,85 @@ async def create_system_account(
         name: str = Body(..., description='name'),
         password: str = Body(..., description='Password'),
 ):
-    # Check if user already exist
-    if SYSTEM['users'].find({"email": {"$eq": email}}).count():
-        return JSONResponse(content={
-            "status": "Failed",
-            "msg": "Email is existing for another account"
-        }, status_code=status.HTTP_403_FORBIDDEN)
-    
+    try:
+        # Check if user already exist
+        if SYSTEM['users'].find({"email": {"$eq": email}}).count():
+            return JSONResponse(content={
+                "status": "Failed",
+                "msg": "Email is existing for another account"
+            }, status_code=status.HTTP_403_FORBIDDEN)
+        
 
-    # #Thêm encrypt password
-    # key = Fernet.generate_key()
-    # fernet = Fernet(key)
+        # #Thêm encrypt password
+        # key = Fernet.generate_key()
+        # fernet = Fernet(key)
 
-    import secrets
-    keyonce = secrets.token_urlsafe(12)
-    await send_verify_email(to_email=email, keyonce=keyonce)
+        import secrets
+        keyonce = secrets.token_urlsafe(12)
+        await send_verify_email(to_email=email, keyonce=keyonce)
 
-    user = User(
-        name=name,
-        # token=token,
-        # secret_key=secret_key,
-        email=email,
-        hashed_password=get_password_hash(password),
-        # encrypt_password=fernet.encrypt(password.encode()), #pass
-        # encrypt_key=key,  
-        key_verify=keyonce,                                   #key
-        datetime_created=datetime.now()
-    )
+        user = User(
+            name=name,
+            # token=token,
+            # secret_key=secret_key,
+            email=email,
+            hashed_password=get_password_hash(password),
+            # encrypt_password=fernet.encrypt(password.encode()), #pass
+            # encrypt_key=key,  
+            key_verify=keyonce,                                   #key
+            datetime_created=datetime.now()
+        )
 
-    # Create user in db
-    user_id = SYSTEM[USER_COLLECTION].insert_one(
-        jsonable_encoder(user)
-    ).inserted_id
+        # Create user in db
+        user_id = SYSTEM[USER_COLLECTION].insert_one(
+            jsonable_encoder(user)
+        ).inserted_id
 
-    # insert to user profile
-    query_profile = {
-        'user_id': str(user_id),
-        'name': name,
-        'email': email
-    }
-    SYSTEM[USERS_PROFILE].insert_one(
-        query_profile
-    )
-
-    # Update access token, secret key
-    access_token = create_access_token(
-        data={
-            'email': email,
-            'user_id': str(user_id)
+        # insert to user profile
+        query_profile = {
+            'user_id': str(user_id),
+            'name': name,
+            'email': email
         }
-    )
+        SYSTEM[USERS_PROFILE].insert_one(
+            query_profile
+        )
 
-    token = Token(
-        access_token=access_token,
-        token_type='Bearer'
-    )
-    
-    user = SYSTEM['users'].find_one(
-        {'email': {'$eq': email}},
-    )
+        # Update access token, secret key
+        access_token = create_access_token(
+            data={
+                'email': email,
+                'user_id': str(user_id)
+            }
+        )
 
-    query_update = {
-        '$set': {
-            'token': jsonable_encoder(token)
-        }      
-    }
+        token = Token(
+            access_token=access_token,
+            token_type='Bearer'
+        )
+        
+        user = SYSTEM['users'].find_one(
+            {'email': {'$eq': email}},
+        )
 
-    SYSTEM['users'].update_one(
-        {'email': {'$eq': email}},
-        query_update
-    )
+        query_update = {
+            '$set': {
+                'token': jsonable_encoder(token)
+            }      
+        }
 
-    
+        SYSTEM['users'].update_one(
+            {'email': {'$eq': email}},
+            query_update
+        )
 
-    return JSONResponse(content={
-        'status': 'Created',
-        'access_token': access_token
-    }, status_code=status.HTTP_200_OK)
+        return JSONResponse(content={
+            'status': 'Created',
+        }, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
 
 # #===========================================
 # #==============GET_ACCOUNT_INFO=============
@@ -255,7 +257,7 @@ async def update_account_info(
         }, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed!'}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #=================UPDATE_AVATAR=============
