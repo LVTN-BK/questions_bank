@@ -975,6 +975,11 @@ async def user_get_all_question(
                                 'datetime_created': "$question_information.datetime_created"
                             }
                         },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
                         { 
                             '$skip': num_skip 
                         },
