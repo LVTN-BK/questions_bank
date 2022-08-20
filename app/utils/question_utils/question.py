@@ -205,10 +205,19 @@ def get_question_information_with_version_id(question_version_id: str):
     
     return question_version
 
-def get_query_filter_questions(search, type, level, class_id, subject_id, chapter_id):
+def get_query_filter_questions(search, type, level, class_id, subject_id, chapter_id, tags):
     filter_question = [{}]
     filter_question_version = [{}]
 
+    # =============== tags =================
+    if tags:
+        query_search = {
+            'tag_id': {
+                '$in': tags,
+            }
+        }
+        filter_question.append(query_search)
+    
     # =============== search =================
     if search:
         query_search = {

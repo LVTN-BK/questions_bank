@@ -842,6 +842,7 @@ async def user_get_all_question(
     search: Optional[str] = Query(default=None, description='text search'),
     type: Optional[str] = Query(default=None, description='question type'),
     level: Optional[str] = Query(default=None, description='question level'),
+    tags: List[str] = Query(default=[], description='list tag_id'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -854,7 +855,8 @@ async def user_get_all_question(
             level=level,
             class_id=class_id,
             subject_id=subject_id,
-            chapter_id=chapter_id
+            chapter_id=chapter_id,
+            tags=tags
         )
 
         # =============== owner =================
@@ -1340,6 +1342,7 @@ async def group_get_all_question(
     search: Optional[str] = Query(default=None, description='text search'),
     type: Optional[str] = Query(default=None, description='question type'),
     level: Optional[str] = Query(default=None, description='question level'),
+    tags: List[str] = Query(default=[], description='list tag_id'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -1360,7 +1363,8 @@ async def group_get_all_question(
             level=level,
             class_id=class_id,
             subject_id=subject_id,
-            chapter_id=chapter_id
+            chapter_id=chapter_id,
+            tags=tags
         )
 
         num_skip = (page - 1)*limit
@@ -1733,6 +1737,7 @@ async def community_get_all_question(
     search: Optional[str] = Query(default=None, description='text search'),
     type: Optional[str] = Query(default=None, description='question type'),
     level: Optional[str] = Query(default=None, description='question level'),
+    tags: List[str] = Query(default=[], description='list tag_id'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -1745,7 +1750,8 @@ async def community_get_all_question(
             level=level,
             class_id=class_id,
             subject_id=subject_id,
-            chapter_id=chapter_id
+            chapter_id=chapter_id,
+            tags=tags
         )
 
         # =============== public =================

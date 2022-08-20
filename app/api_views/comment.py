@@ -544,7 +544,7 @@ async def get_list_reply_comment(
             },
         ]
 
-        comments = comments_db[COMMENTS].aggregate(pipeline)
+        comments = comments_db[REPLY_COMMENTS].aggregate(pipeline)
 
         result_data, meta_data = get_data_and_metadata(aggregate_response=comments, page=page)
 
