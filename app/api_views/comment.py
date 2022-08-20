@@ -34,24 +34,11 @@ async def create_comment(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # check user
-        user = SYSTEM['users'].find_one(
-            {
-                'email': {
-                    '$eq': data2.get('email')
-                }
-            }
-        )
-        if not user:
-            return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
-
-        data1 = jsonable_encoder(data1)
-        
         comment = Comments_DB(
             user_id=data2.get('user_id'),
-            target_id=data1.get('target_id'),
-            target_type=data1.get('target_type'),
-            content=data1.get('content'),
+            target_id=data1.target_id,
+            target_type=data1.target_type,
+            content=data1.content,
         )
 
         logger().info(f'comment: {comment}')
@@ -62,7 +49,7 @@ async def create_comment(
         return JSONResponse(content={'status': 'success', 'data': {'comment_id': str(id_comment)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #================CREATE_REPLY_COMMENT====================
@@ -84,23 +71,10 @@ async def create_reply_comment(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # check user
-        user = SYSTEM['users'].find_one(
-            {
-                'email': {
-                    '$eq': data2.get('email')
-                }
-            }
-        )
-        if not user:
-            return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
-
-        data1 = jsonable_encoder(data1)
-        
         reply_comment = Reply_Comments_DB(
             user_id=data2.get('user_id'),
-            comment_id=data1.get('comment_id'),
-            content=data1.get('content'),
+            comment_id=data1.comment_id,
+            content=data1.content,
         )
 
         logger().info(f'reply_comment: {reply_comment}')
@@ -111,12 +85,12 @@ async def create_reply_comment(
         return JSONResponse(content={'status': 'success', 'data': {'reply_comment_id': str(id_reply_comment)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #=====================REMOVE_COMMENT=====================
 #========================================================
-@app.post(
+@app.delete(
     path='/remove_comment',
     responses={
         status.HTTP_200_OK: {
@@ -132,44 +106,46 @@ async def remove_comment(
     data1: DATA_Remove_Comment,
     data2: dict = Depends(valid_headers)
 ):
-    try:
-        # check user
-        user = SYSTEM['users'].find_one(
+    try:        
+        # remove comment record
+        comment_data = comments_db[COMMENTS].find_one_and_update(
             {
-                'email': {
-                    '$eq': data2.get('email')
+                '_id': ObjectId(data1.comment_id),
+                'user_id': data2.get('user_id')
+            },
+            {
+                '$set': {
+                    'is_removed': True
                 }
             }
         )
-        if not user:
-            return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
 
-        data1 = jsonable_encoder(data1)
+        if comment_data:
+            # delete reply comment
+            comments_db[REPLY_COMMENTS].update_many(
+                {
+                    'comment_id': data1.get('comment_id')
+                },
+                {
+                    '$set': {
+                        'is_removed': True
+                    }
+                }
+            )
 
-        query_remove_comment = {
-            '_id': ObjectId(data1.get('comment_id')),
-            'user_id': data2.get('user_id')
-        }
-        
-        # remove comment record
-        comments_db[COMMENTS].find_one_and_delete(query_remove_comment)
-
-        # delete reply comment
-        query_remove_reply_comment = {
-            'comment_id': data1.get('comment_id')
-        }
-        comments_db[REPLY_COMMENTS].delete_many(query_remove_reply_comment)
-
-        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+            return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+        else:
+            msg = 'comment not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg},status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #==================REMOVE_REPLY_COMMENT==================
 #========================================================
-@app.post(
-    path='/remove_comment',
+@app.delete(
+    path='/remove_reply_comment',
     responses={
         status.HTTP_200_OK: {
             'model': ''
@@ -184,32 +160,28 @@ async def remove_reply_comment(
     data1: DATA_Remove_Reply_Comment,
     data2: dict = Depends(valid_headers)
 ):
-    try:
-        # check user
-        user = SYSTEM['users'].find_one(
+    try:        
+        # remove comment record
+        comment_data = comments_db[COMMENTS].find_one_and_update(
             {
-                'email': {
-                    '$eq': data2.get('email')
+                '_id': ObjectId(data1.reply_comment_id),
+                'user_id': data2.get('user_id')
+            },
+            {
+                '$set': {
+                    'is_removed': True
                 }
             }
         )
-        if not user:
-            return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
 
-        data1 = jsonable_encoder(data1)
-
-        query_remove_reply_comment = {
-            '_id': ObjectId(data1.get('reply_comment_id')),
-            'user_id': data2.get('user_id')
-        }
-        
-        # remove comment record
-        comments_db[COMMENTS].find_one_and_delete(query_remove_reply_comment)
-
-        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+        if comment_data:
+            return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+        else:
+            msg = 'comment not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg},status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #==================QUESTION_GET_LIST_COMMENT=============

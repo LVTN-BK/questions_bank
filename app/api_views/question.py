@@ -631,6 +631,13 @@ async def question_more_detail(
                     'from': 'comments',
                     'localField': 'question_id',
                     'foreignField': 'target_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'is_removed': False
+                            }
+                        }
+                    ],
                     'as': 'comments_data'
                 }
             },
