@@ -53,6 +53,7 @@ async def create_exam(
             class_id=data1.get('class_id'),
             subject_id=data1.get('subject_id'),
             tag_id=data1.get('tag_id'),
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'exam: {exam}')
@@ -66,7 +67,8 @@ async def create_exam(
             exam_title=data1.get('exam_title'),
             note=data1.get('note'),
             time_limit=data1.get('time_limit'),
-            questions=data1.get('questions')
+            questions=data1.get('questions'),
+            datetime_created=datetime.now().timestamp()
         )
         id_exam_version = exams_db[EXAMS_VERSION].insert_one(jsonable_encoder(exams_version)).inserted_id
 

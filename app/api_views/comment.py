@@ -39,6 +39,7 @@ async def create_comment(
             target_id=data1.target_id,
             target_type=data1.target_type,
             content=data1.content,
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'comment: {comment}')
@@ -75,6 +76,7 @@ async def create_reply_comment(
             user_id=data2.get('user_id'),
             comment_id=data1.comment_id,
             content=data1.content,
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'reply_comment: {reply_comment}')

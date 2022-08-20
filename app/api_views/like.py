@@ -32,13 +32,12 @@ async def create_like(
     data1: DATA_Create_Like,
     data2: dict = Depends(valid_headers)
 ):
-    try:
-        data1 = jsonable_encoder(data1)
-        
+    try:        
         like = Likes_DB(
             user_id=data2.get('user_id'),
-            target_id=data1.get('target_id'),
-            target_type=data1.get('target_type'),
+            target_id=data1.target_id,
+            target_type=data1.target_type,
+            datetime_created=datetime.now().timestamp()
         )
 
         logger().info(f'like: {like}')
@@ -49,7 +48,7 @@ async def create_like(
         return JSONResponse(content={'status': 'success', 'data': {'like_id': str(id_like)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #=========================UNLIKE=========================
@@ -71,12 +70,10 @@ async def unlike(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        data1 = jsonable_encoder(data1)
-
         query_unlike = {
             'user_id': data2.get('user_id'),
-            'target_id': data1.get('target_id'),
-            'target_type': data1.get('target_type')
+            'target_id': data1.target_id,
+            'target_type': data1.target_type
         }
         
         # remove like record
@@ -89,7 +86,7 @@ async def unlike(
 
 
 #========================================================
-#==================QUESTION_GET_LIST_LIKE=============
+#==================QUESTION_GET_LIST_LIKE================
 #========================================================
 @app.get(
     path='/question_get_list_like',

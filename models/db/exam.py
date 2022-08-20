@@ -14,7 +14,7 @@ class Exams_DB(BaseModel):
     is_public: bool = Field(default=False, description='ID of tag')
     # liked: List[str] = Field(default=[], description='ID of tag')
     is_removed: bool = Field(default=False, description='is removed?')
-    datetime_created: float = Field(default=datetime.now().timestamp(), description='time create question')
+    datetime_created: float = Field(..., description='time create question')
     datetime_updated: float = Field(default=None, description='last time update question')
 
 class Exams_Version_DB(BaseModel):
@@ -24,4 +24,4 @@ class Exams_Version_DB(BaseModel):
     note: str = Field(default=None, description='content of question')
     time_limit: str = Field(..., description='limit time of exam')
     questions: List[SectionQuestion] = Field(..., description='questions of exam')
-    datetime_created: float = Field(default=datetime.now().timestamp(), description='time create question version')
+    datetime_created: float = Field(..., description='time create question version')
