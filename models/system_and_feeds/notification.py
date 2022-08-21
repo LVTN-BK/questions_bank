@@ -22,14 +22,20 @@ class Notification(BaseModel):
 
 
 class NotificationTypeManage:
-    COMMENT = 'Comment'
+    COMMENT_QUESTION = 'comment_question'
+    COMMENT_EXAM = 'comment_exam'
     GROUP_SHARE_QUESTION = 'group_share_question'
     COMMUNITY_SHARE_QUESTION = 'community_share_question'
-    LOGGIN = 'Loggin'
+    GROUP_INVITE = 'group_invite'
+    GROUP_ACCEPT_REQUEST = 'group_accept_request'
+    GROUP_REJECT_REQUEST = 'group_reject_request'
     
 
 class NotificationContentManage:
-    COMMENT = 'đã bình luận vào đề thi của bạn'
+    COMMENT_QUESTION = 'đã bình luận vào câu hỏi của bạn'
+    COMMENT_EXAM = 'đã bình luận vào đề thi của bạn'
     GROUP_SHARE_QUESTION = 'Bạn đã chia sẻ thành công một câu hỏi vào nhóm'
     COMMUNITY_SHARE_QUESTION = 'Bạn đã chia sẻ thành công một câu hỏi vào cộng đồng'
-    LOGGIN = 'vừa đăng nhập thành công'
+    GROUP_INVITE = 'đã mời bạn vào nhóm'
+    GROUP_ACCEPT_REQUEST = 'đã chấp nhận yêu cầu tham gia nhóm của bạn'
+    GROUP_REJECT_REQUEST = 'đã từ chối yêu cầu tham gia nhóm của bạn'

@@ -17,6 +17,7 @@ from fastapi import Depends, Path, Query, status, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from models.db.group import GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
+from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
 from models.request.notification import DATA_Create_Noti_List_User, TargetData
 from models.request.question import (DATA_Create_Answer,
@@ -1971,6 +1972,7 @@ async def share_question_to_community(
     },
     tags=['questions - share']
 )
+@SendNotiDecoratorsApi.group_share_question
 async def share_question_to_group(
     background_tasks: BackgroundTasks,
     data: DATA_Share_Question_To_Group,
@@ -1995,19 +1997,19 @@ async def share_question_to_group(
         
         insert = group_db[GROUP_QUESTIONS].insert_one(jsonable_encoder(group_question))
 
-        # notify to user
-        target_data = TargetData(
-            group_id=data.group_id,
-            question_id=data.question_id
-        )
+        # # notify to user
+        # target_data = TargetData(
+        #     group_id=data.group_id,
+        #     question_id=data.question_id
+        # )
 
-        data_noti = DATA_Create_Noti_List_User(
-            sender_id=data2.get('user_id'),
-            list_users=[data2.get('user_id')],
-            noti_type=NotificationTypeManage.GROUP_SHARE_QUESTION,
-            target=target_data
-        )
-        background_tasks.add_task(create_notification_to_list_specific_user, data_noti)
+        # data_noti = DATA_Create_Noti_List_User(
+        #     sender_id=data2.get('user_id'),
+        #     list_users=[data2.get('user_id')],
+        #     noti_type=NotificationTypeManage.GROUP_SHARE_QUESTION,
+        #     target=target_data
+        # )
+        # background_tasks.add_task(create_notification_to_list_specific_user, data_noti)
 
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:

@@ -21,6 +21,7 @@ from fastapi import (BackgroundTasks, Body, Depends, File, Form, Path, Query,
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from models.db.group import Group_DB, GroupInvitation, GroupMember
+from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.group import GroupStatus, GroupType, UpdateGroupImage
 from models.request.group import (DATA_Accept_invitation,
                                   DATA_Accept_Join_Request,
@@ -113,7 +114,9 @@ async def send_request_join_group(
     description='accept request join group',
     tags=['Group - Request Join']
 )
+@SendNotiDecoratorsApi.group_accept_request_join
 async def group_accept_request_join_group(
+    background_tasks: BackgroundTasks,
     data: DATA_Accept_Join_Request,
     data2: dict = Depends(valid_headers),
 ):
@@ -144,8 +147,8 @@ async def group_accept_request_join_group(
             )
             request_id = group_db[GROUP_PARTICIPANT].insert_one(jsonable_encoder(mem_data)).inserted_id
 
-            #remove request join
-            group_db[GROUP_JOIN_REQUEST].find_one_and_delete(query_request)
+            # #remove request join
+            # group_db[GROUP_JOIN_REQUEST].find_one_and_delete(query_request)
 
             data = {
                 'group_id': request_join.get('group_id'),
@@ -175,7 +178,9 @@ async def group_accept_request_join_group(
     description='reject request join group',
     tags=['Group - Request Join']
 )
+@SendNotiDecoratorsApi.group_reject_request_join
 async def group_reject_request_join_group(
+    background_tasks: BackgroundTasks,
     data: DATA_Reject_Join_Request,
     data2: dict = Depends(valid_headers),
 ):
@@ -193,11 +198,20 @@ async def group_reject_request_join_group(
         group = group_db[GROUP].find_one(query,{'owner_id': 1})
         if group:
             #check owner of group
-            if data2.get('user_id') != group.get('owner_id'):
-                return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+            query_member = {
+                'group_id': request_join.get('group_id'),
+                'user_id': data2.get('user_id'),
+                'is_owner': True
+            }
+            member_group = group_db[GROUP_PARTICIPANT].find_one(query_member)
+            if not member_group:
+                content = {'status': 'Failed', 'msg': 'User is not the owner of group'}
+                return JSONResponse(content=content, status_code=status.HTTP_400_BAD_REQUEST)
+            # if data2.get('user_id') != group.get('owner_id'):
+            #     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
 
-            #remove request join
-            group_db[GROUP_JOIN_REQUEST].find_one_and_delete(query_request)
+            # #remove request join
+            # group_db[GROUP_JOIN_REQUEST].find_one_and_delete(query_request)
 
             data = {
                 'group_id': request_join.get('group_id'),
