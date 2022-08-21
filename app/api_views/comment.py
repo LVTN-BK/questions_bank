@@ -126,7 +126,7 @@ async def remove_comment(
             # delete reply comment
             comments_db[REPLY_COMMENTS].update_many(
                 {
-                    'comment_id': data1.get('comment_id')
+                    'comment_id': data1.comment_id
                 },
                 {
                     '$set': {
@@ -164,7 +164,7 @@ async def remove_reply_comment(
 ):
     try:        
         # remove comment record
-        comment_data = comments_db[COMMENTS].find_one_and_update(
+        comment_data = comments_db[REPLY_COMMENTS].find_one_and_update(
             {
                 '_id': ObjectId(data1.reply_comment_id),
                 'user_id': data2.get('user_id')
