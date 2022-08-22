@@ -31,3 +31,9 @@ class DATA_Update_Notification_Setting(BaseModel):
     noti_type: str = Field(..., description="type of notification")
     is_enable: bool = Field(..., description='setting status')
 
+class DATA_Delete_Notification(BaseModel):
+    noti_id: str = Field(..., description='ID of notification will be deleted by user')
+
+class DATA_Mark_Notification_As_Seen(BaseModel):
+    noti_id: str = Field(..., description='ID of notification/mark as read all if noti_id is None')
+

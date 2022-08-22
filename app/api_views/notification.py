@@ -14,7 +14,7 @@ from app.utils.notification_content import get_notification_content
 from app.utils.question_utils.question import get_data_and_metadata
 
 from configs import NOTI_COLLECTION, NOTI_SETTING_COLLECTION, app, noti_db
-from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, DATA_Update_Notification_Setting
+from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, DATA_Delete_Notification, DATA_Mark_Notification_As_Seen, DATA_Update_Notification_Setting
 # import response models
 from models.response import *
 from models.system_and_feeds.notification import NotificationContentManage, NotificationTypeManage
@@ -315,13 +315,13 @@ async def create_notification_to_list_specific_user(
     tags=['Notification']
 )
 async def delete_notification(
-    noti_id: str = Body(..., description='ID of notification will be deleted by user'),
+    data: DATA_Delete_Notification,
     data2: dict = Depends(valid_headers)
 ):
     try:
         query = {
             '_id': {
-                '$eq': ObjectId(noti_id)
+                '$eq': ObjectId(data.noti_id)
             },
             'receiver_ids': {
                 '$elemMatch': {
@@ -360,18 +360,18 @@ async def delete_notification(
     tags=['Notification']
 )
 async def mark_notification_as_seen(
-    noti_id: str = Body(default=None, description="ID of notification/mark as read all if noti_id is None"),
+    data: DATA_Mark_Notification_As_Seen,
     data2: dict = Depends(valid_headers)
 ):
     logger().info(f'==========mark_notification_as_seen============')
     try:
-        logger().info(f'noti_id: {noti_id}')
-        if noti_id:
+        logger().info(f'noti_id: {data.noti_id}')
+        if data.noti_id:
             query = {
                 '$and': [
                     {
                         '_id': {
-                            '$eq': ObjectId(noti_id)
+                            '$eq': ObjectId(data.noti_id)
                         }
                     },
                     {
