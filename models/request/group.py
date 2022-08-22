@@ -129,7 +129,6 @@ class DATA_Remove_Members(BaseModel):
 #==================================================================
 class DATA_Delete_Group(BaseModel):
     group_id: str = Field(..., description='ID of group')
-    # owner_id: str = Field(..., description='ID of owner')
 
 #==================================================================
 #====================LIST_ALL_GROUP_CREATED========================

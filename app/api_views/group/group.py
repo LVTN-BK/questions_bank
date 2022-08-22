@@ -1,25 +1,19 @@
 #  Copyright (c) 2021.
 from datetime import datetime
-from enum import unique
-from importlib.metadata import metadata
-from json import JSONEncoder
 from math import ceil
-from typing import List, Optional, Union
+from typing import Optional
+from app.utils.group_utils.group import check_group_exist, check_owner_of_group
 from app.utils.question_utils.question import get_data_and_metadata
 from configs.settings import GROUP_QUESTIONS
-from models.db.group import Group_DB, GroupInvitation, GroupMember
+from models.db.group import Group_DB, GroupMember
 
-import pymongo
-import requests
 from bson import ObjectId
-from fastapi import BackgroundTasks, Depends, Path, Query, Body, status, UploadFile, File, Form
+from fastapi import BackgroundTasks, Depends, Path, Query, status
 from fastapi.responses import JSONResponse
-from pymongo import ReturnDocument
-from app.utils.group_info import get_one_group_info, get_one_group_name_and_avatar
 
-from configs import GROUP, GROUP_INVITATION, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, app, group_db
-from models.define.group import GroupStatus, GroupType, UpdateGroupImage
-from models.request.group import DATA_Accept_Join_Request, DATA_Accept_invitation, DATA_Cancel_Join_Request, DATA_Cancel_invitation, DATA_Create_Group, DATA_Delete_Group, DATA_Group_Label, DATA_Group_created, DATA_Invite_Members, DATA_Join_Request, DATA_Leave_Group, DATA_Reject_Join_Request, DATA_Reject_invitation, DATA_Remove_Group_Question, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_Chat, DATA_Update_Group_image
+from configs import GROUP, GROUP_PARTICIPANT, app, group_db
+from models.define.group import GroupStatus, UpdateGroupImage
+from models.request.group import DATA_Create_Group, DATA_Delete_Group, DATA_Leave_Group, DATA_Remove_Group_Question, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_image
 # import response models
 from models.response import *
 
@@ -111,13 +105,11 @@ async def update_group(
 ):
     try:
         # Find a group
-        query = {'_id': ObjectId(data.group_id)}
-        group = group_db.get_collection('group').find_one(query)
+        group = check_group_exist(group_id=data.group_id)
         if group:
             # check owner of group
-            if group.get('owner_id') != data2.get('user_id'):
-                content = {'status': 'Forbidden'}
-                return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+            if not check_owner_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+                raise Exception('user is not owner of group!')
 
             update_data = {}
 
@@ -153,65 +145,6 @@ async def update_group(
             return JSONResponse(content={'status': 'Not found'}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Bad request'}, status_code=status.HTTP_400_BAD_REQUEST)
-
-#==========================DEPRECATED==============================
-#======================UPDATE_GROUP_IMAGE==========================
-#==================================================================
-@app.post(
-    '/update_group_image',
-    responses={
-        status.HTTP_200_OK: {
-            'model': UpdateGroupResponse200
-        },
-        status.HTTP_400_BAD_REQUEST: {
-            'model': UpdateGroupResponse400
-        },
-        status.HTTP_403_FORBIDDEN: {
-            'model': UpdateGroupResponse403
-        },
-        status.HTTP_404_NOT_FOUND: {
-            'model': UpdateGroupResponse404
-        }
-    },
-    description='Update group image',
-    tags=['Group'],
-    deprecated=True
-)
-async def update_group_image(
-    data: DATA_Update_Group_image,
-    data2: dict = Depends(valid_headers)
-):
-    try:
-        # Find a group
-        query = {'_id': ObjectId(data.group_id)}
-        group = group_db.get_collection('group').find_one(query)
-        if group:
-            # check owner of group
-            if group.get('owner_id') != data2.get('user_id'):
-                content = {'status': 'Forbidden'}
-                return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
-
-            update_data = {}
-
-            if data.image_type == UpdateGroupImage.AVATAR:
-                update_data['group_avatar'] = data.image_url
-            elif data.image_type == UpdateGroupImage.COVER:
-                update_data['group_cover_image'] = data.image_url
-            
-            update_data['datetime_updated'] = datetime.now().timestamp()
-
-            update_query = {
-                '$set': update_data
-            }
-
-            #update data:
-            group_db.get_collection('group').update_many(query, update_query)
-
-            return JSONResponse(content={'status': 'Success'}, status_code=status.HTTP_200_OK)
-        else:
-            return JSONResponse(content={'status': 'Not found'}, status_code=status.HTTP_404_NOT_FOUND)
-    except Exception:
         return JSONResponse(content={'status': 'Bad request'}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
@@ -430,12 +363,12 @@ async def group_remove_members(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
-#==========================NEED_TO_FIX============================
+#=================================================================
 #==========================DELETE_GROUP===========================
 #=================================================================
 @app.delete(
-    '/delete_group',
-    description='delete group',
+    '/remove_group',
+    description='remove group',
     responses={
         status.HTTP_404_NOT_FOUND: {
             'model': DeleteGroupResponse404
@@ -447,61 +380,50 @@ async def group_remove_members(
             'model': DeleteGroupResponse200
         }
     },
-    tags=['Group'],
-    deprecated=True
+    tags=['Group']
 )
 async def remove_group(
     data: DATA_Delete_Group,
     data2: dict = Depends(valid_headers),
 ):
     logger().info('===============remove_group=================')
-    # Find a group
-    query = {'_id': ObjectId(data.group_id)}
-    group = group_db.get_collection('group').find_one(query)
-    if group:
-        # check owner of group
-        if group.get('owner_id') != data2.get('user_id'):
-            content = {'status': 'Failed', 'msg': 'User is not the owner of group'}
-            return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
-        
-        query_participant = {
-            'group_id': data.group_id
-        }
-
-        logger().info('get list user_id of group_members')
-        # get list user_id of group_members
-        group_members = group_db['group_participant'].find(query_participant)
-        logger().info(f'group_members: {group_members}')
-        list_group_members = []
-        for mem in group_members:
-            list_group_members.append(mem.get('user_id'))
-        logger().info(f'list_group_members: {list_group_members}')
-
-        #broadcast to list user(notification)
-        #############################################
-        #############################################
-        #############################################
-        
-        # remove group_participant
-        group_db.get_collection('group_participant').delete_many(query_participant)
-
-        # request remove group chat
-        #######################################################
-        #######################################################
-        #######################################################
-
-        # remove group in DB
-        group_db.get_collection('group').find_one_and_delete(query)
-
-        #request remove list user out of group chat
-        #################################################
-        #################################################
-        #################################################
+    try:
+        # Find a group
+        group = check_group_exist(group_id=data.group_id)
+        if group:
+            query_owner = {
+                'group_id': data.group_id,
+                'user_id': data2.get('user_id'),
+                'is_owner': True
+            }
+            group_owner = group_db[GROUP_PARTICIPANT].find_one(query_owner)
+            if not group_owner:
+                raise Exception('user is not the owner of group!')
             
-        
-        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
-    else:
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
+            # remove group_participant
+            # query_participant = {
+            #     'group_id': data.group_id,
+            # }
+            # group_db.get_collection('group_participant').delete_many(query_participant)
+
+            # update group in DB
+            group_db[GROUP].find_one_and_update(
+                {
+                    '_id': ObjectId(data.group_id)
+                },
+                {
+                    '$set': {
+                        'is_deleted': True
+                    }
+                }
+            )
+            return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+        else:
+            msg = 'group not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #=========================GET_GROUP_INFO==========================

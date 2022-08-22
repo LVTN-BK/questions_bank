@@ -5,7 +5,7 @@ from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
-from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_question
+from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
 from app.utils.notification_utils.notification import create_notification_to_list_specific_user
 from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions
 from app.utils.question_utils.question_check_permission import check_owner_of_question
@@ -1350,10 +1350,14 @@ async def group_get_all_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
+        #check group exist:
+        if not check_group_exist(group_id=group_id):
+            msg = 'group not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+
         # check owner of group or member
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
-            content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
-            return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+            raise Exception('user is not the owner or member of group!')
 
         # get list question of group
         list_question = get_list_group_question(group_id=group_id)
@@ -1517,7 +1521,7 @@ async def group_get_all_question(
         return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #===============GROUP_GET_QUESTION_CLASSIFY==============
@@ -1541,10 +1545,14 @@ async def group_get_question_classify(
     try:
         filter_question = [{}]
 
+        #check group exist:
+        if not check_group_exist(group_id=group_id):
+            msg = 'group not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+
         # check owner of group or member
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
-            content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
-            return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+            raise Exception('user is not the owner or member of group!')
 
 
         # get list question of group
@@ -1714,7 +1722,7 @@ async def group_get_question_classify(
         return JSONResponse(content={'status': 'success', 'data': data_return},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
@@ -1970,6 +1978,11 @@ async def share_question_to_group(
         if not check_owner_of_question(user_id=data2.get('user_id'), question_id=data.question_id):
             raise Exception('user is not owner of question!!!')
 
+        #check group exist:
+        if not check_group_exist(group_id=data.group_id):
+            msg = 'group not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+
         # check member of group
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
             raise Exception('user is not member of group!!!')
@@ -1983,20 +1996,6 @@ async def share_question_to_group(
         )
         
         insert = group_db[GROUP_QUESTIONS].insert_one(jsonable_encoder(group_question))
-
-        # # notify to user
-        # target_data = TargetData(
-        #     group_id=data.group_id,
-        #     question_id=data.question_id
-        # )
-
-        # data_noti = DATA_Create_Noti_List_User(
-        #     sender_id=data2.get('user_id'),
-        #     list_users=[data2.get('user_id')],
-        #     noti_type=NotificationTypeManage.GROUP_SHARE_QUESTION,
-        #     target=target_data
-        # )
-        # background_tasks.add_task(create_notification_to_list_specific_user, data_noti)
 
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:

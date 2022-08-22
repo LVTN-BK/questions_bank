@@ -1,7 +1,7 @@
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from app.utils.group_utils.group import check_owner_or_user_of_group, get_list_group_exam
+from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_exam
 from app.utils.question_utils.question import get_answer, get_question_information_with_version_id
 from bson import ObjectId
 from configs.logger import logger
@@ -667,12 +667,14 @@ async def group_get_one_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        start_time = datetime.now()
+        #check group exist:
+        if not check_group_exist(group_id=group_id):
+            msg = 'group not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
 
         # check owner of group or member
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
-            content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
-            return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+            raise Exception('user is not the owner or member of group!')
 
         # check group has exam with exam_id
         query_check = {
@@ -932,8 +934,9 @@ async def group_get_one_exam(
         # find exam
         exam = exams_db[EXAMS].aggregate(pipeline)
 
-        logger().info(f'type exam: {type(exam)}')
-        data = exam.next()
+        data = {}
+        if exam.alive:
+            data = exam.next()
 
         # for section_idx, section in enumerate(data['questions']):
         #     for question_idx, question in enumerate(data['questions'][section_idx]['section_questions']):
@@ -941,12 +944,10 @@ async def group_get_one_exam(
         #         answers = data['questions'][section_idx]['section_questions'][question_idx]['answers']
         #         data['questions'][section_idx]['section_questions'][question_idx]['answers'] = get_answer(answers=answers, question_type=question_type)
  
-        end_time = datetime.now()
-        logger().info(end_time-start_time)
         return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #=================COMMUNITY_GET_ONE_EXAM=================
@@ -1507,6 +1508,11 @@ async def group_get_all_exam(
         # find exam
         filter_exam = [{}]
         filter_exam_version = [{}]
+
+        #check group exist:
+        if not check_group_exist(group_id=group_id):
+            msg = 'group not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
 
         # check owner of group or member
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):

@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group
 from app.utils.question_utils.question import get_data_and_metadata
 from models.db.group import Group_DB, GroupInvitation, GroupMember
 from bson import ObjectId
@@ -45,18 +46,11 @@ async def invite_users_to_group(
 ):
     try:
         # Find a group
-        query = {'_id': ObjectId(data.group_id)}
-        group = group_db.get_collection('group').find_one(query)
+        group = check_group_exist(group_id=data.group_id)
         if group:
             # check owner of group or member
-            query_member = {
-                'group_id': data.group_id,
-                'user_id': data2.get('user_id')
-            }
-            member_group = group_db[GROUP_PARTICIPANT].find_one(query_member)
-            if not member_group:
-                content = {'status': 'Failed', 'msg': 'User is not the owner or member of group'}
-                return JSONResponse(content=content, status_code=status.HTTP_403_FORBIDDEN)
+            if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+                raise Exception('user is not the owner or member of group!')
 
             logger().info('========add user========')
             logger().info(f'list users: {data.list_user_ids}')
@@ -114,12 +108,10 @@ async def user_accept_invitation(
             msg = 'invitation not found'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
         elif invitation.get('user_id') != data2.get('user_id'):
-            msg = 'not your invitation'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+            raise Exception('not your invitation!')
 
         # Find a group
-        query_group = {'_id': ObjectId(invitation.get('group_id'))}
-        group = group_db[GROUP].find_one(query_group)
+        group = check_group_exist(group_id=invitation.get('group_id'))
         if group:
             #add to group participant
             mem_data = GroupMember(
@@ -146,8 +138,7 @@ async def user_accept_invitation(
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-        msg = str(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #======================USER_REJECT_INVITATION=====================
