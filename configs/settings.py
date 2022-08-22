@@ -113,6 +113,7 @@ questions_db = MONGO_CLIENT['questions-db']
 QUESTIONS = 'questions'
 QUESTIONS_VERSION = 'questions_version'
 ANSWERS = 'answers'
+QUESTIONS_EVALUATION = 'questions_evaluation'
 #create text index for group name
 questions_db[QUESTIONS_VERSION].create_index([('question_content', 'text')])
 

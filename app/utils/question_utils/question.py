@@ -1,5 +1,6 @@
+from math import ceil
 from configs.logger import logger
-from models.define.question import ManageQuestionType
+from models.define.question import ManageQuestionLevel, ManageQuestionType
 from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_VERSION, questions_db, classify_db, TAG_COLLECTION
 from bson import ObjectId
 
@@ -302,3 +303,33 @@ def get_data_and_metadata(aggregate_response, page):
 
     return result_data, meta_data
 
+#==================EVALUATE_QUESTION================
+def get_question_evaluation_value(
+    num_correct: int,
+    num_incorrect: int,
+    discrimination: float,      # độ phân biệt câu hỏi (khác 0)
+    ability: float,             # năng lực học sinh
+    guessing: float             # tham số đoán mò
+):
+    try:
+        import math
+        p = num_correct/num_incorrect
+        if p>guessing:
+            b = ability + math.log((1-guessing)/(p-guessing) - 1)/discrimination
+        else:
+            b = ability + math.log(1/p - 1)/discrimination
+        
+        if b <= -2:
+            return ManageQuestionLevel.VERY_EASY
+        elif b < -0.5:
+            return ManageQuestionLevel.EASY
+        elif b <= 0.5:
+            return ManageQuestionLevel.MEDIUM
+        elif b < 2:
+            return ManageQuestionLevel.HARD
+        else:
+            return ManageQuestionLevel.VERY_HARD
+
+    except Exception as e:
+        logger().error(e)
+        return None

@@ -35,3 +35,16 @@ class Answers_DB(BaseModel):
     answer_content: str = Field(..., description='content of answer')
     answer_image: str = Field(default=None, description='image of amswer')
     datetime_created: float = Field(..., description='time create answer')
+
+
+class Questions_Evaluation_DB(BaseModel):
+    question_id: str = Field(..., description='ID of question')
+    user_id: str = Field(..., description='ID of user')
+    is_latest: bool = Field(default=True, description='is the newest evaluation of question')
+    num_correct: int = Field(..., description='number of correct answer')
+    num_incorrect: int = Field(..., description='number of incorrect answer')
+    discrimination_param: float = Field(default=1, description='discrimination param')
+    ability_level: float = Field(..., description='ability of student')
+    guessing_param: float = Field(default=0, description='guessing param')
+    recommend_level: str = Field(default=None, description='recommend level')
+    datetime_created: float = Field(..., description='time create evaluation of question')

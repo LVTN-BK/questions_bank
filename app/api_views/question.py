@@ -5,23 +5,23 @@ from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions
+from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (ANSWERS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_VERSION, SYSTEM,
+from configs.settings import (ANSWERS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
 from fastapi import Depends, Path, Query, status, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from models.db.group import GroupQuestion
-from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
+from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
 from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
 from starlette.responses import JSONResponse
 
 
@@ -2126,6 +2126,69 @@ async def update_question(
             del question_version_info['_id']
             question_version_info.update(query_question_version)
             question_version_info = questions_db[QUESTIONS_VERSION].insert_one(question_version_info)
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+#========================================================
+#======================EVALUATE_QUESTION=================
+#========================================================
+@app.post(
+    path='/evaluate_question',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def evaluate_question(
+    data: DATA_Evaluate_Question,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        recommend_level = get_question_evaluation_value(
+            num_correct=data.num_correct,
+            num_incorrect=data.num_incorrect,
+            discrimination=data.discrimination,
+            ability=data.ability,
+            guessing=data.guessing
+        )
+
+        evaluate_question_data = Questions_Evaluation_DB(
+            question_id=data.question_id,
+            user_id=data2.get('user_id'),
+            is_latest=True,
+            num_correct=data.num_correct,
+            num_incorrect=data.num_incorrect,
+            discrimination_param=data.discrimination,
+            ability_level=data.ability,
+            guessing_param=data.guessing,
+            recommend_level=recommend_level,
+            datetime_created=datetime.now().timestamp()
+        )
+        # update current latest question evaluation
+        update_question_evaluation = questions_db[QUESTIONS_EVALUATION].find_one_and_update(
+            {
+                'question_id': data.question_id,
+                'user_id': data2.get('user_id'),
+                'is_latest': True
+            },
+            {
+                '$set': {
+                    'is_latest': False
+                }
+            }
+        )
+        
+        # insert evaluation into db
+        questions_db[QUESTIONS_EVALUATION].insert_one(jsonable_encoder(evaluate_question_data))
+        
         return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)

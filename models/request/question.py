@@ -113,3 +113,12 @@ class DATA_Update_Question(BaseModel):
     sample_answer: Union[List[Tuple[str, str]], str, List[str]] = Field(default=None, description='correct answer of question')
     display: Union[DisplayQuestionM, DisplayQuestionS, DisplayQuestionIP, DisplayQuestionMC] = Field(default=None, description='display setting of question')
 
+
+class DATA_Evaluate_Question(BaseModel):
+    question_id: str = Field(..., description='ID of question')
+    num_correct: int = Field(..., description='number of correct answer')
+    num_incorrect: int = Field(..., description='number of incorrect answer')
+    discrimination: float = Field(default=1, description='discrimination param')
+    ability: float = Field(..., description='ability of student')
+    guessing: float = Field(default=0, description='guessing param')
+
