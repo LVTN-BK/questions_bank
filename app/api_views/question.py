@@ -1938,19 +1938,6 @@ async def share_question_to_community(
             }
         )
 
-        # notify to user
-        target_data = TargetData(
-            question_id=data.question_id
-        )
-
-        data_noti = DATA_Create_Noti_List_User(
-            sender_id=data2.get('user_id'),
-            list_users=[data2.get('user_id')],
-            noti_type=NotificationTypeManage.COMMUNITY_SHARE_QUESTION,
-            target=target_data
-        )
-        background_tasks.add_task(create_notification_to_list_specific_user, data_noti)
-
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)

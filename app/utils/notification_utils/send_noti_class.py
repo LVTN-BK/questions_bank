@@ -1,10 +1,10 @@
-from app.utils.notification_utils.notification import create_notification_to_list_specific_user
+from app.utils.notification_utils.notification import create_notification_to_list_specific_user, create_notification_to_group_members_except_user
 from configs.settings import COMMENTS, EXAMS, GROUP_JOIN_REQUEST, QUESTIONS, group_db, questions_db, comments_db
 from models.define.target import ManageTargetType
 from models.request.comment import DATA_Create_Comment, DATA_Create_Reply_Comment
 from models.request.group import DATA_Accept_Join_Request, DATA_Invite_Members, DATA_Reject_Join_Request
 from models.request.like import DATA_Create_Like
-from models.request.notification import DATA_Create_Noti_List_User, TargetData
+from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, TargetData
 from models.request.question import DATA_Share_Question_To_Group
 from models.system_and_feeds.notification import NotificationTypeManage
 from fastapi import BackgroundTasks
@@ -21,13 +21,13 @@ class SendNotification:
             question_id=data.question_id
         )
 
-        data_noti = DATA_Create_Noti_List_User(
+        data_noti_group = DATA_Create_Noti_Group_Members_Except_User(
             sender_id=user_id,
-            list_users=[user_id],
+            group_id=data.group_id,
             noti_type=NotificationTypeManage.GROUP_SHARE_QUESTION,
             target=target_data
         )
-        create_notification_to_list_specific_user(data_noti)
+        create_notification_to_group_members_except_user(data_noti_group)
 
     def group_accept_request_join(
         data: DATA_Accept_Join_Request,

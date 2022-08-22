@@ -23,6 +23,11 @@ class DATA_Create_Noti_List_User(BaseModel):
 
 class DATA_Create_Noti_Group_Members_Except_User(BaseModel):
     group_id: str = Field(..., description="ID of group")
-    user_id: str = Field(..., description="User ID who create the notification")
+    sender_id: str = Field(..., description="User ID who create the notification")
     noti_type: str = Field(default=None, description='type of notification')
     target: Optional[TargetData] = Field(default=None, description='target data')
+
+class DATA_Update_Notification_Setting(BaseModel):
+    noti_type: str = Field(..., description="type of notification"),
+    is_enable: bool = Field(..., description='setting status')
+

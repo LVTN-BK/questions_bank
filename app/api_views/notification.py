@@ -2,11 +2,9 @@
 from datetime import datetime
 from math import ceil
 from typing import List, Optional, Union
-
-import pymongo
-import requests
+from app.utils._header import valid_headers
 from bson import ObjectId
-from fastapi import Path, Query, Body, status
+from fastapi import Path, Query, Body, status, Depends
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pymongo import ReturnDocument
@@ -16,7 +14,7 @@ from app.utils.notification_content import get_notification_content
 from app.utils.question_utils.question import get_data_and_metadata
 
 from configs import NOTI_COLLECTION, NOTI_SETTING_COLLECTION, app, noti_db
-from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User
+from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, DATA_Update_Notification_Setting
 # import response models
 from models.response import *
 from models.system_and_feeds.notification import NotificationContentManage, NotificationTypeManage
@@ -26,6 +24,7 @@ from . import notification_manage
 from configs.logger import logger
 from fastapi import WebSocket, Form
 from starlette.websockets import WebSocketDisconnect
+
 
 #==================================================================
 #=====================SYSTEM_ESTABLISH_CONNECTION==================
@@ -58,6 +57,7 @@ async def noti_sys_establish_connection(
     except Exception as e:
         logger().error(e.args)
 
+
 #=================================================================
 #=========================GET_ALL_NOTIFICATION====================
 #=================================================================
@@ -79,17 +79,8 @@ async def noti_sys_establish_connection(
 async def user_all_notification(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    user_id: str = Query(..., description='ID of user')
+    data2: dict = Depends(valid_headers)
 ):
-    # Find all noti
-    # query = {
-    #     'receive_ids': {
-    #         '$elemMatch':{
-    #             '$eq': user_id
-    #         }
-    #     }
-    # }
-
     try:
         num_skip = (page - 1)*limit
         pipeline=[
@@ -98,14 +89,14 @@ async def user_all_notification(
                     '$and': [
                         {
                             '$expr': {
-                                '$in': [user_id, '$receiver_ids']
+                                '$in': [data2.get('user_id'), '$receiver_ids']
                             }
                         },
                         {
-                            'receive_ids': {
+                            'removed_ids': {
                                 '$not': {
                                     '$elemMatch': {
-                                        '$eq': user_id
+                                        '$eq': data2.get('user_id')
                                     }
                                 }
                             }
@@ -113,6 +104,38 @@ async def user_all_notification(
                     ]
                 }
             },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'sender_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'sender_data'
+                }
+            },
+            {
+                '$set': {
+                    'sender_info': {
+                        '$ifNull': [{'$first': '$sender_data'}, None]
+                    }
+                }
+            },   
             { 
                 '$facet' : {
                     'metadata': [ 
@@ -133,6 +156,22 @@ async def user_all_notification(
                     ],
                     'data': [ 
                         {
+                            '$project': {
+                                '_id': 0,
+                                'id': {
+                                    '$toString': '$_id'
+                                },
+                                'sender_info': 1,
+                                'is_read': {
+                                    '$in': [data2.get('user_id'), '$seen_ids']
+                                },
+                                "noti_type": 1,
+                                "content": 1,
+                                'target': 1,
+                                'datetime_created': 1
+                            }
+                        },
+                        {
                             '$sort': {
                                 'datetime_created': -1
                             }
@@ -142,28 +181,7 @@ async def user_all_notification(
                         },
                         { 
                             '$limit': limit 
-                        },
-                        {
-                            '$set': {
-                                '_id': {
-                                    '$toString': '$_id'
-                                }
-                            }
-                        }, 
-                        {
-                            '$project': {
-                                '_id': 0,
-                                'id': '$_id',
-                                'sender_id': 1,
-                                'is_read': {
-                                    '$in': [user_id, '$seen_ids']
-                                },
-                                "noti_type": 1,
-                                "content": 1,
-                                'target': 1,
-                                'datetime_created': 1
-                            }
-                        }  
+                        }
                     ] # add projection here wish you re-shape the docs
                 } 
             },
@@ -175,39 +193,13 @@ async def user_all_notification(
         list_notification = noti_db[NOTI_COLLECTION].aggregate(pipeline)
         result_data, meta_data = get_data_and_metadata(aggregate_response=list_notification, page=page)
 
-
-        
-        # all_noti = []
-        # noti = noti_db[NOTI_COLLECTION].find(query, {'sender_id': 1, 'noti_type': 1, 'target': 1, 'content': 1, 'seen_ids': 1,'datetime_created': 1}).sort('datetime_created', -1).skip(num_skip).limit(limit)
-
-        # logger().info(noti.count(True))
-        # if noti.count(True):
-        #     for ele in noti:
-        #         ele['_id'] = str(ele['_id'])
-        #         ele['is_read'] = (user_id in ele['seen_ids'])
-        #         del ele['seen_ids']
-        #         all_noti.append(ele)
-        # num_noti = noti_db[NOTI_COLLECTION].find(query).count()
-        # num_pages = ceil(num_noti/limit)
-
-        # logger().info(noti.count(True))
-        # meta_data = {
-        #     'count': noti.count(True),
-        #     'current_page': page,
-        #     'has_next': (num_pages>page),
-        #     'has_previous': (page>1),
-        #     'next_page_number': (page+1) if (num_pages>page) else None,
-        #     'num_pages': num_pages,
-        #     'previous_page_number': (page-1) if (page>1) else None,
-        #     'valid_page': (page>=1) and (page<=num_pages)
-        # }
-
         return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().info(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
-#=================================================================
+
+#===========================DEPRECATED============================
 #===========CREATE_NOTIFICATION_TO_GROUP_MEMBERS_EXCEPT_USER======
 #=================================================================
 @app.post(
@@ -219,7 +211,8 @@ async def user_all_notification(
             'description': 'When notification successfully created!'
         }
     },
-    tags=['Notification']
+    tags=['Notification'],
+    deprecated=True
 )
 async def create_notification_to_group_members_except_user(
     data: DATA_Create_Noti_Group_Members_Except_User
@@ -273,7 +266,7 @@ async def create_notification_to_group_members_except_user(
     deprecated=True
 )
 async def create_notification_to_list_specific_user(
-        data: DATA_Create_Noti_List_User
+    data: DATA_Create_Noti_List_User
 ): 
     logger().info('===============send_notification_to_list_specific_user=================')
     # filter user_id enable notification with noti_type
@@ -304,11 +297,12 @@ async def create_notification_to_list_specific_user(
 
     return JSONResponse(content={'status': 'success', 'noti_id': str(_id)}, status_code=status.HTTP_200_OK)
 
+
 #=================================================================
 #======================DELETE_NOTIFICATION========================
 #=================================================================
 @app.delete(
-    '/notification/{user_id}/delete',
+    '/delete_notification',
     description='Remove a notification',
     responses={
         status.HTTP_400_BAD_REQUEST: {
@@ -320,36 +314,40 @@ async def create_notification_to_list_specific_user(
     },
     tags=['Notification']
 )
-async def remove_notification(
-        user_id: Union[int, str] = Path(..., description='ID of user'),
-        noti_id: str = Query(..., description='ID of notification will be deleted by user'),
+async def delete_notification(
+    noti_id: str = Body(..., description='ID of notification will be deleted by user'),
+    data2: dict = Depends(valid_headers)
 ):
     try:
         query = {
             '_id': {
                 '$eq': ObjectId(noti_id)
-            }
-        }
-        update = {
-            '$pull': {
-                'receive_ids': {
-                    '$in': [user_id]
+            },
+            'receiver_ids': {
+                '$elemMatch': {
+                    '$eq': data2.get('user_id')
                 }
             }
+                        
         }
-        noti_db['notification'].update_many(query, update)
+        update = {
+            '$addToSet': {
+                'removed_ids': data2.get('user_id')
+            }
+        }
+        noti_db[NOTI_COLLECTION].find_one_and_update(query, update)
         
-        return JSONResponse(content={'status': 'Deleted!'}, status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
     except Exception as e:
-        logger().info(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
     
 
 #=================================================================
 #=================MARK_NOTIFICATION_AS_SEEN(READ)=================
 #=================================================================
-@app.post(
-    '/notification/{user_id}/read',
+@app.put(
+    '/mark_notification_as_seen',
     responses={
         status.HTTP_200_OK: {
             'model': MarkNotificationAsSeenResponse200
@@ -362,13 +360,12 @@ async def remove_notification(
     tags=['Notification']
 )
 async def mark_notification_as_seen(
-        user_id: str = Path(..., description='ID of user'),
-        noti_id: Optional[str] = Form(default=None, description="ID of notification/mark as read all if noti_id is None")
+    noti_id: str = Body(default=None, description="ID of notification/mark as read all if noti_id is None"),
+    data2: dict = Depends(valid_headers)
 ):
     logger().info(f'==========mark_notification_as_seen============')
     try:
         logger().info(f'noti_id: {noti_id}')
-        logger().info(f'user_id: {user_id}')
         if noti_id:
             query = {
                 '$and': [
@@ -380,66 +377,50 @@ async def mark_notification_as_seen(
                     {
                         'receive_ids': {
                             '$elemMatch': {
-                                '$eq': user_id
+                                '$eq': data2.get('user_id')
                             }
                         }
-                    },
-                    {
-                        'seen_ids': {
-                            '$ne': user_id
-                        }
                     }
-                ]
-                    
+                ]      
             }
             update = {
                 '$addToSet': {
-                    'seen_ids': user_id
+                    'seen_ids': data2.get('user_id')
                 }
             }
             # mark as seen
-            noti_db['notification'].update_one(query, update)
+            noti_db[NOTI_COLLECTION].update_one(query, update)
         else:
             query = {
                 '$and': [
                     {
                         'receive_ids': {
                             '$elemMatch': {
-                                '$eq': user_id
+                                '$eq': data2.get('user_id')
                             }
                         }
-                    },
-                    {
-                        
-                        'seen_ids': {
-                            '$ne': user_id
-                        }
-                        
                     }
-                ]
-                        
+                ]          
             }
             update = {
                 '$addToSet': {
-                    'seen_ids': user_id
+                    'seen_ids': data2.get('user_id')
                 }
             }
 
             # mark as seen
-            noti_db['notification'].update_many(query, update)
-
-        return JSONResponse(content={'status': 'successful!'}, status_code=status.HTTP_200_OK)
-
+            noti_db[NOTI_COLLECTION].update_many(query, update)
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
     except Exception as e:
-        logger().info(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_400_BAD_REQUEST)
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
         
 
 #=================================================================
 #======================ALL_UNREAD_NOTIFICATION====================
 #=================================================================
 @app.get(
-    '/notification/{user_id}/unread',
+    '/user_all_unread_notification',
     responses={
         status.HTTP_200_OK: {
             'model': UnreadNotificationResponse200
@@ -451,140 +432,144 @@ async def mark_notification_as_seen(
     description='get all unread notification',
     tags=['Notification']
 )
-async def unread_message(
+async def user_all_unread_notification(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    user_id: str = Path(..., description='ID of user')
+    data2: dict = Depends(valid_headers)
 ):
     # Find all noti unread
     logger().info('===========unread_message==========')
-    query = {
-        '$and': [
+    try:
+        num_skip = (page - 1)*limit
+        pipeline=[
             {
-                'receive_ids': {
-                    '$elemMatch':{
-                        '$eq': user_id
-                    }
+                '$match': {
+                    '$and': [
+                        {
+                            '$expr': {
+                                '$in': [data2.get('user_id'), '$receiver_ids']
+                            }
+                        },
+                        {
+                            'removed_ids': {
+                                '$not': {
+                                    '$elemMatch': {
+                                        '$eq': data2.get('user_id')
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            'seen_ids': {
+                                '$not': {
+                                    '$elemMatch': {
+                                        '$eq': data2.get('user_id')
+                                    }
+                                }
+                            }
+                        }
+                    ]
                 }
             },
             {
-                'seen_ids': {
-                    '$ne': user_id
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'sender_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'sender_data'
                 }
-            }
+            },
+            {
+                '$set': {
+                    'sender_info': {
+                        '$ifNull': [{'$first': '$sender_data'}, None]
+                    }
+                }
+            },   
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': {
+                                    '$toString': '$_id'
+                                },
+                                'sender_info': 1,
+                                'is_read': {
+                                    '$in': [data2.get('user_id'), '$seen_ids']
+                                },
+                                "noti_type": 1,
+                                "content": 1,
+                                'target': 1,
+                                'datetime_created': 1
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        }
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'
+            },
         ]
-    }
 
-    try:
-        num_skip = (page - 1)*limit
-        noti = noti_db[NOTI_COLLECTION].find(query,{'sender_id': 1, 'content': 1, 'target': 1, 'noti_type': 1, 'datetime_created': 1}).sort([('datetime_created', -1)]).skip(num_skip).limit(limit)
-        all_noti = []
-        logger().info('bbbbbbbbbbbbb')
-        if noti.count(True):
-            for ele in noti:
-                ele['_id'] = str(ele['_id'])
-                all_noti.append(ele)
-        
-        num_noti = noti_db[NOTI_COLLECTION].find(query).count()
-        num_pages = ceil(num_noti/limit)
+        list_notification = noti_db[NOTI_COLLECTION].aggregate(pipeline)
+        result_data, meta_data = get_data_and_metadata(aggregate_response=list_notification, page=page)
 
-        meta_data = {
-            'count': noti.count(True),
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
-        return JSONResponse(content={'status': 'success', 'data': all_noti, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data}, status_code=status.HTTP_200_OK)
     except Exception as e:
-        logger().info(e)
-        return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_404_NOT_FOUND)
-
-
-#=================================================================
-#======================INITIAL_NOTIFICATION_SETTING===============
-#=================================================================
-@app.post(
-    '/initial_notification_setting',
-    description='init notification setting',
-    responses={
-        status.HTTP_200_OK: {
-            'model': InitNotificationSetting200,
-            'description': 'When notification successfully created!'
-        }
-    },
-    tags=['Notification']
-)
-async def initial_notification_setting_to_user(
-        user_id: str = Query(..., description="User ID who create the notification")
-):
-    logger().info('===============initial_notification_setting=================')
-    # insert to DB Notification Type Comment
-    noti_db[NOTI_SETTING_COLLECTION].update_one(
-        {
-            'user_id': user_id,
-            'noti_type': NotificationTypeManage.COMMENT
-        },
-        {
-            '$set': {
-                'is_enable': True
-            }
-        },
-        upsert=True
-    )
-    
-    # insert to DB Notification Type Follow
-    noti_db[NOTI_SETTING_COLLECTION].update_one(
-        {
-            'user_id': user_id,
-            'noti_type': NotificationTypeManage.FOLLOW
-        },
-        {
-            '$set': {
-                'is_enable': True
-            }
-        },
-        upsert=True
-    )
-    
-    # insert to DB Notification Type Unfollow
-    noti_db[NOTI_SETTING_COLLECTION].update_one(
-        {
-            'user_id': user_id,
-            'noti_type': NotificationTypeManage.UNFOLLOW
-        },
-        {
-            '$set': {
-                'is_enable': True
-            }
-        },
-        upsert=True
-    )
-    
-    # insert to DB Notification Type Share
-    noti_db[NOTI_SETTING_COLLECTION].update_one(
-        {
-            'user_id': user_id,
-            'noti_type': NotificationTypeManage.SHARE
-        },
-        {
-            '$set': {
-                'is_enable': True
-            }
-        },
-        upsert=True
-    )
-
-    return JSONResponse(content={'status': 'success', 'user_id': user_id}, status_code=status.HTTP_200_OK)
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #=================================================================
 #======================UPDATE_NOTIFICATION_SETTING================
 #=================================================================
-@app.post(
+@app.put(
     '/update_notification_setting',
     description='update notification setting',
     responses={
@@ -596,23 +581,27 @@ async def initial_notification_setting_to_user(
     tags=['Notification']
 )
 async def update_notification_setting(
-        user_id: str = Form(..., description="User ID who create the notification"),
-        noti_type: str = Form(..., description="type of notification"),
-        is_enable: bool = Form(..., description='setting status')
+    data: DATA_Update_Notification_Setting,
+    data2: dict = Depends(valid_headers)
 ):
     logger().info('===============initial_notification_setting=================')
-    # insert to DB Notification Type Comment
-    noti_db[NOTI_SETTING_COLLECTION].update_one(
-        {
-            'user_id': user_id,
-            'noti_type': noti_type
-        },
-        {
-            '$set': {
-                'is_enable': is_enable
-            }
-        },
-        upsert=True
-    )
-    
-    return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    try:
+        # insert to DB Notification Type Comment
+        noti_db[NOTI_SETTING_COLLECTION].update_one(
+            {
+                'user_id': data2.get('user_id'),
+                'noti_type': data.noti_type
+            },
+            {
+                '$set': {
+                    'is_enable': data.is_enable
+                }
+            },
+            upsert=True
+        )
+        
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
