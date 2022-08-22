@@ -6,6 +6,7 @@ from json import JSONEncoder
 from math import ceil
 from typing import List, Optional, Union
 from app.utils.question_utils.question import get_data_and_metadata
+from configs.settings import GROUP_QUESTIONS
 from models.db.group import Group_DB, GroupInvitation, GroupMember
 
 import pymongo
@@ -18,7 +19,7 @@ from app.utils.group_info import get_one_group_info, get_one_group_name_and_avat
 
 from configs import GROUP, GROUP_INVITATION, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, app, group_db
 from models.define.group import GroupStatus, GroupType, UpdateGroupImage
-from models.request.group import DATA_Accept_Join_Request, DATA_Accept_invitation, DATA_Cancel_Join_Request, DATA_Cancel_invitation, DATA_Create_Group, DATA_Delete_Group, DATA_Group_Label, DATA_Group_created, DATA_Invite_Members, DATA_Join_Request, DATA_Leave_Group, DATA_Reject_Join_Request, DATA_Reject_invitation, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_Chat, DATA_Update_Group_image
+from models.request.group import DATA_Accept_Join_Request, DATA_Accept_invitation, DATA_Cancel_Join_Request, DATA_Cancel_invitation, DATA_Create_Group, DATA_Delete_Group, DATA_Group_Label, DATA_Group_created, DATA_Invite_Members, DATA_Join_Request, DATA_Leave_Group, DATA_Reject_Join_Request, DATA_Reject_invitation, DATA_Remove_Group_Question, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_Chat, DATA_Update_Group_image
 # import response models
 from models.response import *
 
@@ -1494,6 +1495,63 @@ async def user_leave_group(
             msg = 'Error, user is not member of group!!!'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
         
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+#=================================================================
+#====================USER_REMOVE_GROUP_QUESTION===================
+#=================================================================
+@app.delete(
+    '/remove_group_question',
+    description='user remove group question',
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            'model': RemoveMemberResponse404,
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': RemoveMemberResponse403,
+        },
+        status.HTTP_200_OK: {
+            'model': RemoveMemberResponse200,
+        }
+    },
+    tags=['Group']
+)
+async def remove_group_question(
+    data: DATA_Remove_Group_Question,
+    data2: dict = Depends(valid_headers),
+):
+    logger().info('===============user_remove_group_question=================')
+    try:
+        # find member
+        query_mem = {
+            'group_id': data.group_id,
+            'user_id': data2.get('user_id'),
+        }
+        mem_data = group_db[GROUP_PARTICIPANT].find_one(query_mem)
+        if mem_data:
+            # find question
+            query_question = {
+                'group_id': data.group_id,
+                'question_id': data.question_id
+            }
+            question_data = group_db[GROUP_QUESTIONS].find_one(query_question)
+            if not question_data:
+                msg = 'question not found!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+
+            # check user is group owner or sharer
+            if mem_data.get('is_owner') or (question_data.get('sharer_id') == data2.get('user_id')):
+                # delete group question
+                group_db[GROUP_QUESTIONS].delete_one(query_question)
+            else:
+                raise Exception('user is not owner of group or sharer!')
+
+            return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+        else:
+            raise Exception('user is not member of group!!!')        
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)

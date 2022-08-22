@@ -163,3 +163,10 @@ class DATA_Leave_Group(BaseModel):
     group_id: str = Field(..., description='ID of group')
     # owner_id: str = Field(..., description='ID of owner')
 
+#==================================================================
+#===================USER_REMOVE_GROUP_QUESTION=====================
+#==================================================================
+class DATA_Remove_Group_Question(BaseModel):
+    group_id: str = Field(..., description='ID of group')
+    question_id: str = Field(..., description='ID of question')
+
