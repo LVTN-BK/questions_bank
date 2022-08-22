@@ -5,9 +5,10 @@ from bson import ObjectId
 from app.utils.question_utils.question import get_data_and_metadata
 from configs.logger import logger
 from configs.settings import COMMENTS, EXAMS, LIKES, REPLY_COMMENTS, SYSTEM, app, comments_db
-from fastapi import Depends, Path, status, Query
+from fastapi import Depends, Path, status, Query, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from models.db.comment import Comments_DB, Reply_Comments_DB
+from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.target import ManageTargetType
 from models.request.comment import DATA_Create_Comment, DATA_Create_Reply_Comment, DATA_Remove_Comment, DATA_Remove_Reply_Comment
 from models.request.like import DATA_Create_Like, DATA_Unlike
@@ -29,16 +30,18 @@ from starlette.responses import JSONResponse
     },
     tags=['comments']
 )
+@SendNotiDecoratorsApi.create_comment
 async def create_comment(
-    data1: DATA_Create_Comment,
+    background_tasks: BackgroundTasks,
+    data: DATA_Create_Comment,
     data2: dict = Depends(valid_headers)
 ):
     try:
         comment = Comments_DB(
             user_id=data2.get('user_id'),
-            target_id=data1.target_id,
-            target_type=data1.target_type,
-            content=data1.content,
+            target_id=data.target_id,
+            target_type=data.target_type,
+            content=data.content,
             datetime_created=datetime.now().timestamp()
         )
 
@@ -67,15 +70,17 @@ async def create_comment(
     },
     tags=['comments']
 )
+@SendNotiDecoratorsApi.create_reply_comment
 async def create_reply_comment(
-    data1: DATA_Create_Reply_Comment,
+    background_tasks: BackgroundTasks,
+    data: DATA_Create_Reply_Comment,
     data2: dict = Depends(valid_headers)
 ):
     try:
         reply_comment = Reply_Comments_DB(
             user_id=data2.get('user_id'),
-            comment_id=data1.comment_id,
-            content=data1.content,
+            comment_id=data.comment_id,
+            content=data.content,
             datetime_created=datetime.now().timestamp()
         )
 

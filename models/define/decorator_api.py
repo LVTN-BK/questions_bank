@@ -17,6 +17,7 @@ class SendNotiDecoratorsApi:
                 )
             return response_data
         return inner
+
     def group_accept_request_join(func):
         @wraps(func)
         async def inner(*args, **kwargs):
@@ -29,6 +30,7 @@ class SendNotiDecoratorsApi:
                 )
             return response_data
         return inner
+        
     def group_reject_request_join(func):
         @wraps(func)
         async def inner(*args, **kwargs):
@@ -41,3 +43,56 @@ class SendNotiDecoratorsApi:
                 )
             return response_data
         return inner
+
+    def group_invite_member(func):
+        @wraps(func)
+        async def inner(*args, **kwargs):
+            response_data = await func(*args, **kwargs)
+            if response_data.status_code == 200:
+                kwargs.get("background_tasks").add_task(
+                    SendNotification.group_invite_member,
+                    data=kwargs.get("data"), 
+                    user_id=kwargs.get("data2").get('user_id')
+                )
+            return response_data
+        return inner
+
+    def create_comment(func):
+        @wraps(func)
+        async def inner(*args, **kwargs):
+            response_data = await func(*args, **kwargs)
+            if response_data.status_code == 200:
+                kwargs.get("background_tasks").add_task(
+                    SendNotification.create_comment,
+                    data=kwargs.get("data"), 
+                    user_id=kwargs.get("data2").get('user_id')
+                )
+            return response_data
+        return inner
+
+    def create_reply_comment(func):
+        @wraps(func)
+        async def inner(*args, **kwargs):
+            response_data = await func(*args, **kwargs)
+            if response_data.status_code == 200:
+                kwargs.get("background_tasks").add_task(
+                    SendNotification.create_reply_comment,
+                    data=kwargs.get("data"), 
+                    user_id=kwargs.get("data2").get('user_id')
+                )
+            return response_data
+        return inner
+
+    def create_like(func):
+        @wraps(func)
+        async def inner(*args, **kwargs):
+            response_data = await func(*args, **kwargs)
+            if response_data.status_code == 200:
+                kwargs.get("background_tasks").add_task(
+                    SendNotification.create_like,
+                    data=kwargs.get("data"), 
+                    user_id=kwargs.get("data2").get('user_id')
+                )
+            return response_data
+        return inner
+

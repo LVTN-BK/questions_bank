@@ -2,10 +2,11 @@ from datetime import datetime
 from app.utils.question_utils.question import get_data_and_metadata
 from models.db.group import Group_DB, GroupInvitation, GroupMember
 from bson import ObjectId
-from fastapi import Depends, Query, status
+from fastapi import Depends, Query, status, BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from configs import GROUP, GROUP_INVITATION, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, app, group_db
+from models.define.decorator_api import SendNotiDecoratorsApi
 from models.request.group import DATA_Accept_invitation, DATA_Cancel_invitation, DATA_Invite_Members, DATA_Reject_invitation
 # import response models
 from models.response import *
@@ -35,7 +36,9 @@ from app.utils._header import valid_headers
     description='add users to group',
     tags=['Group - Invitation']
 )
+@SendNotiDecoratorsApi.group_invite_member
 async def invite_users_to_group(
+    background_tasks: BackgroundTasks,
     data: DATA_Invite_Members,
     data2: dict = Depends(valid_headers),
     # group_id: str = Path(...)

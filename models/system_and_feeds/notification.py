@@ -24,9 +24,12 @@ class Notification(BaseModel):
 class NotificationTypeManage:
     COMMENT_QUESTION = 'comment_question'
     COMMENT_EXAM = 'comment_exam'
+    REPLY_COMMENT = 'reply_comment'
+    LIKE_QUESTION = 'like_question'
+    LIKE_EXAM = 'like_exam'
     GROUP_SHARE_QUESTION = 'group_share_question'
     COMMUNITY_SHARE_QUESTION = 'community_share_question'
-    GROUP_INVITE = 'group_invite'
+    GROUP_INVITE_MEMBER = 'group_invite_member'
     GROUP_ACCEPT_REQUEST = 'group_accept_request'
     GROUP_REJECT_REQUEST = 'group_reject_request'
     
@@ -34,8 +37,11 @@ class NotificationTypeManage:
 class NotificationContentManage:
     COMMENT_QUESTION = 'đã bình luận vào câu hỏi của bạn'
     COMMENT_EXAM = 'đã bình luận vào đề thi của bạn'
+    REPLY_COMMENT = 'đã trả lời bình luận của bạn'
+    LIKE_QUESTION = 'đã thích câu hỏi của bạn'
+    LIKE_EXAM = 'đã thích đề thi của bạn'
     GROUP_SHARE_QUESTION = 'Bạn đã chia sẻ thành công một câu hỏi vào nhóm'
     COMMUNITY_SHARE_QUESTION = 'Bạn đã chia sẻ thành công một câu hỏi vào cộng đồng'
-    GROUP_INVITE = 'đã mời bạn vào nhóm'
+    GROUP_INVITE_MEMBER = 'đã mời bạn vào nhóm'
     GROUP_ACCEPT_REQUEST = 'đã chấp nhận yêu cầu tham gia nhóm của bạn'
     GROUP_REJECT_REQUEST = 'đã từ chối yêu cầu tham gia nhóm của bạn'

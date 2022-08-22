@@ -5,7 +5,7 @@ from bson import ObjectId
 from app.utils.question_utils.question import get_data_and_metadata
 from configs.logger import logger
 from configs.settings import EXAMS, LIKES, SYSTEM, app, likes_db
-from fastapi import Depends, Path, status, Query
+from fastapi import Depends, Path, status, Query, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from models.db.like import Likes_DB
 from models.define.target import ManageTargetType
@@ -29,14 +29,15 @@ from starlette.responses import JSONResponse
     tags=['likes']
 )
 async def create_like(
-    data1: DATA_Create_Like,
+    background_tasks: BackgroundTasks,
+    data: DATA_Create_Like,
     data2: dict = Depends(valid_headers)
 ):
     try:        
         like = Likes_DB(
             user_id=data2.get('user_id'),
-            target_id=data1.target_id,
-            target_type=data1.target_type,
+            target_id=data.target_id,
+            target_type=data.target_type,
             datetime_created=datetime.now().timestamp()
         )
 
