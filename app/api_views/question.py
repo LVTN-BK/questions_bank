@@ -1,4 +1,3 @@
-from math import ceil
 import copy
 from typing import List
 from app.secure._password import *
@@ -6,8 +5,7 @@ from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
-from app.utils.notification_utils.notification import create_notification_to_list_specific_user
-from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions
+from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
@@ -19,15 +17,12 @@ from models.db.group import GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
-from models.request.notification import DATA_Create_Noti_List_User, TargetData
 from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
                                      DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
 from starlette.responses import JSONResponse
-
-from models.system_and_feeds.notification import NotificationTypeManage
 
 
 #========================================================
@@ -371,13 +366,13 @@ async def create_answer(
     tags=['questions']
 )
 async def delete_questions(
-    list_question_ids: List[str] = Query(..., description='List ID of question'),
+    data: DATA_Delete_Question,
     data2: dict = Depends(valid_headers)
 ):
     try:
         data = []
         # find question
-        for question_id in list_question_ids:
+        for question_id in data.list_question_ids:
             question_del = questions_db[QUESTIONS].find_one_and_update(
                 {
                     "_id": ObjectId(question_id),

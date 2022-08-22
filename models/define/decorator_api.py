@@ -1,6 +1,4 @@
 from functools import wraps
-from fastapi import status
-from fastapi.responses import JSONResponse
 from app.utils.notification_utils.send_noti_class import SendNotification
 
 from configs.logger import logger

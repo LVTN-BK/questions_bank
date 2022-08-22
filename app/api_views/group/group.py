@@ -12,7 +12,7 @@ from fastapi import BackgroundTasks, Depends, Path, Query, status
 from fastapi.responses import JSONResponse
 
 from configs import GROUP, GROUP_PARTICIPANT, app, group_db
-from models.define.group import GroupStatus, UpdateGroupImage
+from models.define.group import GroupStatus
 from models.request.group import DATA_Create_Group, DATA_Delete_Group, DATA_Leave_Group, DATA_Remove_Group_Question, DATA_Remove_Members, DATA_Update_Group, DATA_Update_Group_image
 # import response models
 from models.response import *
@@ -391,13 +391,7 @@ async def remove_group(
         # Find a group
         group = check_group_exist(group_id=data.group_id)
         if group:
-            query_owner = {
-                'group_id': data.group_id,
-                'user_id': data2.get('user_id'),
-                'is_owner': True
-            }
-            group_owner = group_db[GROUP_PARTICIPANT].find_one(query_owner)
-            if not group_owner:
+            if not check_owner_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
                 raise Exception('user is not the owner of group!')
             
             # remove group_participant
@@ -448,12 +442,6 @@ async def get_group_info(
     logger().info('===============get_group_info=================')
     # Find a group
     try:
-        query_filter = {
-            '$and': [
-                
-            ] 
-        }
-
         pipeline = [
             {
                 '$match': {
@@ -673,7 +661,7 @@ async def get_group_info(
             return JSONResponse(content={'status': 'success', 'data': result_data}, status_code=status.HTTP_200_OK)
         else:
             msg = 'group not found!'
-            return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)

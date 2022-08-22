@@ -934,9 +934,11 @@ async def group_get_one_exam(
         # find exam
         exam = exams_db[EXAMS].aggregate(pipeline)
 
-        data = {}
         if exam.alive:
             data = exam.next()
+        else:
+            msg = 'exam not found'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
 
         # for section_idx, section in enumerate(data['questions']):
         #     for question_idx, question in enumerate(data['questions'][section_idx]['section_questions']):
