@@ -28,6 +28,6 @@ class DATA_Create_Noti_Group_Members_Except_User(BaseModel):
     target: Optional[TargetData] = Field(default=None, description='target data')
 
 class DATA_Update_Notification_Setting(BaseModel):
-    noti_type: str = Field(..., description="type of notification"),
+    noti_type: str = Field(..., description="type of notification")
     is_enable: bool = Field(..., description='setting status')
 
