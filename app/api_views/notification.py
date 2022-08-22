@@ -375,7 +375,7 @@ async def mark_notification_as_seen(
                         }
                     },
                     {
-                        'receive_ids': {
+                        'receiver_ids': {
                             '$elemMatch': {
                                 '$eq': data2.get('user_id')
                             }
@@ -394,7 +394,7 @@ async def mark_notification_as_seen(
             query = {
                 '$and': [
                     {
-                        'receive_ids': {
+                        'receiver_ids': {
                             '$elemMatch': {
                                 '$eq': data2.get('user_id')
                             }
