@@ -40,7 +40,7 @@ from pymongo import ReturnDocument
 
 
 #=================================================================
-#======================SEND_REQUEST_JOIN_GROUP====================
+#====================USER_SEND_REQUEST_JOIN_GROUP=================
 #=================================================================
 @app.post(
     '/request_join_group',
@@ -55,7 +55,9 @@ from pymongo import ReturnDocument
     description='send request to join group',
     tags=['Group - Request Join']
 )
+@SendNotiDecoratorsApi.user_request_join_group
 async def send_request_join_group(
+    background_tasks: BackgroundTasks,
     data: DATA_Join_Request,
     data2: dict = Depends(valid_headers),
 ):

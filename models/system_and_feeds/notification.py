@@ -31,6 +31,7 @@ class NotificationTypeManage:
     GROUP_INVITE_MEMBER = 'group_invite_member'
     GROUP_ACCEPT_REQUEST = 'group_accept_request'
     GROUP_REJECT_REQUEST = 'group_reject_request'
+    USER_REQUEST_JOIN_GROUP = 'user_request_join_group'
     
 
 class NotificationContentManage:
@@ -43,3 +44,4 @@ class NotificationContentManage:
     GROUP_INVITE_MEMBER = 'đã mời bạn vào nhóm'
     GROUP_ACCEPT_REQUEST = 'đã chấp nhận yêu cầu tham gia nhóm của bạn'
     GROUP_REJECT_REQUEST = 'đã từ chối yêu cầu tham gia nhóm của bạn'
+    USER_REQUEST_JOIN_GROUP = 'đã gửi yêu cầu tham gia nhóm'

@@ -15,4 +15,6 @@ def get_notification_content(noti_type: str):
         content = NotificationContentManage.GROUP_ACCEPT_REQUEST
     elif noti_type == NotificationTypeManage.GROUP_REJECT_REQUEST:
         content = NotificationContentManage.GROUP_REJECT_REQUEST
+    elif noti_type == NotificationTypeManage.USER_REQUEST_JOIN_GROUP:
+        content = NotificationContentManage.USER_REQUEST_JOIN_GROUP
     return content

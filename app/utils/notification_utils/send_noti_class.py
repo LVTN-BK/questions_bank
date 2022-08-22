@@ -1,8 +1,9 @@
 from app.utils.notification_utils.notification import create_notification_to_list_specific_user, create_notification_to_group_members_except_user
-from configs.settings import COMMENTS, EXAMS, GROUP_JOIN_REQUEST, QUESTIONS, group_db, questions_db, comments_db
+from configs.logger import logger
+from configs.settings import COMMENTS, EXAMS, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, QUESTIONS, group_db, questions_db, comments_db
 from models.define.target import ManageTargetType
 from models.request.comment import DATA_Create_Comment, DATA_Create_Reply_Comment
-from models.request.group import DATA_Accept_Join_Request, DATA_Invite_Members, DATA_Reject_Join_Request
+from models.request.group import DATA_Accept_Join_Request, DATA_Invite_Members, DATA_Join_Request, DATA_Reject_Join_Request
 from models.request.like import DATA_Create_Like
 from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, TargetData
 from models.request.question import DATA_Share_Question_To_Group
@@ -90,6 +91,33 @@ class SendNotification:
             target=target_data
         )
         create_notification_to_list_specific_user(data_noti)
+
+    def user_request_join_group(
+        data: DATA_Join_Request,
+        user_id: str
+    ):    
+        try:    
+            # find group owner
+            group_owner = group_db[GROUP_PARTICIPANT].find_one(
+                {
+                    'group_id': data.group_id,
+                    'is_owner': True
+                }
+            )
+            if group_owner:
+                target_data = TargetData(
+                    group_id=data.group_id,
+                )
+
+                data_noti = DATA_Create_Noti_List_User(
+                    sender_id=user_id,
+                    list_users=[group_owner.get('user_id')],
+                    noti_type=NotificationTypeManage.USER_REQUEST_JOIN_GROUP,
+                    target=target_data
+                )
+                create_notification_to_list_specific_user(data_noti)
+        except Exception as e:
+            logger().error(e)
 
     def create_comment(
         data: DATA_Create_Comment,

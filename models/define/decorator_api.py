@@ -57,6 +57,19 @@ class SendNotiDecoratorsApi:
             return response_data
         return inner
 
+    def user_request_join_group(func):
+        @wraps(func)
+        async def inner(*args, **kwargs):
+            response_data = await func(*args, **kwargs)
+            if response_data.status_code == 200:
+                kwargs.get("background_tasks").add_task(
+                    SendNotification.user_request_join_group,
+                    data=kwargs.get("data"), 
+                    user_id=kwargs.get("data2").get('user_id')
+                )
+            return response_data
+        return inner
+
     def create_comment(func):
         @wraps(func)
         async def inner(*args, **kwargs):
