@@ -421,7 +421,6 @@ async def user_get_one_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
-
         pipeline = [
             {
                 '$match': {
@@ -495,9 +494,12 @@ async def user_get_one_question(
                     'chapter_id': 1,
                     'level': 1,
                     'question_id': 1,
+                    'question_version_id': {
+                        '$toString': '$ques_ver._id'
+                    },
                     'version_name': '$ques_ver.version_name',
                     "question_content": '$ques_ver.question_content',
-                    "question_image": '$ques_ver.question_image',
+                    # "question_image": '$ques_ver.question_image',
                     'question_type': "$type",
                     'tags_info': "$tags_info",
                     'answers': '$ques_ver.answers',
@@ -513,8 +515,8 @@ async def user_get_one_question(
             question_data = question_info.next()
             return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
         else:
-            return JSONResponse(content={'status': 'question not found!'}, status_code=status.HTTP_404_NOT_FOUND)
-
+            msg = 'question not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
@@ -791,6 +793,9 @@ async def get_question_by_version(
                 '$project': {
                     '_id': 0,
                     'question_id': 1,
+                    'question_version_id': {
+                        '$toString': '$_id'
+                    },
                     'version_name': 1,
                     "question_content": 1,
                     'level': "$question_information.level",
@@ -968,6 +973,10 @@ async def user_get_all_question(
                             '$project': {
                                 '_id': 0,
                                 'question_id': 1,
+                                'question_version_id': {
+                                    '$toString': '$_id'
+                                },
+                                'version_name': 1,
                                 "question_content": 1,
                                 "question_image": 1,
                                 'level': "$question_information.level",

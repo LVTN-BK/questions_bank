@@ -9,8 +9,8 @@ class SectionQuestion(BaseModel):
     section_questions: List[str] = Field(..., description='list questions of section')
 
 class DATA_Create_Exam(BaseModel):
-    class_id: str = Field(..., description='ID of class')
     subject_id: str = Field(..., description='ID of subject')
+    class_id: str = Field(..., description='ID of class')
     tag_id: List[Tag] = Field(default=[], description='ID of tag')
     exam_title: str = Field(..., description='title of exam')
     note: str = Field(default=None, description='note of question')

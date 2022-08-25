@@ -63,88 +63,13 @@ async def create_exam(
 
         exam = jsonable_encoder(exam)
         exams_version = jsonable_encoder(exams_version)
+        exam['exam_version_id'] = str(id_exam_version)
         exam.update({'exam_info': exams_version})
 
         return JSONResponse(content={'status': 'success', 'data': exam},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
     return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
-
-# #========================================================
-# #=====================USER_GET_ONE_EXAM==================
-# #========================================================
-# @app.get(
-#     path='/user/get_one_exam/{exam_id}',
-#     responses={
-#         status.HTTP_200_OK: {
-#             'model': ''
-#         },
-#         status.HTTP_403_FORBIDDEN: {
-#             'model': ''
-#         }
-#     },
-#     tags=['exams']
-# )
-# async def user_get_one_exam(
-#     exam_id: str = Path(..., description='ID of exam'),
-#     data2: dict = Depends(valid_headers)
-# ):
-#     try:
-#         # find exam
-#         exam = exams_db[EXAMS].find_one(
-#             {
-#                 "$and": [
-#                     {
-#                         '_id': ObjectId(exam_id)
-#                     },
-#                     {
-#                         'user_id': {
-#                             '$eq': data2.get('user_id')
-#                         }
-#                     },
-#                     {
-#                         'is_removed': False
-#                     }
-#                 ]
-                        
-#             }
-#         )
-#         if not exam:
-#             return JSONResponse(content={'status': 'Exam not found!'}, status_code=status.HTTP_404_NOT_FOUND)
-        
-#         # find exam version
-#         exam_version = exams_db[EXAMS_VERSION].find_one(
-#             {
-#                 '$and': [
-#                     {
-#                         'exam_id': exam_id
-#                     },
-#                     {
-#                         'is_latest': True
-#                     }
-#                 ]
-#             }
-#         )
-#         if not exam_version:
-#             return JSONResponse(content={'status': 'Exam not found!'}, status_code=status.HTTP_404_NOT_FOUND)
-
-#         # get question infomation
-#         all_question = []
-#         for question in exam_version.get('questions'):
-#             question_info = get_question_information_with_version_id(question_version_id=question)
-#             all_question.append(question_info)
-        
-#         exam_version['questions'] = all_question
-#         del exam_version['_id']
-#         del exam['_id']
-#         exam['exam_info'] = exam_version
-
-#         logger().info(exam_version)
-
-#         return JSONResponse(content={'status': 'success', 'data': exam},status_code=status.HTTP_200_OK)
-#     except Exception as e:
-#         logger().error(e)
-#     return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
 
 #========================================================
 #=====================USER_GET_ONE_EXAM==================
@@ -166,205 +91,6 @@ async def user_get_one_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        start_time = datetime.now()
-        
-
-        pipeline_v1 = [
-            {
-                '$match': {
-                    "$and": [
-                        {
-                            '_id': ObjectId(exam_id)
-                        },
-                        {
-                            'user_id': {
-                                '$eq': data2.get('user_id')
-                            }
-                        },
-                        {
-                            'is_removed': False
-                        }
-                    ]
-                }
-            },
-            {
-                '$addFields': {
-                    'exam_id': {
-                        '$toString': '$_id'
-                    }
-                }
-            },
-            {
-                "$lookup": {
-                    'from': 'exams_version',
-                    'localField': 'exam_id',
-                    'foreignField': 'exam_id',
-                    'pipeline': [
-                        {
-                            '$match': {
-                                'is_latest': True
-                            }
-                        },
-                        {
-                            '$unwind': '$questions'
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'questions',
-                                'let': {
-                                    'section_question': '$questions.section_questions'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$addFields': {
-                                            'id': {
-                                                '$toString': '$_id'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$in': ['$id', '$$section_question']
-                                            }
-                                        }
-                                    },
-                                    # join with questions_version
-                                    {
-                                        '$lookup': {
-                                            'from': 'questions_version',
-                                            'localField': 'id',
-                                            'foreignField': 'question_id',
-                                            'pipeline': [
-                                                {
-                                                    '$match': {
-                                                        'is_latest': True
-                                                    }
-                                                },
-                                                # join with answers
-                                                {
-                                                    '$lookup': {
-                                                        'from': 'answers',
-                                                        'let': {
-                                                            'list_answers': '$answers'
-                                                        },
-                                                        'pipeline': [
-                                                            {
-                                                                '$addFields': {
-                                                                    'answer_id': {
-                                                                        '$toString': '$_id'
-                                                                    }
-                                                                }
-                                                            },
-                                                            {
-                                                                '$match': {
-                                                                    '$expr': {
-                                                                        '$in': ['$answer_id', '$$list_answers']
-                                                                    }
-                                                                }
-                                                            },
-                                                            {
-                                                                '$project': {
-                                                                    '_id': 0,
-                                                                    'answer_id': 1,
-                                                                    'answer_content': 1,
-                                                                    'answer_image': 1,
-                                                                    'datetime_created': 1
-                                                                }
-                                                            }
-                                                        ],
-                                                        'as': 'answers'
-                                                    }
-                                                },
-                                                {
-                                                    '$project': {
-                                                        '_id': 0,
-                                                        'question_version_id': {
-                                                            '$toString': '$_id'
-                                                        },
-                                                        'question_id': 1,
-                                                        'question_content': 1,
-                                                        'question_image': 1,
-                                                        'answers': 1,
-                                                        'correct_answers': 1,
-                                                        'datetime_created': 1
-                                                    }
-                                                }
-                                            ],
-                                            'as': 'question_version'
-                                        }
-                                    },
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'type': 1,
-                                            'level': 1,
-                                            'question_version': 1
-                                        }
-                                    }
-                                ],
-                                'as': 'questions.section_questions'
-                            }
-                        },
-                        {
-                            '$group': {
-                                '_id': {
-                                    '$toString': '$_id'
-                                },
-                                # 'exam_id': '$exam_id',
-                                'exam_title': {
-                                    '$first': '$exam_title'
-                                },
-                                'note': {
-                                    '$first': '$note'
-                                },
-                                'time_limit': {
-                                    '$first': '$time_limit'
-                                },
-                                'questions': {
-                                    '$push': '$questions'
-                                }
-                            }
-                        },
-                        {
-                            '$project': {
-                                '_id': 0,
-                                'exam_title': 1,
-                                'note': 1,
-                                'time_limit': 1,
-                                'questions': 1
-                            }
-                        },
-                        # {
-                        #     '$unwind': '$exam_title'
-                        # },
-                    ],
-                    'as': 'exam_detail'
-                }
-            },
-            {
-                '$unwind': '$exam_detail'
-            },
-            {
-                '$project': {
-                    '_id': 0,
-                    # 'exam_id': {
-                    #     '$toString': '$_id'
-                    # },
-                    'exam_id': 1,
-                    'user_id': 1,
-                    'class_id': 1,
-                    'subject_id': 1,
-                    'tag_id': 1,
-                    'exam_title': '$exam_detail.exam_title',
-                    'note': '$exam_detail.note',
-                    'time_limit': '$exam_detail.time_limit',
-                    'questions': '$exam_detail.questions'
-                    # 'exam_detail': 1
-                }
-            }
-        ]
-        
         pipeline = [
             {
                 '$match': {
@@ -372,11 +98,11 @@ async def user_get_one_exam(
                         {
                             '_id': ObjectId(exam_id)
                         },
-                        {
-                            'user_id': {
-                                '$eq': data2.get('user_id')
-                            }
-                        },
+                        # {
+                        #     'user_id': {
+                        #         '$eq': data2.get('user_id')
+                        #     }
+                        # },
                         {
                             'is_removed': False
                         }
@@ -390,7 +116,38 @@ async def user_get_one_exam(
                     }
                 }
             },
-
+            {
+                '$lookup': {
+                    'from': 'tag',
+                    'let': {
+                        'list_tag_id': '$tag_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$in': ['$id', '$$list_tag_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'tags_info'
+                }
+            },
             #join with exam_version
             {
                 "$lookup": {
@@ -429,127 +186,88 @@ async def user_get_one_exam(
                                             }
                                         }
                                     },
+                                    {
+                                        '$addFields': { # convert question_id in questions_version collection from string to ObjectId(to join with questions collection)
+                                            'question_object_id': {
+                                                '$toObjectId': '$question_id'
+                                            }
+                                        }
+                                    },
                                     # join with questions db and get question type
                                     {
                                         "$lookup": {
                                             'from': 'questions',
-                                            'let': {
-                                                'question_id': '$question_id'
-                                            },
+                                            'localField': 'question_object_id',
+                                            'foreignField': '_id',
+                                            # 'let': {
+                                            #     'question_id': '$question_id'
+                                            # },
                                             'pipeline': [
                                                 {
-                                                    '$addFields': {
-                                                        'question_id': {
-                                                            '$toString': '$_id'
-                                                        }
+                                                    '$lookup': { #join with tag collection
+                                                        'from': 'tag',
+                                                        'let': {
+                                                            'list_tag_id': '$tag_id'
+                                                        },
+                                                        'pipeline': [
+                                                            {
+                                                                '$set': {
+                                                                    'id': {
+                                                                        '$toString': '$_id'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$match': {
+                                                                    '$expr': {
+                                                                        '$in': ['$id', '$$list_tag_id']
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$project': {
+                                                                    '_id': 0,
+                                                                    'id': 1,
+                                                                    'name': 1
+                                                                }
+                                                            }
+                                                        ],
+                                                        'as': 'tags_info'
                                                     }
                                                 },
                                                 {
-                                                    '$match': {
-                                                        '$expr': {
-                                                            '$eq': ['$question_id', '$$question_id']
-                                                        }
-                                                    }
-                                                },
-                                                {
-                                                    '$project': {
+                                                    '$project': { #project for questions collection
                                                         '_id': 0,
-                                                        'question_type': '$type',
-                                                    }
-                                                }
-                                            ],
-                                            'as': 'question_info'
-                                        }
-                                    },
-                                    {
-                                        '$unwind': '$question_info'
-                                    },
-
-                                    # join with answers
-                                    {
-                                        '$lookup': {
-                                            'from': 'answers',
-                                            'let': {
-                                                'list_answers': '$answers'
-                                            },
-                                            'pipeline': [
-                                                {
-                                                    '$addFields': {
-                                                        'answer_id': {
-                                                            '$toString': '$_id'
-                                                        }
-                                                    }
-                                                },
-                                                {
-                                                    '$match': {
-                                                        '$expr': {
-                                                            '$in': ['$answer_id', '$$list_answers']
-                                                        }
-                                                    }
-                                                },
-                                                {
-                                                    '$project': {
-                                                        '_id': 0,
-                                                        'answer_id': 1,
-                                                        'answer_content': 1,
-                                                        'answer_image': 1,
+                                                        'type': 1,
+                                                        'level': 1,
+                                                        'tags_info': 1,
                                                         'datetime_created': 1
                                                     }
                                                 }
                                             ],
-                                            'as': 'answers'
+                                            'as': 'question_information'
                                         }
                                     },
-
-                                    # continue join with answers to get answers_right(matching question)
                                     {
-                                        '$lookup': {
-                                            'from': 'answers',
-                                            'let': {
-                                                'list_answers': '$answers_right'
-                                            },
-                                            'pipeline': [
-                                                {
-                                                    '$addFields': {
-                                                        'answer_id': {
-                                                            '$toString': '$_id'
-                                                        }
-                                                    }
-                                                },
-                                                {
-                                                    '$match': {
-                                                        '$expr': {
-                                                            '$in': ['$answer_id', '$$list_answers']
-                                                        }
-                                                    }
-                                                },
-                                                {
-                                                    '$project': {
-                                                        '_id': 0,
-                                                        'answer_id': 1,
-                                                        'answer_content': 1,
-                                                        'answer_image': 1,
-                                                        'datetime_created': 1
-                                                    }
-                                                }
-                                            ],
-                                            'as': 'answers_right'
-                                        }
+                                        '$unwind': '$question_information'
                                     },
                                     {
                                         '$project': {
                                             '_id': 0,
+                                            'question_id': 1,
                                             'question_version_id': {
                                                 '$toString': '$_id'
                                             },
-                                            'question_id': 1,
-                                            'question_content': 1,
-                                            'question_image': 1,
-                                            'question_type': '$question_info.question_type',
+                                            'version_name': 1,
+                                            "question_content": 1,
+                                            'level': "$question_information.level",
+                                            'question_type': "$question_information.type",
+                                            'tags_info': "$question_information.tags_info",
                                             'answers': 1,
                                             'answers_right': 1,
-                                            'correct_answers': 1,
-                                            'datetime_created': 1
+                                            'sample_answer': 1,
+                                            'display': 1,
+                                            'datetime_created': "$question_information.datetime_created"
                                         }
                                     }
                                 ],
@@ -565,6 +283,9 @@ async def user_get_one_exam(
                                 'exam_title': {
                                     '$first': '$exam_title'
                                 },
+                                'version_name': {
+                                    '$first': '$version_name'
+                                },
                                 'note': {
                                     '$first': '$note'
                                 },
@@ -579,6 +300,8 @@ async def user_get_one_exam(
                         {
                             '$project': {
                                 '_id': 0,
+                                'exam_version_id': '$_id',
+                                'version_name': 1,
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
@@ -605,8 +328,10 @@ async def user_get_one_exam(
                     'user_id': 1,
                     'class_id': 1,
                     'subject_id': 1,
-                    'tag_id': 1,
+                    'tags_info': 1,
                     'exam_title': '$exam_detail.exam_title',
+                    'exam_version_id': '$exam_detail.exam_version_id',
+                    'version_name': '$exam_detail.version_name',
                     'note': '$exam_detail.note',
                     'time_limit': '$exam_detail.time_limit',
                     'questions': '$exam_detail.questions',
@@ -618,22 +343,15 @@ async def user_get_one_exam(
 
         # find exam
         exam = exams_db[EXAMS].aggregate(pipeline)
-
-        logger().info(f'type exam: {type(exam)}')
-        data = exam.next()
-
-        # for section_idx, section in enumerate(data['questions']):
-        #     for question_idx, question in enumerate(data['questions'][section_idx]['section_questions']):
-        #         question_type = data['questions'][section_idx]['section_questions'][question_idx]['question_type']
-        #         answers = data['questions'][section_idx]['section_questions'][question_idx]['answers']
-        #         data['questions'][section_idx]['section_questions'][question_idx]['answers'] = get_answer(answers=answers, question_type=question_type)
- 
-        end_time = datetime.now()
-        logger().info(end_time-start_time)
-        return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
+        if exam.alive:
+            exam_data = exam.next()
+            return JSONResponse(content={'status': 'success', 'data': exam_data},status_code=status.HTTP_200_OK)
+        else:
+            msg = 'exam not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #====================GROUP_GET_ONE_EXAM==================
