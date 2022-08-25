@@ -2,7 +2,7 @@ from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_exam
-from app.utils.question_utils.question import get_answer, get_question_information_with_version_id
+from app.utils.question_utils.question import get_answer, get_list_tag_id_from_input, get_question_information_with_version_id
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exams_db, group_db
@@ -35,24 +35,13 @@ async def create_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # check user
-        user = SYSTEM['users'].find_one(
-            {
-                'email': {
-                    '$eq': data2.get('email')
-                }
-            }
-        )
-        if not user:
-            return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
-
         data1 = jsonable_encoder(data1)
         
         exam = Exams_DB(
             user_id=data2.get('user_id'),
             class_id=data1.get('class_id'),
             subject_id=data1.get('subject_id'),
-            tag_id=data1.get('tag_id'),
+            tag_id=get_list_tag_id_from_input(data1.get('tag_id')),
             datetime_created=datetime.now().timestamp()
         )
 
@@ -79,7 +68,7 @@ async def create_exam(
         return JSONResponse(content={'status': 'success', 'data': exam},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+    return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 # #========================================================
 # #=====================USER_GET_ONE_EXAM==================
