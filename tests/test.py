@@ -1,12 +1,13 @@
 # from __future__ import print_function
-# import json
-# from configs.logger import logger
-# # import time
-# # import sib_api_v3_sdk
-# # from sib_api_v3_sdk.rest import ApiException
-# # from pprint import pprint
-# from starlette.responses import JSONResponse
-# from configs.settings import app
+import json
+import os
+from configs.logger import logger
+# import time
+# import sib_api_v3_sdk
+# from sib_api_v3_sdk.rest import ApiException
+# from pprint import pprint
+from starlette.responses import JSONResponse
+from configs.settings import app
     
 # # from __future__ import print_function
 
@@ -19,7 +20,9 @@
 # from google.oauth2.credentials import Credentials
 # from google.auth.transport.requests import Request
 # from google_auth_oauthlib.flow import InstalledAppFlow
-# from fastapi.encoders import jsonable_encoder
+from fastapi.encoders import jsonable_encoder
+from fastapi import UploadFile, File, BackgroundTasks
+from fastapi.responses import FileResponse
 
 # # If modifying these scopes, delete the file token.json.
 # SCOPES = [
@@ -103,4 +106,24 @@
 #     # except ApiException as e:
 #     #     print("Exception when calling SMTPApi->send_transac_email: %s\n" % e)
 #     return JSONResponse(status_code=200, content={"message": "email has been sent"})
+
+def remove_file(path: str) -> None:
+    os.unlink(path)
+
+@app.post("/export_word")
+async def simple_send(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...,description="file as UploadFile"),
+):
+    from htmldocx import HtmlToDocx
+    import uuid    
+    file_name = uuid.uuid4().hex
+
+    new_parser = HtmlToDocx()
+    # new_parser.parse_html_file('Questions.html', 'out')
+    docx = new_parser.parse_html_string(file.file.read())
+    docx.save(f'file_export/{file_name}.docx')
+    some_file_path = f'file_export/{file_name}.docx'
+    background_tasks.add_task(remove_file, some_file_path)
+    return FileResponse(some_file_path, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document', filename='q.docx')
 
