@@ -94,6 +94,11 @@ class DATA_Delete_Question(BaseModel):
 class DATA_Share_Question_To_Community(BaseModel):
     question_id: str = Field(..., description='ID of question')
 
+class DATA_Copy_Question(BaseModel):
+    question_id: str = Field(..., description='ID of question')
+    subject_id: str = Field(..., description='ID of subject')
+    class_id: str = Field(..., description='ID of class')
+    chapter_id: str = Field(..., description='ID of chapter')
 
 class DATA_Share_Question_To_Group(BaseModel):
     question_id: str = Field(..., description='ID of question')
