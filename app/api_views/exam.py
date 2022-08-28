@@ -56,6 +56,8 @@ async def create_exam(
             exam_title=data1.get('exam_title'),
             note=data1.get('note'),
             time_limit=data1.get('time_limit'),
+            oganization_info=data1.get('oganization_info'),
+            exam_info=data1.get('exam_info'),
             questions=data1.get('questions'),
             datetime_created=datetime.now().timestamp()
         )
@@ -305,6 +307,8 @@ async def user_get_one_exam(
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
+                                'oganization_info': 1,
+                                'exam_info': 1,
                                 'questions': 1
                             }
                         },
@@ -334,6 +338,8 @@ async def user_get_one_exam(
                     'version_name': '$exam_detail.version_name',
                     'note': '$exam_detail.note',
                     'time_limit': '$exam_detail.time_limit',
+                    'oganization_info': '$exam_detail.oganization_info',
+                    'exam_info': '$exam_detail.exam_info',
                     'questions': '$exam_detail.questions',
                     'datetime_created': 1
                     # 'exam_detail': 1
