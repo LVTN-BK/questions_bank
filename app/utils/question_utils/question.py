@@ -271,7 +271,7 @@ def get_query_filter_questions(search, type, level, class_id, subject_id, chapte
 
     # =============== chapter =================
     if chapter_id:
-        if type(chapter_id) == list:
+        if (isinstance(chapter_id, list)):
             query_question_chapter = {
                 'chapter_id': {
                     '$in': chapter_id
