@@ -271,9 +271,16 @@ def get_query_filter_questions(search, type, level, class_id, subject_id, chapte
 
     # =============== chapter =================
     if chapter_id:
-        query_question_chapter = {
-            'chapter_id': chapter_id
-        }
+        if type(chapter_id) == list:
+            query_question_chapter = {
+                'chapter_id': {
+                    '$in': chapter_id
+                }
+            }
+        else:
+            query_question_chapter = {
+                'chapter_id': chapter_id
+            }
         filter_question.append(query_question_chapter)
 
     return filter_question, filter_question_version
