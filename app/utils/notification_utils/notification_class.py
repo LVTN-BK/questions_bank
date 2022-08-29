@@ -1,6 +1,6 @@
 from typing import Dict, List, Union
 from bson import ObjectId
-from app.utils.check_noti_setting import get_list_user_id_enable_noti_type
+from app.utils.notification_utils.check_noti_setting import get_list_user_id_enable_noti_type
 from app.utils.group_utils.group import get_group_members_id_except_user, get_list_group_member_id
 from fastapi import WebSocket
 

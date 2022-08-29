@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field
 class DATA_Create_Subject(BaseModel):
     name: str = Field(..., description='name of subject')
 
+class DATA_Group_Create_Subject(BaseModel):
+    name: str = Field(..., description='name of subject')
+    group_id: str = Field(..., description='ID of group')
+
 class DATA_Update_Subject(BaseModel):
     subject_id: str = Field(..., description='ID of subject')
     name: str = Field(..., description='name of subject')

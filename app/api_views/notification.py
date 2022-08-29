@@ -8,9 +8,9 @@ from fastapi import Path, Query, Body, status, Depends
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pymongo import ReturnDocument
-from app.utils.check_noti_setting import get_list_user_id_enable_noti_type
+from app.utils.notification_utils.check_noti_setting import get_list_user_id_enable_noti_type
 from app.utils.group_utils.group import get_group_members_id_except_user
-from app.utils.notification_content import get_notification_content
+from app.utils.notification_utils.notification_content import get_notification_content
 from app.utils.question_utils.question import get_data_and_metadata
 
 from configs import NOTI_COLLECTION, NOTI_SETTING_COLLECTION, app, noti_db

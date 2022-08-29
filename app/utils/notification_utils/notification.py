@@ -1,7 +1,7 @@
 from datetime import datetime
-from app.utils.check_noti_setting import get_list_user_id_enable_noti_type
+from app.utils.notification_utils.check_noti_setting import get_list_user_id_enable_noti_type
 from app.utils.group_utils.group import get_group_members_id_except_user
-from app.utils.notification_content import get_notification_content
+from app.utils.notification_utils.notification_content import get_notification_content
 from configs.logger import logger
 from models.db.notification import Notification_DB
 from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User
