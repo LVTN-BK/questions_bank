@@ -2,7 +2,7 @@ from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_exam
-from app.utils.question_utils.question import get_answer, get_list_tag_id_from_input, get_question_information_with_version_id
+from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_question_information_with_version_id
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exams_db, group_db
@@ -116,6 +116,95 @@ async def user_get_one_exam(
                     'exam_id': {
                         '$toString': '$_id'
                     }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'author_data'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'subject',
+                    'let': {
+                        'subject_id': '$subject_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$subject_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'subject_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'class',
+                    'let': {
+                        'class_id': '$class_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$class_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'class_info'
                 }
             },
             {
@@ -325,21 +414,28 @@ async def user_get_one_exam(
             {
                 '$project': {
                     '_id': 0,
-                    # 'exam_id': {
-                    #     '$toString': '$_id'
-                    # },
                     'exam_id': 1,
-                    'user_id': 1,
-                    'class_id': 1,
-                    'subject_id': 1,
+                    'user_info': {
+                        '$ifNull': [{'$first': '$author_data'}, None]
+                    },
+                    'subject_info': {
+                        '$ifNull': [{'$first': '$subject_info'}, None]
+                    },
+                    'class_info': {
+                        '$ifNull': [{'$first': '$class_info'}, None]
+                    },
                     'tags_info': 1,
                     'exam_title': '$exam_detail.exam_title',
                     'exam_version_id': '$exam_detail.exam_version_id',
                     'version_name': '$exam_detail.version_name',
                     'note': '$exam_detail.note',
                     'time_limit': '$exam_detail.time_limit',
-                    'oganization_info': '$exam_detail.oganization_info',
-                    'exam_info': '$exam_detail.exam_info',
+                    'oganization_info': {
+                        '$ifNull': ['$exam_detail.oganization_info', None]
+                    },
+                    'exam_info': {
+                        '$ifNull': ['$exam_detail.exam_info', None]
+                    },
                     'questions': '$exam_detail.questions',
                     'datetime_created': 1
                     # 'exam_detail': 1
@@ -1062,13 +1158,140 @@ async def user_get_all_exam(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'users_profile',
+                                'localField': 'user_id',
+                                'foreignField': 'user_id',
+                                'pipeline': [
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'user_id': 1,
+                                            'name': {
+                                                '$ifNull': ['$name', None]
+                                            },
+                                            'email': {
+                                                '$ifNull': ['$email', None]
+                                            },
+                                            'avatar': {
+                                                '$ifNull': ['$avatar', None]
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'author_data'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'subject',
+                                'let': {
+                                    'subject_id': '$subject_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$subject_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'subject_info'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'class',
+                                'let': {
+                                    'class_id': '$class_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$class_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'class_info'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'tag',
+                                'let': {
+                                    'list_tag_id': '$tag_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$in': ['$id', '$$list_tag_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'tags_info'
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
-                                'exam_id': 1,
-                                'user_id': 1,
-                                'class_id': 1,
-                                'subject_id': 1,
-                                'tag_id': 1,
+                                # 'exam_id': 1,
+                                'user_info': {
+                                    '$ifNull': [{'$first': '$author_data'}, None]
+                                },
+                                'subject_info': {
+                                    '$ifNull': [{'$first': '$subject_info'}, None]
+                                },
+                                'class_info': {
+                                    '$ifNull': [{'$first': '$class_info'}, None]
+                                },
+                                'tags_info': 1,
                                 'datetime_created': 1
                             }
                         },
@@ -1101,16 +1324,27 @@ async def user_get_all_exam(
                         {
                             '$project': {
                                 '_id': 0,
-                                'exam_id': '$exam_detail.exam_id',
-                                'user_id': '$exam_detail.user_id',
-                                'class_id': '$exam_detail.class_id',
-                                'subject_id': '$exam_detail.subject_id',
-                                'tag_id': '$exam_detail.tag_id',
+                                'exam_id': 1,
+                                'user_info': '$exam_detail.user_info',
+                                'class_info': '$exam_detail.class_info',
+                                'subject_info': '$exam_detail.subject_info',
+                                'tags_info': '$exam_detail.tags_info',
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
+                                'oganization_info': {
+                                    '$ifNull': ['$oganization_info', None]
+                                },
+                                'exam_info': {
+                                    '$ifNull': ['$exam_info', None]
+                                },
                                 'questions': 1,
                                 'datetime_created': '$exam_detail.datetime_created'
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
                             }
                         },
                         { 
@@ -1129,70 +1363,12 @@ async def user_get_all_exam(
 
         exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
         
-        exams_data = exams.next()
+        result_data, meta_data = get_data_and_metadata(aggregate_response=exams, page=page)
 
-        exams_count = exams_data['metadata']['total']
-        num_pages = exams_data.get('metadata').get('page')
-        
-        meta_data = {
-            'count': exams_count,
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
-
-        
-        # for exam in exams:
-        #     result.append(exam)
-
-        # exams = exams_db[EXAMS].find(
-        #     {
-        #         "$and": [
-        #             {
-        #                 'user_id': {
-        #                     '$eq': data2.get('user_id')
-        #                 }
-        #             },
-        #             {
-        #                 'is_removed': False
-        #             }
-        #         ]
-                        
-        #     }
-        # )
-        
-        # for exam in exams:
-        #     # find exam version
-        #     exam_version = exams_db[EXAMS_VERSION].find_one(
-        #         {
-        #             '$and': [
-        #                 {
-        #                     'exam_id': str(exam['_id'])
-        #                 },
-        #                 {
-        #                     'is_latest': True
-        #                 }
-        #             ]
-        #         }
-        #     )
-        #     if exam_version:
-        #         del exam['_id']
-        #         del exam_version['_id']
-        #         exam['exam_info'] = exam_version
-        #         result.append(exam)
-        #     else:
-        #         del exam['_id']
-        #         exam['exam_info'] = {}
-        #         result.append(exam)
-
-        return JSONResponse(content={'status': 'success', 'data': exams_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #====================GROUP_GET_ALL_EXAM==================
