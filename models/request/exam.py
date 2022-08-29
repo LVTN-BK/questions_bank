@@ -15,6 +15,6 @@ class DATA_Create_Exam(BaseModel):
     exam_title: str = Field(..., description='title of exam')
     note: str = Field(default=None, description='note of question')
     time_limit: str = Field(default=None, description='limit time of exam')
-    oganization_info: str = Field(default=None, description='organization information')
+    organization_info: str = Field(default=None, description='organization information')
     exam_info: str = Field(default=None, description='exam information')
     questions: List[SectionQuestion] = Field(..., description='questions of exam')
