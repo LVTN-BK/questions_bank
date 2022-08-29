@@ -396,7 +396,7 @@ async def user_get_one_exam(
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
-                                'oganization_info': 1,
+                                'organization_info': 1,
                                 'exam_info': 1,
                                 'questions': 1
                             }
@@ -430,8 +430,8 @@ async def user_get_one_exam(
                     'version_name': '$exam_detail.version_name',
                     'note': '$exam_detail.note',
                     'time_limit': '$exam_detail.time_limit',
-                    'oganization_info': {
-                        '$ifNull': ['$exam_detail.oganization_info', None]
+                    'organization_info': {
+                        '$ifNull': ['$exam_detail.organization_info', None]
                     },
                     'exam_info': {
                         '$ifNull': ['$exam_detail.exam_info', None]
@@ -706,6 +706,8 @@ async def group_get_one_exam(
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
+                                'organization_info': 1,
+                                'exam_info': 1,
                                 'questions': 1
                             }
                         },
@@ -733,6 +735,12 @@ async def group_get_one_exam(
                     'exam_title': '$exam_detail.exam_title',
                     'note': '$exam_detail.note',
                     'time_limit': '$exam_detail.time_limit',
+                    'organization_info': {
+                        '$ifNull': ['$exam_detail.organization_info', None]
+                    },
+                    'exam_info': {
+                        '$ifNull': ['$exam_detail.exam_info', None]
+                    },
                     'questions': '$exam_detail.questions',
                     'datetime_created': 1
                     # 'exam_detail': 1
@@ -1333,8 +1341,8 @@ async def user_get_all_exam(
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
-                                'oganization_info': {
-                                    '$ifNull': ['$oganization_info', None]
+                                'organization_info': {
+                                    '$ifNull': ['$organization_info', None]
                                 },
                                 'exam_info': {
                                     '$ifNull': ['$exam_info', None]
@@ -1691,8 +1699,8 @@ async def group_get_all_exam(
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
-                                'oganization_info': {
-                                    '$ifNull': ['$oganization_info', None]
+                                'organization_info': {
+                                    '$ifNull': ['$organization_info', None]
                                 },
                                 'exam_info': {
                                     '$ifNull': ['$exam_info', None]
