@@ -14,6 +14,7 @@ from models.db.group import GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
+from models.define.target import ManageTargetType
 from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
@@ -589,6 +590,13 @@ async def question_more_detail(
                     'from': 'likes',
                     'localField': 'question_id',
                     'foreignField': 'target_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'target_type': ManageTargetType.QUESTION
+                            }
+                        }
+                    ],
                     'as': 'likes_data'
                 }
             },
@@ -607,6 +615,7 @@ async def question_more_detail(
                     'pipeline': [
                         {
                             '$match': {
+                                'target_type': ManageTargetType.QUESTION,
                                 'user_id': data2.get('user_id')
                             }
                         }
@@ -629,6 +638,7 @@ async def question_more_detail(
                     'pipeline': [
                         {
                             '$match': {
+                                'target_type': ManageTargetType.QUESTION,
                                 'is_removed': False
                             }
                         }

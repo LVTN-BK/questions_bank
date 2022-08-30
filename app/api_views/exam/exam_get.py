@@ -6,6 +6,7 @@ from configs.logger import logger
 from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, app, exams_db, group_db
 from fastapi import Depends, Path, Query, status
 from starlette.responses import JSONResponse
+from models.define.target import ManageTargetType
 
 from models.response.exam import UserGetAllExamResponse200, UserGetAllExamResponse403, UserGetOneExamResponse200, UserGetOneExamResponse403
 
@@ -389,6 +390,183 @@ async def user_get_one_exam(
         else:
             msg = 'exam not found!'
             return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#=====================EXAM_MORE_DETAIL===================
+#========================================================
+@app.get(
+    path='/exam_more_detail/{exam_id}',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['exams']
+)
+async def exam_more_detail(
+    exam_id: str = Path(..., description='ID of exam'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        pipeline = [
+            {
+                '$match': {
+                    '_id': ObjectId(exam_id),
+                    'is_removed': False
+                }
+            },
+            {
+                '$set': {
+                    'exam_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'author_data'
+                }
+            },
+            {
+                '$set': {
+                    'author_info': {
+                        '$ifNull': [{'$first': '$author_data'}, None]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'likes',
+                    'localField': 'exam_id',
+                    'foreignField': 'target_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'target_type': ManageTargetType.EXAM
+                            }
+                        }
+                    ],
+                    'as': 'likes_data'
+                }
+            },
+            {
+                '$set': {
+                    'num_likes': {
+                        '$size': '$likes_data'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'likes',
+                    'localField': 'exam_id',
+                    'foreignField': 'target_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'target_type': ManageTargetType.EXAM,
+                                'user_id': data2.get('user_id')
+                            }
+                        }
+                    ],
+                    'as': 'user_like'
+                }
+            },
+            {
+                '$set': {
+                    'is_liked': {
+                        '$ne': ['$user_like', []]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'comments',
+                    'localField': 'exam_id',
+                    'foreignField': 'target_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'target_type': ManageTargetType.EXAM,
+                                'is_removed': False
+                            }
+                        }
+                    ],
+                    'as': 'comments_data'
+                }
+            },
+            {
+                '$set': {
+                    'num_comments': {
+                        '$size': '$comments_data'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'exams_version',
+                    'localField': 'exam_id',
+                    'foreignField': 'exam_id',
+                    'pipeline': [
+                        {
+                            '$project' : {
+                                '_id': 0,
+                                'version_id': {
+                                    '$toString': '$_id'
+                                },
+                                # 'exam_id': 1,
+                                'version_name': 1
+                            }
+                        }
+                    ],
+                    'as': 'exam_version'
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'exam_id': 1,
+                    'author_info': 1,
+                    'num_comments': 1,
+                    'num_likes': 1,
+                    'is_liked': 1,
+                    'exam_version': 1,
+                }
+            }
+        ]
+        exam_info = exams_db[EXAMS].aggregate(pipeline)
+        if exam_info.alive:
+            exam_data = exam_info.next()
+            return JSONResponse(content={'status': 'success', 'data': exam_data},status_code=status.HTTP_200_OK)
+        else:
+            return JSONResponse(content={'status': 'exam not found!'}, status_code=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
