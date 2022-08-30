@@ -224,7 +224,7 @@ async def delete_exams(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        data = []
+        all_id = []
         # find question
         for exam_id in data.list_exam_ids:
             exam_del = exams_db[EXAMS].find_one_and_update(
@@ -240,7 +240,7 @@ async def delete_exams(
             )
 
             if exam_del:
-                data.append(exam_id)
+                all_id.append(exam_id)
         
                 # # find exam version
                 # exam_version = exams_db[EXAMS_VERSION].delete_many(

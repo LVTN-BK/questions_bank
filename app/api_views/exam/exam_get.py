@@ -25,7 +25,7 @@ from models.response.exam import UserGetAllExamResponse200, UserGetAllExamRespon
             'model': UserGetOneExamResponse403
         }
     },
-    tags=['exams']
+    tags=['exams - get']
 )
 async def user_get_one_exam(
     exam_id: str = Path(..., description='ID of exam'),
@@ -407,7 +407,7 @@ async def user_get_one_exam(
             'model': ''
         }
     },
-    tags=['exams']
+    tags=['exams - get']
 )
 async def exam_more_detail(
     exam_id: str = Path(..., description='ID of exam'),
@@ -584,7 +584,7 @@ async def exam_more_detail(
             'model': UserGetOneExamResponse403
         }
     },
-    tags=['exams']
+    tags=['exams - get']
 )
 async def group_get_one_exam(
     exam_id: str = Path(..., description='ID of exam'),
@@ -897,7 +897,7 @@ async def group_get_one_exam(
             'model': UserGetOneExamResponse403
         }
     },
-    tags=['exams']
+    tags=['exams - get']
 )
 async def community_get_one_exam(
     exam_id: str = Path(..., description='ID of exam'),
@@ -1183,7 +1183,7 @@ async def community_get_one_exam(
             'model': UserGetAllExamResponse403
         }
     },
-    tags=['exams']
+    tags=['exams - get']
 )
 async def user_get_all_exam(
     page: int = Query(default=1, description='page number'),
@@ -1504,7 +1504,7 @@ async def user_get_all_exam(
             'model': UserGetAllExamResponse403
         }
     },
-    tags=['exams']
+    tags=['exams - get']
 )
 async def group_get_all_exam(
     group_id: str = Query(..., description='ID of group'),
@@ -1861,7 +1861,7 @@ async def group_get_all_exam(
             'model': UserGetAllExamResponse403
         }
     },
-    tags=['exams']
+    tags=['exams - get']
 )
 async def community_get_all_exam(
     page: int = Query(default=1, description='page number'),

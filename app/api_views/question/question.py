@@ -368,7 +368,7 @@ async def delete_questions(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        data = []
+        all_id = []
         # find question
         for question_id in data.list_question_ids:
             question_del = questions_db[QUESTIONS].find_one_and_update(
@@ -384,7 +384,7 @@ async def delete_questions(
             )
 
             if question_del:
-                data.append(question_id)
+                all_id.append(question_id)
         
                 # # find question version
                 # question_version = questions_db[QUESTIONS_VERSION].delete_many(
