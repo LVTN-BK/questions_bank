@@ -726,7 +726,9 @@ async def get_exam_by_version(
                     '_id': {
                         '$toString': '$_id'
                     },
-                    # 'exam_id': '$exam_id',
+                    'exam_id': {
+                        '$first': '$exam_id'
+                    },
                     'exam_title': {
                         '$first': '$exam_title'
                     },
@@ -753,6 +755,7 @@ async def get_exam_by_version(
             {
                 '$project': {
                     '_id': 0,
+                    'exam_id': 1,
                     'exam_version_id': '$_id',
                     'version_name': 1,
                     'exam_title': 1,
