@@ -1,77 +1,15 @@
-from app.secure._password import *
-from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_exam
-from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_question_information_with_version_id
+from app.utils.question_utils.question import get_data_and_metadata
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exams_db, group_db
+from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, app, exams_db, group_db
 from fastapi import Depends, Path, Query, status
-from fastapi.encoders import jsonable_encoder
-from models.db.exam import Exams_DB, Exams_Version_DB
-from models.request.exam import DATA_Create_Exam
 from starlette.responses import JSONResponse
 
 from models.response.exam import UserGetAllExamResponse200, UserGetAllExamResponse403, UserGetOneExamResponse200, UserGetOneExamResponse403
 
 
-#========================================================
-#=====================CREATE_EXAM========================
-#========================================================
-@app.post(
-    path='/create_exam',
-    responses={
-        status.HTTP_200_OK: {
-            'model': ''
-        },
-        status.HTTP_403_FORBIDDEN: {
-            'model': ''
-        }
-    },
-    tags=['exams']
-)
-async def create_exam(
-    data1: DATA_Create_Exam,
-    data2: dict = Depends(valid_headers)
-):
-    try:
-        data1 = jsonable_encoder(data1)
-        
-        exam = Exams_DB(
-            user_id=data2.get('user_id'),
-            class_id=data1.get('class_id'),
-            subject_id=data1.get('subject_id'),
-            tag_id=get_list_tag_id_from_input(data1.get('tag_id')),
-            datetime_created=datetime.now().timestamp()
-        )
-
-        logger().info(f'exam: {exam}')
-
-        # insert to exams table
-        id_exam = exams_db[EXAMS].insert_one(jsonable_encoder(exam)).inserted_id
-
-        # insert exam version to exams_version
-        exams_version = Exams_Version_DB(
-            exam_id=str(id_exam),
-            exam_title=data1.get('exam_title'),
-            note=data1.get('note'),
-            time_limit=data1.get('time_limit'),
-            oganization_info=data1.get('oganization_info'),
-            exam_info=data1.get('exam_info'),
-            questions=data1.get('questions'),
-            datetime_created=datetime.now().timestamp()
-        )
-        id_exam_version = exams_db[EXAMS_VERSION].insert_one(jsonable_encoder(exams_version)).inserted_id
-
-        exam = jsonable_encoder(exam)
-        exams_version = jsonable_encoder(exams_version)
-        exam['exam_version_id'] = str(id_exam_version)
-        exam.update({'exam_info': exams_version})
-
-        return JSONResponse(content={'status': 'success', 'data': exam},status_code=status.HTTP_200_OK)
-    except Exception as e:
-        logger().error(e)
-    return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #=====================USER_GET_ONE_EXAM==================
@@ -788,8 +726,6 @@ async def community_get_one_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        start_time = datetime.now()
-
         pipeline = [
             {
                 '$match': {
@@ -1051,8 +987,6 @@ async def community_get_one_exam(
         #         answers = data['questions'][section_idx]['section_questions'][question_idx]['answers']
         #         data['questions'][section_idx]['section_questions'][question_idx]['answers'] = get_answer(answers=answers, question_type=question_type)
  
-        end_time = datetime.now()
-        logger().info(end_time-start_time)
         return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
@@ -1076,7 +1010,7 @@ async def community_get_one_exam(
 async def user_get_all_exam(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    search: Optional[str] = Query(default=None, description='text search'),
+    search: str = Query(default=None, description='text search'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -1398,7 +1332,7 @@ async def group_get_all_exam(
     group_id: str = Query(..., description='ID of group'),
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    search: Optional[str] = Query(default=None, description='text search'),
+    search: str = Query(default=None, description='text search'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -1754,7 +1688,7 @@ async def group_get_all_exam(
 async def community_get_all_exam(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
-    search: Optional[str] = Query(default=None, description='text search'),
+    search: str = Query(default=None, description='text search'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
