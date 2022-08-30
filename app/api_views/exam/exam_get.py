@@ -1,4 +1,5 @@
 from app.utils._header import valid_headers
+from app.utils.exam_utils.exam_check_permission import check_permission_view_exam
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_exam
 from app.utils.question_utils.question import get_data_and_metadata
 from bson import ObjectId
@@ -32,6 +33,9 @@ async def user_get_one_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
+        if not check_permission_view_exam(exam_id=exam_id, user_id=data2.get('user_id')):
+            raise Exception('user not have permission to view exam!')
+
         pipeline = [
             {
                 '$match': {
@@ -973,7 +977,8 @@ async def get_exam_by_version(
             'model': UserGetOneExamResponse403
         }
     },
-    tags=['exams - get']
+    tags=['exams - get'],
+    deprecated=True
 )
 async def group_get_one_exam(
     exam_id: str = Path(..., description='ID of exam'),
@@ -1257,7 +1262,8 @@ async def group_get_one_exam(
             'model': UserGetOneExamResponse403
         }
     },
-    tags=['exams - get']
+    tags=['exams - get'],
+    deprecated=True
 )
 async def community_get_one_exam(
     exam_id: str = Path(..., description='ID of exam'),
@@ -2316,13 +2322,140 @@ async def community_get_all_exam(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'users_profile',
+                                'localField': 'user_id',
+                                'foreignField': 'user_id',
+                                'pipeline': [
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'user_id': 1,
+                                            'name': {
+                                                '$ifNull': ['$name', None]
+                                            },
+                                            'email': {
+                                                '$ifNull': ['$email', None]
+                                            },
+                                            'avatar': {
+                                                '$ifNull': ['$avatar', None]
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'author_data'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'subject',
+                                'let': {
+                                    'subject_id': '$subject_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$subject_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'subject_info'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'class',
+                                'let': {
+                                    'class_id': '$class_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$class_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'class_info'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'tag',
+                                'let': {
+                                    'list_tag_id': '$tag_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$in': ['$id', '$$list_tag_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'tags_info'
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
-                                'exam_id': 1,
-                                'user_id': 1,
-                                'class_id': 1,
-                                'subject_id': 1,
-                                'tag_id': 1,
+                                # 'exam_id': 1,
+                                'user_info': {
+                                    '$ifNull': [{'$first': '$author_data'}, None]
+                                },
+                                'subject_info': {
+                                    '$ifNull': [{'$first': '$subject_info'}, None]
+                                },
+                                'class_info': {
+                                    '$ifNull': [{'$first': '$class_info'}, None]
+                                },
+                                'tags_info': 1,
                                 'datetime_created': 1
                             }
                         },
@@ -2355,16 +2488,26 @@ async def community_get_all_exam(
                         {
                             '$project': {
                                 '_id': 0,
-                                'exam_id': '$exam_detail.exam_id',
-                                'user_id': '$exam_detail.user_id',
-                                'class_id': '$exam_detail.class_id',
-                                'subject_id': '$exam_detail.subject_id',
-                                'tag_id': '$exam_detail.tag_id',
+                                'exam_id': 1,
+                                'user_info': '$exam_detail.user_info',
+                                'class_info': '$exam_detail.class_info',
+                                'subject_info': '$exam_detail.subject_info',
+                                'tags_info': '$exam_detail.tags_info',
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
-                                'questions': 1,
+                                'organization_info': {
+                                    '$ifNull': ['$organization_info', None]
+                                },
+                                'exam_info': {
+                                    '$ifNull': ['$exam_info', None]
+                                },
                                 'datetime_created': '$exam_detail.datetime_created'
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
                             }
                         },
                         { 
@@ -2383,23 +2526,9 @@ async def community_get_all_exam(
 
         exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
         
-        exams_data = exams.next()
+        result_data, meta_data = get_data_and_metadata(aggregate_response=exams, page=page)
 
-        exams_count = exams_data['metadata']['total']
-        num_pages = exams_data.get('metadata').get('page')
-        
-        meta_data = {
-            'count': exams_count,
-            'current_page': page,
-            'has_next': (num_pages>page),
-            'has_previous': (page>1),
-            'next_page_number': (page+1) if (num_pages>page) else None,
-            'num_pages': num_pages,
-            'previous_page_number': (page-1) if (page>1) else None,
-            'valid_page': (page>=1) and (page<=num_pages)
-        }
-        
-        return JSONResponse(content={'status': 'success', 'data': exams_data['data'], 'metadata': meta_data},status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
