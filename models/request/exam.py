@@ -35,3 +35,9 @@ class DATA_Update_Exam(BaseModel):
 class DATA_Delete_Exam(BaseModel):
     list_exam_ids: List[str] = Field(..., description='List ID of exam')
 
+
+class DATA_Share_Exam_To_Group(BaseModel):
+    exam_id: str = Field(..., description='ID of exam')
+    group_id: str = Field(..., description='ID of group')
+
+

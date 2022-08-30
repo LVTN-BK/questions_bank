@@ -23,7 +23,7 @@ class Exams_Version_DB(BaseModel):
     is_latest: bool = Field(default=True, description='is the newest version of question')
     note: str = Field(default=None, description='content of question')
     time_limit: str = Field(..., description='limit time of exam')
-    oganization_info: str = Field(default=None, description='organization information')
+    organization_info: str = Field(default=None, description='organization information')
     exam_info: str = Field(default=None, description='exam information')
     questions: List[SectionQuestion] = Field(..., description='questions of exam')
     datetime_created: float = Field(..., description='time create question version')

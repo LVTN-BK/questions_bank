@@ -56,7 +56,7 @@ async def create_exam(
             exam_title=data1.get('exam_title'),
             note=data1.get('note'),
             time_limit=data1.get('time_limit'),
-            oganization_info=data1.get('oganization_info'),
+            organization_info=data1.get('organization_info'),
             exam_info=data1.get('exam_info'),
             questions=data1.get('questions'),
             datetime_created=datetime.now().timestamp()

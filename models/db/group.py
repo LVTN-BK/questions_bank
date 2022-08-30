@@ -28,6 +28,12 @@ class GroupQuestion(BaseModel):
     sharer_id: str = Field(...)
     datetime_created: float= Field(...)
 
+class GroupExam(BaseModel):
+    group_id:str= Field(...)
+    exam_id: str = Field(...)
+    sharer_id: str = Field(...)
+    datetime_created: float= Field(...)
+
 
 class GroupInvitation(BaseModel):
     user_id: str= Field(...)
