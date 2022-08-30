@@ -1,9 +1,12 @@
+from datetime import datetime
 from app.utils.group_utils.group import check_owner_or_user_of_group
 from configs.logger import logger
 from configs.settings import CHAPTER, CLASS, SUBJECT, classify_db
 from bson import ObjectId
+from models.db.classify import Chapters_DB, Class_DB, Subjects_DB
+from fastapi.encoders import jsonable_encoder
 
-from models.define.classify import ClassifyOwnerType
+from models.define.classify import ClassifyDefaultValue, ClassifyOwnerType
 
 
 def get_chapter_info(chapter_id: str):
@@ -179,3 +182,62 @@ def check_permission_with_chapter(user_id: str, chapter_id: str):
     except Exception as e:
         logger().error(e)
         return False
+
+def get_group_classify_other_id(group_id: str, user_id: str):
+    # subject other
+    subject_info = classify_db[SUBJECT].find_one({
+        'group_id': group_id,
+        'owner_type': ClassifyOwnerType.GROUP,
+        'name': ClassifyDefaultValue.OTHER
+    })
+
+    if subject_info:
+        subject_id = str(subject_info.get('_id'))
+    else:
+        subject_data = Subjects_DB(
+            name=ClassifyDefaultValue.OTHER,
+            user_id=user_id,
+            group_id=group_id,
+            owner_type=ClassifyOwnerType.GROUP,
+            datetime_created=datetime.now().timestamp(),
+        )
+        inserted_subject_id = classify_db[SUBJECT].insert_one(jsonable_encoder(subject_data)).inserted_id
+        subject_id = str(inserted_subject_id)
+
+    # class other
+    class_info = classify_db[CLASS].find_one({
+        'subject_id': subject_id,
+        'name': ClassifyDefaultValue.OTHER
+    })
+
+    if class_info:
+        class_id = str(class_info.get('_id'))
+    else:
+        class_data = Class_DB(
+            name=ClassifyDefaultValue.OTHER,
+            user_id=user_id,
+            subject_id=subject_id,
+            datetime_created=datetime.now().timestamp(),
+        )
+        inserted_class_id = classify_db[CLASS].insert_one(jsonable_encoder(class_data)).inserted_id
+        class_id = str(inserted_class_id)
+
+    # chapter other
+    chapter_info = classify_db[CHAPTER].find_one({
+        'class_id': class_id,
+        'name': ClassifyDefaultValue.OTHER
+    })
+
+    if chapter_info:
+        chapter_id = str(chapter_info.get('_id'))
+    else:
+        chapter_data = Chapters_DB(
+            name=ClassifyDefaultValue.OTHER,
+            user_id=user_id,
+            class_id=class_id,
+            datetime_created=datetime.now().timestamp(),
+        )
+        inserted_chapter_id = classify_db[CHAPTER].insert_one(jsonable_encoder(chapter_data)).inserted_id
+        chapter_id = str(inserted_chapter_id)
+    return subject_id, class_id, chapter_id
+

@@ -3,14 +3,14 @@ from typing import List
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
+from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_group_classify_other_id, get_subject_info
 from app.utils.exam_utils.exam_check_permission import check_owner_of_exam
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
 from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (ANSWERS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
+from configs.settings import (exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
 from fastapi import Depends, Path, Query, status, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
@@ -18,7 +18,7 @@ from models.db.group import GroupExam, GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
-from models.request.exam import DATA_Share_Exam_To_Group
+from models.request.exam import DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
 from models.request.question import (DATA_Copy_Question, DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
@@ -42,23 +42,22 @@ from starlette.responses import JSONResponse
             'model': ''
         }
     },
-    tags=['questions - share'],
-    deprecated=True
+    tags=['exams - action']
 )
 async def share_exam_to_community(
     background_tasks: BackgroundTasks,
-    data: DATA_Share_Question_To_Community,
+    data: DATA_Share_Exam_To_Community,
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # check owner of question
-        if not check_owner_of_question(user_id=data2.get('user_id'), question_id=data.question_id):
-            raise Exception('user is not owner of question!!!')
+        # check owner of exam
+        if not check_owner_of_exam(user_id=data2.get('user_id'), exam_id=data.exam_id):
+            raise Exception('user is not owner of exam!!!')
 
-        # update question:
-        check = questions_db[QUESTIONS].update_one(
+        # update exam:
+        check = exams_db[EXAMS].update_one(
             {
-                '_id': ObjectId(data.question_id)
+                '_id': ObjectId(data.exam_id)
             },
             {
                 '$set': {
@@ -86,9 +85,9 @@ async def share_exam_to_community(
             'model': ''
         }
     },
-    tags=['exams - share']
+    tags=['exams - action']
 )
-# @SendNotiDecoratorsApi.group_share_question
+@SendNotiDecoratorsApi.group_share_exam
 async def share_exam_to_group(
     background_tasks: BackgroundTasks,
     data: DATA_Share_Exam_To_Group,
@@ -108,11 +107,22 @@ async def share_exam_to_group(
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
             raise Exception('user is not member of group!!!')
 
+        # check classify
+        if not all([data.subject_id, data.class_id]):
+            data.subject_id, data.class_id, _ = get_group_classify_other_id(group_id=data.group_id, user_id=data2.get('user_id'))
+        else: # check is group classify
+            pass
+            ########################
+            ########################
+            ########################
+
         # add exam to group:
         group_exam = GroupExam(
             group_id=data.group_id,
             exam_id=data.exam_id,
             sharer_id=data2.get('user_id'),
+            subject_id=data.subject_id,
+            class_id=data.class_id,
             datetime_created=datetime.now().timestamp()
         )
         
@@ -121,7 +131,7 @@ async def share_exam_to_group(
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
@@ -137,7 +147,7 @@ async def share_exam_to_group(
             'model': ''
         }
     },
-    tags=['exams'],
+    tags=['exams - action'],
     deprecated=True
 )
 async def evaluate_exam(

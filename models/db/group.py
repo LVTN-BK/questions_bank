@@ -32,6 +32,8 @@ class GroupExam(BaseModel):
     group_id:str= Field(...)
     exam_id: str = Field(...)
     sharer_id: str = Field(...)
+    subject_id: str = Field(..., description='ID of subject')
+    class_id: str = Field(..., description='ID of class')
     datetime_created: float= Field(...)
 
 

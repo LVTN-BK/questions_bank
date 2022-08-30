@@ -3,7 +3,7 @@ from typing import List
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_subject_info
+from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_group_classify_other_id, get_subject_info
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
 from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value
 from app.utils.question_utils.question_check_permission import check_owner_of_question
@@ -105,11 +105,23 @@ async def share_question_to_group(
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
             raise Exception('user is not member of group!!!')
 
+        # check classify
+        if not all([data.subject_id, data.class_id, data.chapter_id]):
+            data.subject_id, data.class_id, data.chapter_id = get_group_classify_other_id(group_id=data.group_id, user_id=data2.get('user_id'))
+        else: # check is group classify
+            pass
+            ########################
+            ########################
+            ########################
+        
         # add question to group:
         group_question = GroupQuestion(
             group_id=data.group_id,
             question_id=data.question_id,
             sharer_id=data2.get('user_id'),
+            subject_id=data.subject_id,
+            class_id=data.class_id,
+            chapter_id=data.chapter_id,
             datetime_created=datetime.now().timestamp()
         )
         

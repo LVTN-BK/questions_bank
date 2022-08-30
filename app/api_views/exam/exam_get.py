@@ -577,7 +577,7 @@ async def exam_more_detail(
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
-#=========================FIX===============================
+#========================================================
 #====================GET_EXAM_BY_VERSION=================
 #========================================================
 @app.get(

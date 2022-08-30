@@ -3,6 +3,7 @@ from configs.logger import logger
 from configs.settings import COMMENTS, EXAMS, GROUP_JOIN_REQUEST, GROUP_PARTICIPANT, QUESTIONS, group_db, questions_db, comments_db
 from models.define.target import ManageTargetType
 from models.request.comment import DATA_Create_Comment, DATA_Create_Reply_Comment
+from models.request.exam import DATA_Share_Exam_To_Group
 from models.request.group import DATA_Accept_Join_Request, DATA_Invite_Members, DATA_Join_Request, DATA_Reject_Join_Request
 from models.request.like import DATA_Create_Like
 from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, TargetData
@@ -25,6 +26,23 @@ class SendNotification:
             sender_id=user_id,
             group_id=data.group_id,
             noti_type=NotificationTypeManage.GROUP_SHARE_QUESTION,
+            target=target_data
+        )
+        create_notification_to_group_members_except_user(data_noti_group)
+    
+    def group_share_exam(
+        data: DATA_Share_Exam_To_Group,
+        user_id: str
+    ):
+        target_data = TargetData(
+            group_id=data.group_id,
+            exam_id=data.exam_id
+        )
+
+        data_noti_group = DATA_Create_Noti_Group_Members_Except_User(
+            sender_id=user_id,
+            group_id=data.group_id,
+            noti_type=NotificationTypeManage.GROUP_SHARE_EXAM,
             target=target_data
         )
         create_notification_to_group_members_except_user(data_noti_group)

@@ -39,5 +39,12 @@ class DATA_Delete_Exam(BaseModel):
 class DATA_Share_Exam_To_Group(BaseModel):
     exam_id: str = Field(..., description='ID of exam')
     group_id: str = Field(..., description='ID of group')
+    subject_id: str = Field(default=None, description='ID of subject')
+    class_id: str = Field(default=None, description='ID of class')
+
+
+class DATA_Share_Exam_To_Community(BaseModel):
+    exam_id: str = Field(..., description='ID of exam')
+
 
 
