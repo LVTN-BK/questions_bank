@@ -32,3 +32,6 @@ class DATA_Update_Exam(BaseModel):
     questions: List[SectionQuestion] = Field(default=None, description='questions of exam')
 
 
+class DATA_Delete_Exam(BaseModel):
+    list_exam_ids: List[str] = Field(..., description='List ID of exam')
+

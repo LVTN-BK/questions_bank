@@ -9,7 +9,7 @@ from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exa
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from models.db.exam import Exams_DB, Exams_Version_DB
-from models.request.exam import DATA_Create_Exam, DATA_Update_Exam
+from models.request.exam import DATA_Create_Exam, DATA_Delete_Exam, DATA_Update_Exam
 from starlette.responses import JSONResponse
 
 from models.response.exam import UserGetAllExamResponse200, UserGetAllExamResponse403, UserGetOneExamResponse200, UserGetOneExamResponse403
@@ -203,6 +203,56 @@ async def update_exam(
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
+
+#========================================================
+#=======================DELETE_EXAMS=====================
+#========================================================
+@app.delete(
+    path='/delete_exams',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ''
+        }
+    },
+    tags=['exams']
+)
+async def delete_exams(
+    data: DATA_Delete_Exam,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        data = []
+        # find question
+        for exam_id in data.list_exam_ids:
+            exam_del = exams_db[EXAMS].find_one_and_update(
+                {
+                    "_id": ObjectId(exam_id),
+                    'user_id': data2.get('user_id')       
+                },
+                {
+                    '$set': {
+                        'is_removed': True
+                    }
+                }
+            )
+
+            if exam_del:
+                data.append(exam_id)
+        
+                # # find exam version
+                # exam_version = exams_db[EXAMS_VERSION].delete_many(
+                #     {
+                #         'exam_id': exam_id
+                #     }
+                # )
+
+        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 
