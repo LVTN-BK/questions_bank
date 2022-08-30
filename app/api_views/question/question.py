@@ -393,7 +393,7 @@ async def delete_questions(
                 #     }
                 # )
 
-        return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
