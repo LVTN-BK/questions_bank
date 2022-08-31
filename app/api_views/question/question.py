@@ -963,10 +963,10 @@ async def update_question(
 
 
 #========================================================
-#===================QUESTION_STATITIC====================
+#==================USER_QUESTION_STATITIC================
 #========================================================
 @app.get(
-    path='/question_statitic',
+    path='/user_question_statitic',
     responses={
         status.HTTP_200_OK: {
             'model': ''
@@ -977,13 +977,61 @@ async def update_question(
     },
     tags=['questions']
 )
-async def question_statitic(
+async def user_question_statitic(
     subject_id: str = Query(default=None, description='classify by subject'),
     class_id: str = Query(default=None, description='classify by class'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
     data2: dict = Depends(valid_headers)
 ):
     try:
+        pipeline_head = [
+            {
+                '$match': {
+                    'user_id': data2.get('user_id')
+                }
+            }
+        ]
+        body_facet = {
+            'total_question': [
+                {
+                    '$count': 'count'
+                }
+            ],
+            'questions': [
+                {
+                    '$group': {
+                        '_id': '$level',
+                        'num_questions': {
+                            '$count': {}
+                        }
+                    }
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'name': '$_id',
+                        'num_questions': 1
+                    }
+                }
+            ],
+            'types': [
+                {
+                    '$group': {
+                        '_id': '$type',
+                        'num_questions': {
+                            '$count': {}
+                        }
+                    }
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'name': '$_id',
+                        'num_questions': 1
+                    }
+                }
+            ]
+        }
         if not (subject_id or class_id or chapter_id): # all is null
             pipeline_mid = [
                 {
@@ -1030,6 +1078,8 @@ async def question_statitic(
                     }
                 }
             ]
+            body_facet['subjects'] = pipeline_mid
+
         elif subject_id and not all([subject_id, class_id]): # only subject
             pipeline_mid = [
                 {
@@ -1076,7 +1126,17 @@ async def question_statitic(
                     }
                 }
             ]
-        elif all([subject_id, class_id]) and not chapter_id:
+            body_facet['classes'] = pipeline_mid
+
+            pipeline_head = [
+                {
+                    '$match': {
+                        'user_id': data2.get('user_id'),
+                        'subject_id': subject_id
+                    }
+                }
+            ]
+        elif all([subject_id, class_id]) and not chapter_id: # not chapter
             pipeline_mid = [
                 {
                     '$group': {
@@ -1122,103 +1182,53 @@ async def question_statitic(
                     }
                 }
             ]
-        
-        pipeline = [
-            {
-                '$match': {
-                    '_id': ObjectId(question_id),
-                    'is_removed': False
+            body_facet['chapters'] = pipeline_mid
+
+            pipeline_head = [
+                {
+                    '$match': {
+                        'user_id': data2.get('user_id'),
+                        'subject_id': subject_id,
+                        'class_id': class_id
+                    }
                 }
+            ]
+        
+        elif all([subject_id, class_id, chapter_id]):
+            pipeline_head = [
+                {
+                    '$match': {
+                        'user_id': data2.get('user_id'),
+                        'subject_id': subject_id,
+                        'class_id': class_id,
+                        'chapter_id': chapter_id
+                    }
+                }
+            ]
+
+        pipeline_facet = [
+            {
+                '$facet': body_facet
+            },
+            {
+                '$unwind': '$total_question'
             },
             {
                 '$set': {
-                    'question_id': {
-                        '$toString': '$_id'
-                    }
-                }
-            },
-            {
-                '$lookup': {
-                    'from': 'tag',
-                    'let': {
-                        'list_tag_id': '$tag_id'
-                    },
-                    'pipeline': [
-                        {
-                            '$set': {
-                                'id': {
-                                    '$toString': '$_id'
-                                }
-                            }
-                        },
-                        {
-                            '$match': {
-                                '$expr': {
-                                    '$in': ['$id', '$$list_tag_id']
-                                }
-                            }
-                        },
-                        {
-                            '$project': {
-                                '_id': 0,
-                                'id': 1,
-                                'name': 1
-                            }
-                        }
-                    ],
-                    'as': 'tags_info'
-                }
-            },
-            {
-                '$lookup': {
-                    'from': 'questions_version',
-                    'localField': 'question_id',
-                    'foreignField': 'question_id',
-                    'pipeline': [
-                        {
-                            '$match' : {
-                                'is_latest': True
-                            }
-                        }
-                    ],
-                    'as': 'ques_ver'
-                }
-            },
-            {
-                '$unwind': '$ques_ver'
-            },
-            {
-                '$project': {
-                    '_id': 0,
-                    'user_id': 1,
-                    'class_id': 1,
-                    'subject_id': 1,
-                    'chapter_id': 1,
-                    'level': 1,
-                    'question_id': 1,
-                    'question_version_id': {
-                        '$toString': '$ques_ver._id'
-                    },
-                    'version_name': '$ques_ver.version_name',
-                    "question_content": '$ques_ver.question_content',
-                    # "question_image": '$ques_ver.question_image',
-                    'question_type': "$type",
-                    'tags_info': "$tags_info",
-                    'answers': '$ques_ver.answers',
-                    'answers_right': '$ques_ver.answers_right',
-                    'sample_answer': '$ques_ver.sample_answer',
-                    'display': '$ques_ver.display',
-                    'datetime_created': "$datetime_created"
+                    'total_question': '$total_question.count'
                 }
             }
         ]
+
+        pipeline = pipeline_head + pipeline_facet
+        
         question_info = questions_db[QUESTIONS].aggregate(pipeline)
         if question_info.alive:
             question_data = question_info.next()
             return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
         else:
-            msg = 'question not found!'
-            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+            question_data = {}
+            return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
