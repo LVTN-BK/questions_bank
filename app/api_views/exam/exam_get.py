@@ -270,11 +270,116 @@ async def user_get_one_exam(
                                                     }
                                                 },
                                                 {
+                                                    '$lookup': {
+                                                        'from': 'subject',
+                                                        'let': {
+                                                            'subject_id': '$subject_id'
+                                                        },
+                                                        'pipeline': [
+                                                            {
+                                                                '$set': {
+                                                                    'id': {
+                                                                        '$toString': '$_id'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$match': {
+                                                                    '$expr': {
+                                                                        '$eq': ['$id', '$$subject_id']
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$project': {
+                                                                    '_id': 0,
+                                                                    'id': 1,
+                                                                    'name': 1
+                                                                }
+                                                            }
+                                                        ],
+                                                        'as': 'subject_info'
+                                                    }
+                                                },
+                                                {
+                                                    '$lookup': {
+                                                        'from': 'class',
+                                                        'let': {
+                                                            'class_id': '$class_id'
+                                                        },
+                                                        'pipeline': [
+                                                            {
+                                                                '$set': {
+                                                                    'id': {
+                                                                        '$toString': '$_id'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$match': {
+                                                                    '$expr': {
+                                                                        '$eq': ['$id', '$$class_id']
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$project': {
+                                                                    '_id': 0,
+                                                                    'id': 1,
+                                                                    'name': 1
+                                                                }
+                                                            }
+                                                        ],
+                                                        'as': 'class_info'
+                                                    }
+                                                },
+                                                {
+                                                    '$lookup': {
+                                                        'from': 'chapter',
+                                                        'let': {
+                                                            'chapter_id': '$chapter_id'
+                                                        },
+                                                        'pipeline': [
+                                                            {
+                                                                '$set': {
+                                                                    'id': {
+                                                                        '$toString': '$_id'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$match': {
+                                                                    '$expr': {
+                                                                        '$eq': ['$id', '$$chapter_id']
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                '$project': {
+                                                                    '_id': 0,
+                                                                    'id': 1,
+                                                                    'name': 1
+                                                                }
+                                                            }
+                                                        ],
+                                                        'as': 'chapter_info'
+                                                    }
+                                                },
+                                                {
                                                     '$project': { #project for questions collection
                                                         '_id': 0,
                                                         'type': 1,
                                                         'level': 1,
                                                         'tags_info': 1,
+                                                        'subject_info': {
+                                                            '$first': '$subject_info'
+                                                        },
+                                                        'class_info': {
+                                                            '$first': '$class_info'
+                                                        },
+                                                        'chapter_info': {
+                                                            '$first': '$chapter_info'
+                                                        },
                                                         'datetime_created': 1
                                                     }
                                                 }
@@ -294,6 +399,9 @@ async def user_get_one_exam(
                                             },
                                             'version_name': 1,
                                             "question_content": 1,
+                                            'subject_info': "$question_information.subject_info",
+                                            'class_info': "$question_information.class_info",
+                                            'chapter_info': "$question_information.chapter_info",
                                             'level': "$question_information.level",
                                             'question_type': "$question_information.type",
                                             'tags_info': "$question_information.tags_info",
@@ -683,9 +791,114 @@ async def get_exam_by_version(
                                         }
                                     },
                                     {
+                                        '$lookup': {
+                                            'from': 'subject',
+                                            'let': {
+                                                'subject_id': '$subject_id'
+                                            },
+                                            'pipeline': [
+                                                {
+                                                    '$set': {
+                                                        'id': {
+                                                            '$toString': '$_id'
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$match': {
+                                                        '$expr': {
+                                                            '$eq': ['$id', '$$subject_id']
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$project': {
+                                                        '_id': 0,
+                                                        'id': 1,
+                                                        'name': 1
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'subject_info'
+                                        }
+                                    },
+                                    {
+                                        '$lookup': {
+                                            'from': 'class',
+                                            'let': {
+                                                'class_id': '$class_id'
+                                            },
+                                            'pipeline': [
+                                                {
+                                                    '$set': {
+                                                        'id': {
+                                                            '$toString': '$_id'
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$match': {
+                                                        '$expr': {
+                                                            '$eq': ['$id', '$$class_id']
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$project': {
+                                                        '_id': 0,
+                                                        'id': 1,
+                                                        'name': 1
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'class_info'
+                                        }
+                                    },
+                                    {
+                                        '$lookup': {
+                                            'from': 'chapter',
+                                            'let': {
+                                                'chapter_id': '$chapter_id'
+                                            },
+                                            'pipeline': [
+                                                {
+                                                    '$set': {
+                                                        'id': {
+                                                            '$toString': '$_id'
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$match': {
+                                                        '$expr': {
+                                                            '$eq': ['$id', '$$chapter_id']
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    '$project': {
+                                                        '_id': 0,
+                                                        'id': 1,
+                                                        'name': 1
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'chapter_info'
+                                        }
+                                    },
+                                    {
                                         '$project': { #project for questions collection
                                             '_id': 0,
                                             'type': 1,
+                                            'subject_info': {
+                                                '$first': '$subject_info'
+                                            },
+                                            'class_info': {
+                                                '$first': '$class_info'
+                                            },
+                                            'chapter_info': {
+                                                '$first': '$chapter_info'
+                                            },
                                             'level': 1,
                                             'tags_info': 1,
                                             'datetime_created': 1
@@ -707,6 +920,9 @@ async def get_exam_by_version(
                                 },
                                 'version_name': 1,
                                 "question_content": 1,
+                                'subject_info': "$question_information.subject_info",
+                                'class_info': "$question_information.class_info",
+                                'chapter_info': "$question_information.chapter_info",
                                 'level': "$question_information.level",
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
@@ -949,7 +1165,7 @@ async def get_exam_by_version(
                     'exam_info': {
                         '$ifNull': ['$exam_info', None]
                     },
-                    # 'questions': 1,
+                    'questions': 1,
                     'datetime_created': '$exam_detail.datetime_created'
                 }
             }
