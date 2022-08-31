@@ -79,7 +79,7 @@ def check_permission_with_class(user_id: str, class_id: str):
                 }
             },
             {
-                '$unwind': 'subject_info'
+                '$unwind': '$subject_info'
             },
             {
                 '$project': {
@@ -121,7 +121,7 @@ def check_permission_with_chapter(user_id: str, chapter_id: str):
             {
                 '$set': {
                     'class_object_id': {
-                        '$toObjectId': '$subject_id'
+                        '$toObjectId': '$class_id'
                     }
                 }
             },
@@ -152,7 +152,7 @@ def check_permission_with_chapter(user_id: str, chapter_id: str):
                 }
             },
             {
-                '$unwind': 'subject_info'
+                '$unwind': '$subject_info'
             },
             {
                 '$project': {
@@ -166,6 +166,7 @@ def check_permission_with_chapter(user_id: str, chapter_id: str):
         res = classify_db[CHAPTER].aggregate(pipeline)
         if res.alive:
             res = res.next()
+            logger().info(res)
             if (res.get('owner_type') == ClassifyOwnerType.USER) or (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
                 # check owner of chapter
                 if user_id != res.get('user_id'):

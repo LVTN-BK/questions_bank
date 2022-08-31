@@ -962,6 +962,267 @@ async def update_question(
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
+#========================================================
+#===================QUESTION_STATITIC====================
+#========================================================
+@app.get(
+    path='/question_statitic',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def question_statitic(
+    subject_id: str = Query(default=None, description='classify by subject'),
+    class_id: str = Query(default=None, description='classify by class'),
+    chapter_id: str = Query(default=None, description='classify by chapter'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        if not (subject_id or class_id or chapter_id): # all is null
+            pipeline_mid = [
+                {
+                    '$group': {
+                        '_id': '$subject_id',
+                        'num_questions': {
+                            '$count': {}
+                        }
+                    }
+                },
+                {
+                    '$set': {
+                        'subject_object_id': {
+                            '$toObjectId': '$_id'
+                        }
+                    }
+                },
+                {
+                    '$lookup': {
+                        'from': 'subject',
+                        'localField': 'subject_object_id',
+                        'foreignField': '_id',
+                        'pipeline': [
+                            {
+                                '$project': {
+                                    '_id': 0,
+                                    'name': 1
+                                }
+                            }
+                        ],
+                        'as': 'subject_info'
+                    }
+                },
+                {
+                    '$unwind': '$subject_info'
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'id': '$_id',
+                        'name': '$subject_info.name',
+                        'num_questions': 1,
+
+                    }
+                }
+            ]
+        elif subject_id and not all([subject_id, class_id]): # only subject
+            pipeline_mid = [
+                {
+                    '$group': {
+                        '_id': '$class_id',
+                        'num_questions': {
+                            '$count': {}
+                        }
+                    }
+                },
+                {
+                    '$set': {
+                        'class_object_id': {
+                            '$toObjectId': '$_id'
+                        }
+                    }
+                },
+                {
+                    '$lookup': {
+                        'from': 'class',
+                        'localField': 'class_object_id',
+                        'foreignField': '_id',
+                        'pipeline': [
+                            {
+                                '$project': {
+                                    '_id': 0,
+                                    'name': 1
+                                }
+                            }
+                        ],
+                        'as': 'class_info'
+                    }
+                },
+                {
+                    '$unwind': '$class_info'
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'id': '$_id',
+                        'name': '$class_info.name',
+                        'num_questions': 1,
+
+                    }
+                }
+            ]
+        elif all([subject_id, class_id]) and not chapter_id:
+            pipeline_mid = [
+                {
+                    '$group': {
+                        '_id': '$chapter_id',
+                        'num_questions': {
+                            '$count': {}
+                        }
+                    }
+                },
+                {
+                    '$set': {
+                        'chapter_object_id': {
+                            '$toObjectId': '$_id'
+                        }
+                    }
+                },
+                {
+                    '$lookup': {
+                        'from': 'chapter',
+                        'localField': 'chapter_object_id',
+                        'foreignField': '_id',
+                        'pipeline': [
+                            {
+                                '$project': {
+                                    '_id': 0,
+                                    'name': 1
+                                }
+                            }
+                        ],
+                        'as': 'chapter_info'
+                    }
+                },
+                {
+                    '$unwind': '$chapter_info'
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'id': '$_id',
+                        'name': '$chapter_info.name',
+                        'num_questions': 1,
+
+                    }
+                }
+            ]
+        
+        pipeline = [
+            {
+                '$match': {
+                    '_id': ObjectId(question_id),
+                    'is_removed': False
+                }
+            },
+            {
+                '$set': {
+                    'question_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'tag',
+                    'let': {
+                        'list_tag_id': '$tag_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$in': ['$id', '$$list_tag_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'tags_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'questions_version',
+                    'localField': 'question_id',
+                    'foreignField': 'question_id',
+                    'pipeline': [
+                        {
+                            '$match' : {
+                                'is_latest': True
+                            }
+                        }
+                    ],
+                    'as': 'ques_ver'
+                }
+            },
+            {
+                '$unwind': '$ques_ver'
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'user_id': 1,
+                    'class_id': 1,
+                    'subject_id': 1,
+                    'chapter_id': 1,
+                    'level': 1,
+                    'question_id': 1,
+                    'question_version_id': {
+                        '$toString': '$ques_ver._id'
+                    },
+                    'version_name': '$ques_ver.version_name',
+                    "question_content": '$ques_ver.question_content',
+                    # "question_image": '$ques_ver.question_image',
+                    'question_type': "$type",
+                    'tags_info': "$tags_info",
+                    'answers': '$ques_ver.answers',
+                    'answers_right': '$ques_ver.answers_right',
+                    'sample_answer': '$ques_ver.sample_answer',
+                    'display': '$ques_ver.display',
+                    'datetime_created': "$datetime_created"
+                }
+            }
+        ]
+        question_info = questions_db[QUESTIONS].aggregate(pipeline)
+        if question_info.alive:
+            question_data = question_info.next()
+            return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
+        else:
+            msg = 'question not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
 
 
 

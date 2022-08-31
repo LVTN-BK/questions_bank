@@ -214,7 +214,7 @@ async def update_chapter(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        if not check_permission_with_chapter(user_id=data2.get('user_id'), class_id=data1.chapter_id):
+        if not check_permission_with_chapter(user_id=data2.get('user_id'), chapter_id=data1.chapter_id):
             raise Exception('user not have permission with chapter!')
         
         chapter_data = classify_db[CHAPTER].find_one_and_update(
