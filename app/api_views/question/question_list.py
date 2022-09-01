@@ -143,6 +143,7 @@ async def user_get_all_question(
                                 'type': 1,
                                 'level': 1,
                                 'tags_info': 1,
+                                'is_public': 1,
                                 'datetime_created': 1
                             }
                         }
@@ -185,6 +186,7 @@ async def user_get_all_question(
                                 'level': "$question_information.level",
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
+                                'is_public': "$question_information.is_public",
                                 'answers': 1,
                                 'answers_right': 1,
                                 'sample_answer': 1,

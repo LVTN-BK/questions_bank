@@ -1998,6 +1998,7 @@ async def user_get_all_exam(
                                     '$ifNull': [{'$first': '$class_info'}, None]
                                 },
                                 'tags_info': 1,
+                                'is_public': 1,
                                 'datetime_created': 1
                             }
                         },
@@ -2035,6 +2036,7 @@ async def user_get_all_exam(
                                 'class_info': '$exam_detail.class_info',
                                 'subject_info': '$exam_detail.subject_info',
                                 'tags_info': '$exam_detail.tags_info',
+                                'is_public': '$exam_detail.is_public',
                                 'exam_title': 1,
                                 'note': 1,
                                 'time_limit': 1,
