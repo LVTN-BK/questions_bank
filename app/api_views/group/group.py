@@ -1110,6 +1110,8 @@ async def list_all_groups_joined(
     limit: int = Query(default=10, description='limit of num result'),
     search: Optional[str] = Query(default=None, description='text search'),
     group_type: str = Query(default=None, description='filter by group type'),
+    question_id: str = Query(default=None, description='ID of question want to check'),
+    exam_id: str = Query(default=None, description='ID of exam want to check'),
     data2: dict = Depends(valid_headers),
     # user_id: str = Path(..., description='ID of user')
 ):
@@ -1291,6 +1293,50 @@ async def list_all_groups_joined(
                 }
             },
             {
+                '$lookup': {
+                    'from': 'group_questions',
+                    'localField': '_id',
+                    'foreignField': 'group_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'question_id': question_id
+                            }
+                        }
+                    ],
+                    'as': 'question_share_status'
+                }
+            },
+            {
+                '$set': {
+                    'question_shared': {
+                        '$ne': ['$question_share_status', []]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_exams',
+                    'localField': '_id',
+                    'foreignField': 'group_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'exam_id': exam_id
+                            }
+                        }
+                    ],
+                    'as': 'exam_share_status'
+                }
+            },
+            {
+                '$set': {
+                    'exam_shared': {
+                        '$ne': ['$exam_share_status', []]
+                    }
+                }
+            },
+            {
                 '$project': {
                     'member_in_group': 0,
                     'owner_id': 0,
@@ -1301,7 +1347,9 @@ async def list_all_groups_joined(
                     'invitation': 0,
                     'request_join': 0,
                     'is_approved': 0,
-                    'is_deleted': 0
+                    'is_deleted': 0,
+                    'question_share_status': 0,
+                    'exam_share_status': 0
                 }
             },
             {

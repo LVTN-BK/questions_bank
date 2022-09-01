@@ -116,7 +116,7 @@ class DATA_Update_Question(BaseModel):
     tag_id: List[Tag] = Field(default=None, description='ID of tag')
     level: str = Field(default=None, description='level of question')
     question_content: str = Field(default=None, description='content of question')
-    answers: Union[List[AnswerM], List[AnswerMC], List[str]] = Field(default=None, description='answer of question')
+    answers: Union[List[AnswerM], List[AnswerMC], List[str]] = Field(default=[], description='answer of question')
     answers_right: List[AnswerM] = Field(default=None, description='answer in the right collumn of question (for matching questions)')
     sample_answer: Union[List[Tuple[str, str]], str, List[str]] = Field(default=None, description='correct answer of question')
     display: Union[DisplayQuestionM, DisplayQuestionS, DisplayQuestionIP, DisplayQuestionMC] = Field(default=None, description='display setting of question')
