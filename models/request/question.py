@@ -141,3 +141,8 @@ class DATA_Evaluate_Question(BaseModel):
     ability: float = Field(..., description='ability of student')
     guessing: float = Field(default=0, description='guessing param')
 
+class DATA_Auto_Pick_Question(BaseModel):
+    chapter_id: str = Field(..., description='ID of chapter')
+    level: Dict[str, int] = Field(..., description='question level')
+    type: List[str] = Field(..., description='question type')
+
