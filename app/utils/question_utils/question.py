@@ -1,12 +1,12 @@
 from datetime import datetime
 from math import ceil
 from configs.logger import logger
-from models.db.question import Questions_Evaluation_DB
+from models.db.question import Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.question import ManageQuestionLevel, ManageQuestionType
 from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, questions_db, classify_db, TAG_COLLECTION
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
-from models.request.question import DATA_Evaluate_Question
+from models.request.question import DATA_Evaluate_Question, DATA_Import_Question
 
 
 def get_list_tag_id_from_input(list_tag: list):
@@ -391,3 +391,38 @@ def question_evaluation_func(
     except Exception as e:
         logger().error(e)
         raise Exception(str(e))
+
+#==================IMPORT_QUESTION================
+def question_import_func(
+    data: DATA_Import_Question,
+    question_data: dict,
+    user_id: str
+):
+    try:
+        logger().info('===========question_import_func============')
+        data_insert_question = Questions_DB(
+            user_id=user_id,
+            class_id=data.class_id,
+            subject_id=data.subject_id,
+            chapter_id=data.chapter_id,
+            type=question_data.get('question_type'),
+            tag_id=get_list_tag_id_from_input(question_data.get('tags_info')),
+            level=question_data.get('level'),
+            datetime_created=datetime.now().timestamp()
+        )
+        question_insert_id = questions_db[QUESTIONS].insert_one(jsonable_encoder(data_insert_question)).inserted_id
+
+        
+        question_version_data = Questions_Version_DB(
+            question_id=str(question_insert_id),
+            question_content=question_data.get('question_content'),
+            answers=question_data.get('answers') if question_data.get('answers') else [],
+            answers_right=question_data.get('answers_right') if question_data.get('answers_right') else [],
+            sample_answer=question_data.get('sample_answer') if question_data.get('sample_answer') else '',
+            display=question_data.get('display'),
+            datetime_created=datetime.now().timestamp()
+        )
+
+        questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(question_version_data))
+    except Exception as e:
+        logger().error(e)
