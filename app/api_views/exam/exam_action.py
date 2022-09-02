@@ -6,7 +6,7 @@ from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_group_classify_other_id, get_subject_info
 from app.utils.exam_utils.exam_check_permission import check_owner_of_exam
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value
+from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value, question_evaluation_func
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
@@ -18,15 +18,13 @@ from models.db.group import GroupExam, GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
-from models.request.exam import DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
+from models.request.exam import DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
 from models.request.question import (DATA_Copy_Question, DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
                                      DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
 from starlette.responses import JSONResponse
-
-
 
 
 #========================================================
@@ -147,50 +145,17 @@ async def share_exam_to_group(
             'model': ''
         }
     },
-    tags=['exams - action'],
-    deprecated=True
+    tags=['exams - action']
 )
 async def evaluate_exam(
-    data: DATA_Evaluate_Question,
+    background_tasks: BackgroundTasks,
+    data: List[DATA_Evaluate_Question],
     data2: dict = Depends(valid_headers)
 ):
     try:
-        recommend_level = get_question_evaluation_value(
-            num_correct=data.num_correct,
-            num_incorrect=data.num_incorrect,
-            discrimination=data.discrimination,
-            ability=data.ability,
-            guessing=data.guessing
-        )
-
-        evaluate_question_data = Questions_Evaluation_DB(
-            question_id=data.question_id,
-            user_id=data2.get('user_id'),
-            is_latest=True,
-            num_correct=data.num_correct,
-            num_incorrect=data.num_incorrect,
-            discrimination_param=data.discrimination,
-            ability_level=data.ability,
-            guessing_param=data.guessing,
-            recommend_level=recommend_level,
-            datetime_created=datetime.now().timestamp()
-        )
-        # update current latest question evaluation
-        update_question_evaluation = questions_db[QUESTIONS_EVALUATION].find_one_and_update(
-            {
-                'question_id': data.question_id,
-                'user_id': data2.get('user_id'),
-                'is_latest': True
-            },
-            {
-                '$set': {
-                    'is_latest': False
-                }
-            }
-        )
-        
-        # insert evaluation into db
-        questions_db[QUESTIONS_EVALUATION].insert_one(jsonable_encoder(evaluate_question_data))
+        for data_result in data:
+            background_tasks.add_task(question_evaluation_func, data=data_result, user_id=data2.get('user_id'))
+            # question_evaluation_func(data=data_result, user_id=data2.get('user_id'))
         
         return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
     except Exception as e:

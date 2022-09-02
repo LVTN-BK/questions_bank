@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple, Union
 from pydantic import BaseModel, Field
 
-from models.request.question import Tag
+from models.request.question import DATA_Evaluate_Question, Tag
 
 
 class SectionQuestion(BaseModel):
@@ -46,5 +46,6 @@ class DATA_Share_Exam_To_Group(BaseModel):
 class DATA_Share_Exam_To_Community(BaseModel):
     exam_id: str = Field(..., description='ID of exam')
 
-
+class DATA_Evaluate_Exam(BaseModel):
+    data: List[DATA_Evaluate_Question] = Field(..., description='data to evaluate exam')
 

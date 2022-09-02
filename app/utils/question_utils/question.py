@@ -1,8 +1,12 @@
+from datetime import datetime
 from math import ceil
 from configs.logger import logger
+from models.db.question import Questions_Evaluation_DB
 from models.define.question import ManageQuestionLevel, ManageQuestionType
-from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_VERSION, questions_db, classify_db, TAG_COLLECTION
+from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, questions_db, classify_db, TAG_COLLECTION
 from bson import ObjectId
+from fastapi.encoders import jsonable_encoder
+from models.request.question import DATA_Evaluate_Question
 
 
 def get_list_tag_id_from_input(list_tag: list):
@@ -320,7 +324,7 @@ def get_question_evaluation_value(
 ):
     try:
         import math
-        p = num_correct/num_incorrect
+        p = num_correct/(num_incorrect + num_correct)
         if p>guessing:
             b = ability + math.log((1-guessing)/(p-guessing) - 1)/discrimination
         else:
@@ -340,3 +344,50 @@ def get_question_evaluation_value(
     except Exception as e:
         logger().error(e)
         return None
+
+#==================EVALUATE_QUESTION================
+def question_evaluation_func(
+    data: DATA_Evaluate_Question,
+    user_id: str
+):
+    try:
+        logger().info('===========question_evaluation_func============')
+        recommend_level = get_question_evaluation_value(
+            num_correct=data.num_correct,
+            num_incorrect=data.num_incorrect,
+            discrimination=data.discrimination,
+            ability=data.ability,
+            guessing=data.guessing
+        )
+
+        evaluate_question_data = Questions_Evaluation_DB(
+            question_id=data.question_id,
+            user_id=user_id,
+            is_latest=True,
+            num_correct=data.num_correct,
+            num_incorrect=data.num_incorrect,
+            discrimination_param=data.discrimination,
+            ability_level=data.ability,
+            guessing_param=data.guessing,
+            recommend_level=recommend_level,
+            datetime_created=datetime.now().timestamp()
+        )
+        # update current latest question evaluation
+        update_question_evaluation = questions_db[QUESTIONS_EVALUATION].find_one_and_update(
+            {
+                'question_id': data.question_id,
+                'user_id': user_id,
+                'is_latest': True
+            },
+            {
+                '$set': {
+                    'is_latest': False
+                }
+            }
+        )
+        
+        # insert evaluation into db
+        questions_db[QUESTIONS_EVALUATION].insert_one(jsonable_encoder(evaluate_question_data))
+    except Exception as e:
+        logger().error(e)
+        raise Exception(str(e))
