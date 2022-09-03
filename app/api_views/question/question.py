@@ -963,10 +963,10 @@ async def update_question(
 
 
 #========================================================
-#==================USER_QUESTION_STATITIC================
+#==================USER_QUESTION_STATISTIC================
 #========================================================
 @app.get(
-    path='/user_question_statitic',
+    path='/user_question_statistic',
     responses={
         status.HTTP_200_OK: {
             'model': ''
@@ -977,7 +977,7 @@ async def update_question(
     },
     tags=['questions']
 )
-async def user_question_statitic(
+async def user_question_statistic(
     subject_id: str = Query(default=None, description='classify by subject'),
     class_id: str = Query(default=None, description='classify by class'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -1042,19 +1042,36 @@ async def user_question_statitic(
                         }
                     }
                 },
-                {
-                    '$set': {
-                        'subject_object_id': {
-                            '$toObjectId': '$_id'
-                        }
-                    }
-                },
+                # {
+                #     '$set': {
+                #         'subject_object_id': {
+                #             '$toObjectId': '$_id'
+                #         }
+                #     }
+                # },
                 {
                     '$lookup': {
                         'from': 'subject',
-                        'localField': 'subject_object_id',
-                        'foreignField': '_id',
+                        # 'localField': 'subject_object_id',
+                        # 'foreignField': '_id',
+                        'let': {
+                            'subject_id': '$_id'
+                        },
                         'pipeline': [
+                            {
+                                '$set': {
+                                    'id': {
+                                        '$toString': '$_id'
+                                    }
+                                }
+                            },
+                            {
+                                '$match': {
+                                    '$expr': {
+                                        '$eq': ['$id', '$$subject_id']
+                                    }
+                                }
+                            },
                             {
                                 '$project': {
                                     '_id': 0,
@@ -1090,19 +1107,36 @@ async def user_question_statitic(
                         }
                     }
                 },
-                {
-                    '$set': {
-                        'class_object_id': {
-                            '$toObjectId': '$_id'
-                        }
-                    }
-                },
+                # {
+                #     '$set': {
+                #         'class_object_id': {
+                #             '$toObjectId': '$_id'
+                #         }
+                #     }
+                # },
                 {
                     '$lookup': {
                         'from': 'class',
-                        'localField': 'class_object_id',
-                        'foreignField': '_id',
+                        # 'localField': 'class_object_id',
+                        # 'foreignField': '_id',
+                        'let': {
+                            'class_id': '$_id'
+                        },
                         'pipeline': [
+                            {
+                                '$set': {
+                                    'id': {
+                                        '$toString': '$_id'
+                                    }
+                                }
+                            },
+                            {
+                                '$match': {
+                                    '$expr': {
+                                        '$eq': ['$id', '$$class_id']
+                                    }
+                                }
+                            },
                             {
                                 '$project': {
                                     '_id': 0,
@@ -1156,9 +1190,26 @@ async def user_question_statitic(
                 {
                     '$lookup': {
                         'from': 'chapter',
-                        'localField': 'chapter_object_id',
-                        'foreignField': '_id',
+                        # 'localField': 'chapter_object_id',
+                        # 'foreignField': '_id',
+                        'let': {
+                            'chapter_id': '$_id'
+                        },
                         'pipeline': [
+                            {
+                                '$set': {
+                                    'id': {
+                                        '$toString': '$_id'
+                                    }
+                                }
+                            },
+                            {
+                                '$match': {
+                                    '$expr': {
+                                        '$eq': ['$id', '$$chapter_id']
+                                    }
+                                }
+                            },
                             {
                                 '$project': {
                                     '_id': 0,
