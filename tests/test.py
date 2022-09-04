@@ -1,6 +1,7 @@
 # from __future__ import print_function
 import json
 import os
+import time
 from configs.logger import logger
 # import time
 # import sib_api_v3_sdk
@@ -108,6 +109,7 @@ from fastapi.responses import FileResponse
 #     return JSONResponse(status_code=200, content={"message": "email has been sent"})
 
 def remove_file(path: str) -> None:
+    time.sleep(3)
     os.unlink(path)
 
 @app.post("/export_word")
@@ -126,4 +128,19 @@ async def simple_send(
     some_file_path = f'file_export/{file_name}.docx'
     background_tasks.add_task(remove_file, some_file_path)
     return FileResponse(some_file_path, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document', filename='q.docx')
+
+
+@app.post("/export_pdf")
+async def simple_send(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...,description="file as UploadFile"),
+):
+    import pdfkit
+    import uuid    
+    file_name = uuid.uuid4().hex
+
+    pdfkit.from_file('Questions.html', f'file_export/{file_name}.pdf')
+    some_file_path = f'file_export/{file_name}.pdf'
+    background_tasks.add_task(remove_file, some_file_path)
+    return FileResponse(some_file_path, media_type='application/pdf', filename='p.pdf')
 
