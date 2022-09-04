@@ -1277,6 +1277,32 @@ async def user_question_statistic(
                     'num_questions': 0
                 }
                 question_data['questions'].append(app_data)
+            
+            list_type = [dict_data.get('name') for dict_data in question_data.get('types')]
+            if ManageQuestionType.MULTICHOICE not in list_type:
+                app_data = {
+                    'name': ManageQuestionType.MULTICHOICE,
+                    'num_questions': 0
+                }
+                question_data['types'].append(app_data)
+            if ManageQuestionType.FILL not in list_type:
+                app_data = {
+                    'name': ManageQuestionType.FILL,
+                    'num_questions': 0
+                }
+                question_data['types'].append(app_data)
+            if ManageQuestionType.SORT not in list_type:
+                app_data = {
+                    'name': ManageQuestionType.SORT,
+                    'num_questions': 0
+                }
+                question_data['types'].append(app_data)
+            if ManageQuestionType.MATCHING not in list_type:
+                app_data = {
+                    'name': ManageQuestionType.MATCHING,
+                    'num_questions': 0
+                }
+                question_data['types'].append(app_data)
             return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
         else:
             question_data = {}
