@@ -3,6 +3,7 @@ from typing import List
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
+from app.utils.classify_utils.classify import check_classify_is_valid
 from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value
 from bson import ObjectId
 from configs.logger import logger
@@ -43,17 +44,9 @@ async def create_multi_choice_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # check user
-        user = SYSTEM['users'].find_one(
-            {
-                'email': {
-                    '$eq': data2.get('email')
-                }
-            }
-        )
-        if not user:
-            return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
-
+        if not check_classify_is_valid(subject_id=data1.subject_id, class_id=data1.class_id, chapter_id=data1.chapter_id):
+            raise Exception('classify is not valid!')
+            
         data1 = jsonable_encoder(data1)
 
         question = Questions_DB(
@@ -113,16 +106,8 @@ async def create_matching_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # # check user
-        # user = SYSTEM['users'].find_one(
-        #     {
-        #         'email': {
-        #             '$eq': data2.get('email')
-        #         }
-        #     }
-        # )
-        # if not user:
-        #     return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
+        if not check_classify_is_valid(subject_id=data1.subject_id, class_id=data1.class_id, chapter_id=data1.chapter_id):
+            raise Exception('classify is not valid!')
 
         data1 = jsonable_encoder(data1)
         
@@ -184,16 +169,8 @@ async def create_sort_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # # check user
-        # user = SYSTEM['users'].find_one(
-        #     {
-        #         'email': {
-        #             '$eq': data2.get('email')
-        #         }
-        #     }
-        # )
-        # if not user:
-        #     return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
+        if not check_classify_is_valid(subject_id=data1.subject_id, class_id=data1.class_id, chapter_id=data1.chapter_id):
+            raise Exception('classify is not valid!')
 
         data1 = jsonable_encoder(data1)
         
@@ -254,16 +231,8 @@ async def create_fill_question(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # # check user
-        # user = SYSTEM['users'].find_one(
-        #     {
-        #         'email': {
-        #             '$eq': data2.get('email')
-        #         }
-        #     }
-        # )
-        # if not user:
-        #     return JSONResponse(content={'status': 'User not found or permission deny!'}, status_code=status.HTTP_403_FORBIDDEN)
+        if not check_classify_is_valid(subject_id=data1.subject_id, class_id=data1.class_id, chapter_id=data1.chapter_id):
+            raise Exception('classify is not valid!')
 
         data1 = jsonable_encoder(data1)
         

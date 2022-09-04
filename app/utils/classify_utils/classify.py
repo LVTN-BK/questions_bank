@@ -242,3 +242,13 @@ def get_group_classify_other_id(group_id: str, user_id: str):
         chapter_id = str(inserted_chapter_id)
     return subject_id, class_id, chapter_id
 
+def check_classify_is_valid(subject_id: str, class_id: str, chapter_id: str):
+    try:
+        subject_id = ObjectId(subject_id)
+        class_id = ObjectId(class_id)
+        chapter_id = ObjectId(chapter_id)
+        return True
+    except Exception as e:
+        logger().error(e)
+        return False
+
