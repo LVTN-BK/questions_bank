@@ -148,7 +148,7 @@ async def group_get_classify(
         pipeline = [
             {
                 '$match': {
-                    'group_id': data2.get('group_id'),
+                    'group_id': group_id,
                     'owner_type': ClassifyOwnerType.GROUP
                 }
             },
