@@ -22,8 +22,9 @@ from configs.settings import app
 # from google.auth.transport.requests import Request
 # from google_auth_oauthlib.flow import InstalledAppFlow
 from fastapi.encoders import jsonable_encoder
-from fastapi import UploadFile, File, BackgroundTasks
+from fastapi import UploadFile, File, BackgroundTasks, Body, Query
 from fastapi.responses import FileResponse
+from models.request.question import DATA_Export
 
 # # If modifying these scopes, delete the file token.json.
 # SCOPES = [
@@ -115,7 +116,8 @@ def remove_file(path: str) -> None:
 @app.post("/export_word")
 async def export_word(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...,description="file as UploadFile"),
+    data: DATA_Export,
+    # file: UploadFile = File(...,description="file as UploadFile"),
 ):
     from htmldocx import HtmlToDocx
     import uuid    
@@ -123,7 +125,8 @@ async def export_word(
 
     new_parser = HtmlToDocx()
     # new_parser.parse_html_file('Questions.html', 'out')
-    docx = new_parser.parse_html_string(file.file.read())
+    # file.file.read()
+    docx = new_parser.parse_html_string(data.content)
     docx.save(f'file_export/{file_name}.docx')
     some_file_path = f'file_export/{file_name}.docx'
     background_tasks.add_task(remove_file, some_file_path)
@@ -133,7 +136,9 @@ async def export_word(
 @app.post("/export_pdf")
 async def export_pdf(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...,description="file as UploadFile"),
+    data: DATA_Export,
+    # content: str = Query(...,description="file as UploadFile"),
+    # file: UploadFile = File(...,description="file as UploadFile"),
 ):
     import pdfkit
     import uuid    
@@ -148,7 +153,8 @@ async def export_pdf(
     # logger().info(t)
 
     # , configuration=config
-    pdfkit.from_string(file.file.read().decode('utf-8'), f'file_export/{file_name}.pdf')
+    # file.file.read().decode('utf-8')
+    pdfkit.from_string(data.content, f'file_export/{file_name}.pdf')
     some_file_path = f'file_export/{file_name}.pdf'
     background_tasks.add_task(remove_file, some_file_path)
     return FileResponse(some_file_path, media_type='application/pdf', filename='p.pdf')

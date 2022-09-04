@@ -146,3 +146,7 @@ class DATA_Auto_Pick_Question(BaseModel):
     level: Dict[str, int] = Field(..., description='question level')
     type: List[str] = Field(..., description='question type')
 
+
+class DATA_Export(BaseModel):
+    content: str = Field(..., description='content')
+
