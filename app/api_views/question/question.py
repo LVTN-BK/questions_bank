@@ -14,7 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from models.db.group import GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
-from models.define.question import ManageQuestionType
+from models.define.question import ManageQuestionLevel, ManageQuestionType
 from models.define.target import ManageTargetType
 from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
@@ -46,7 +46,7 @@ async def create_multi_choice_question(
     try:
         if not check_classify_is_valid(subject_id=data1.subject_id, class_id=data1.class_id, chapter_id=data1.chapter_id):
             raise Exception('classify is not valid!')
-            
+
         data1 = jsonable_encoder(data1)
 
         question = Questions_DB(
@@ -84,7 +84,7 @@ async def create_multi_choice_question(
         return JSONResponse(content={'status': 'success', 'data': question},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #=================CREATE_MATCHING_QUESTION===============
@@ -147,7 +147,7 @@ async def create_matching_question(
         return JSONResponse(content={'status': 'success', 'data': question},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #==================CREATE_SORT_QUESTION==================
@@ -209,7 +209,7 @@ async def create_sort_question(
         return JSONResponse(content={'status': 'success', 'data': question},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #==================CREATE_FILL_QUESTION==================
@@ -272,7 +272,7 @@ async def create_fill_question(
         return JSONResponse(content={'status': 'success', 'data': question},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #======================DEPRECATED========================
 #=====================CREATE_ANSWER======================
@@ -1245,6 +1245,38 @@ async def user_question_statistic(
         question_info = questions_db[QUESTIONS].aggregate(pipeline)
         if question_info.alive:
             question_data = question_info.next()
+
+            list_level = [dict_data.get('name') for dict_data in question_data.get('questions')]
+            if ManageQuestionLevel.VERY_EASY not in list_level:
+                app_data = {
+                    'name': ManageQuestionLevel.VERY_EASY,
+                    'num_questions': 0
+                }
+                question_data['questions'].append(app_data)
+            if ManageQuestionLevel.EASY not in list_level:
+                app_data = {
+                    'name': ManageQuestionLevel.EASY,
+                    'num_questions': 0
+                }
+                question_data['questions'].append(app_data)
+            if ManageQuestionLevel.MEDIUM not in list_level:
+                app_data = {
+                    'name': ManageQuestionLevel.MEDIUM,
+                    'num_questions': 0
+                }
+                question_data['questions'].append(app_data)
+            if ManageQuestionLevel.HARD not in list_level:
+                app_data = {
+                    'name': ManageQuestionLevel.HARD,
+                    'num_questions': 0
+                }
+                question_data['questions'].append(app_data)
+            if ManageQuestionLevel.VERY_HARD not in list_level:
+                app_data = {
+                    'name': ManageQuestionLevel.VERY_HARD,
+                    'num_questions': 0
+                }
+                question_data['questions'].append(app_data)
             return JSONResponse(content={'status': 'success', 'data': question_data},status_code=status.HTTP_200_OK)
         else:
             question_data = {}
