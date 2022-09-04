@@ -139,7 +139,10 @@ async def simple_send(
     import uuid    
     file_name = uuid.uuid4().hex
 
-    pdfkit.from_file('Questions.html', f'file_export/{file_name}.pdf')
+    WKHTMLTOPDF_PATH = '/usr/bin/wkhtmltopdf'
+    config = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_PATH)
+
+    pdfkit.from_string(file.file.read(), f'file_export/{file_name}.pdf', configuration=config)
     some_file_path = f'file_export/{file_name}.pdf'
     background_tasks.add_task(remove_file, some_file_path)
     return FileResponse(some_file_path, media_type='application/pdf', filename='p.pdf')
