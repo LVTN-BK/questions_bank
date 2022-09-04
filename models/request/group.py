@@ -70,14 +70,16 @@ class DATA_Invite_Members(BaseModel):
 #======================ACCEPT_INVITATION===========================
 #==================================================================
 class DATA_Accept_invitation(BaseModel):
-    invitation_id: str = Field(..., description='ID of invitation')
+    group_id: str = Field(..., description='ID of group')
+    # invitation_id: str = Field(..., description='ID of invitation')
     # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
 #======================REJECT_INVITATION===========================
 #==================================================================
 class DATA_Reject_invitation(BaseModel):
-    invitation_id: str = Field(..., description='ID of invitation')
+    group_id: str = Field(..., description='ID of group')
+    # invitation_id: str = Field(..., description='ID of invitation')
     # user_id: str = Field(..., description='ID of user')
 
 #==================================================================
