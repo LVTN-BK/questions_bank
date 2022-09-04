@@ -178,7 +178,7 @@ async def group_reject_request_join_group(
         group = check_group_exist(group_id=request_join.get('group_id'))
         if group:
             #check owner of group
-            if not check_owner_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+            if not check_owner_of_group(user_id=data2.get('user_id'), group_id=request_join.get('group_id')):
                 raise Exception('user is not owner of group!')
 
             # #remove request join

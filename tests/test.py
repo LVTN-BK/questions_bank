@@ -109,11 +109,11 @@ from fastapi.responses import FileResponse
 #     return JSONResponse(status_code=200, content={"message": "email has been sent"})
 
 def remove_file(path: str) -> None:
-    time.sleep(3)
+    # time.sleep(3)
     os.unlink(path)
 
 @app.post("/export_word")
-async def simple_send(
+async def export_word(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...,description="file as UploadFile"),
 ):
@@ -131,7 +131,7 @@ async def simple_send(
 
 
 @app.post("/export_pdf")
-async def simple_send(
+async def export_pdf(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...,description="file as UploadFile"),
 ):
@@ -139,10 +139,16 @@ async def simple_send(
     import uuid    
     file_name = uuid.uuid4().hex
 
-    WKHTMLTOPDF_PATH = '/usr/bin/wkhtmltopdf'
-    config = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_PATH)
+    # WKHTMLTOPDF_PATH = '/usr/local/bin/wkhtmltopdf'
+    # config = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_PATH)
+    # logger().info(type(file.file.read()))
 
-    pdfkit.from_string(file.file.read(), f'file_export/{file_name}.pdf', configuration=config)
+    # t = file.file.read()
+    # logger().info(file.file.read())
+    # logger().info(t)
+
+    # , configuration=config
+    pdfkit.from_string(file.file.read().decode('utf-8'), f'file_export/{file_name}.pdf')
     some_file_path = f'file_export/{file_name}.pdf'
     background_tasks.add_task(remove_file, some_file_path)
     return FileResponse(some_file_path, media_type='application/pdf', filename='p.pdf')
