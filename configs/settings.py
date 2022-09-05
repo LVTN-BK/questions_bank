@@ -108,6 +108,7 @@ group_db.get_collection('group_participant').create_index([('group_id', pymongo.
 
 
 group_db[GROUP_QUESTIONS].create_index([('group_id', pymongo.ASCENDING), ('question_id', pymongo.ASCENDING)], unique=True)
+group_db[GROUP_EXAMS].create_index([('group_id', pymongo.ASCENDING), ('exam_id', pymongo.ASCENDING)], unique=True)
 
 
 ############################################
