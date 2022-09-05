@@ -377,162 +377,190 @@ async def group_get_question_classify(
         }
         filter_question.append(query_question_status)
 
-        # # =============== owner =================
-        # query_question_owner = {
-        #     'user_id': {
-        #         '$eq': data2.get('user_id')
-        #     }
-        # }
-        # filter_question.append(query_question_owner)
-
         pipeline = [
             {
-                '$addFields': {
-                    'question_id': {
-                        '$toString': '$_id'
-                    }
+                '$match': {
+                    'group_id': group_id
                 }
             },
             {
-                '$match': {
-                    "$expr": {
-                        '$in': ['$question_id', list_question]
-                    }
+                '$group': {
+                    '_id': '$subject_id'
                 }
             },
             {
-                '$match': {
-                    '$and': filter_question
+                '$lookup': {
+                    'from': 'subject',
+                    'let': {
+                        'subject_id': '$_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            },
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$subject_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'subject_info'
+                }
+            },
+            {
+                '$unwind': '$subject_info'
+            },
+            {
+                '$lookup': {
+                    'from': 'group_questions',
+                    'let': {
+                        'subject_id': '$_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'group_id': group_id,
+                                '$expr': {
+                                    '$eq': ['$subject_id', '$$subject_id']
+                                }
+                            }
+                        },
+                        {
+                            '$group': {
+                                '_id': '$class_id'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'class',
+                                'let': {
+                                    'class_id': '$_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        },
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$class_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'class_info'
+                            }
+                        },
+                        {
+                            '$unwind': '$class_info'
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'group_questions',
+                                'let': {
+                                    'class_id': '$_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            'group_id': group_id,
+                                            '$expr': {
+                                                '$eq': ['$class_id', '$$class_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$group': {
+                                            '_id': '$chapter_id',
+                                        }
+                                    },
+                                    {
+                                        '$lookup': {
+                                            'from': 'chapter',
+                                            'let': {
+                                                'chapter_id': '$_id'
+                                            },
+                                            'pipeline': [
+                                                {
+                                                    '$set': {
+                                                        'id': {
+                                                            '$toString': '$_id'
+                                                        }
+                                                    },
+                                                },
+                                                {
+                                                    '$match': {
+                                                        '$expr': {
+                                                            '$eq': ['$id', '$$chapter_id']
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'chapter_info'
+                                        }
+                                    },
+                                    {
+                                        '$unwind': '$chapter_info'
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': '$_id',
+                                            'name': '$chapter_info.name'
+                                        }
+                                    }
+                                ],
+                                'as': 'chapters'
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': '$_id',
+                                'name': '$class_info.name',
+                                'chapters': 1
+                            }
+                        }
+                    ],
+                    'as': 'classes'
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'id': '$_id',
+                    'name': '$subject_info.name',
+                    'classes': 1
                 }
             },
             {
                 '$group': {
                     '_id': None,
-                    'subject': {
-                        '$addToSet': '$subject_id'
+                    'data': {
+                        '$push': '$$ROOT'
                     }
                 }
             }
         ]
 
-        result = []
+        classify_data = questions_db[GROUP_QUESTIONS].aggregate(pipeline)
 
-        questions = questions_db[QUESTIONS].aggregate(pipeline)
-        
-        questions_data = questions.next()
-        logger().info(f'questions_data: {questions_data}')
-        # get class of subject
-        data_return = []
-        for subject_id in questions_data['subject']:
-            filter_class = copy.deepcopy(filter_question)
-            query_subject = {
-                'subject_id': subject_id
-            }
-            filter_class.append(query_subject)
-
-            pipeline_class = [
-                {
-                    '$addFields': {
-                        'question_id': {
-                            '$toString': '$_id'
-                        }
-                    }
-                },
-                {
-                    '$match': {
-                        "$expr": {
-                            '$in': ['$question_id', list_question]
-                        }
-                    }
-                },
-                {
-                    '$match': {
-                        '$and': filter_class
-                    }
-                },
-                {
-                    '$group': {
-                        '_id': None,
-                        'class': {
-                            '$addToSet': '$class_id'
-                        }
-                    }
-                }
-            ]
-            questions_class = questions_db[QUESTIONS].aggregate(pipeline_class)
-            questions_class_data = questions_class.next()
-
-            subject_data_class = []
-            # get chapter of class, subject
-            for class_id in questions_class_data['class']:
-                filter_chapter = copy.deepcopy(filter_class)
-                query_class = {
-                    'class_id': class_id
-                }
-                filter_chapter.append(query_class)
-
-                pipeline_chapter = [
-                    {
-                        '$addFields': {
-                            'question_id': {
-                                '$toString': '$_id'
-                            }
-                        }
-                    },
-                    {
-                        '$match': {
-                            "$expr": {
-                                '$in': ['$question_id', list_question]
-                            }
-                        }
-                    },
-                    {
-                        '$match': {
-                            '$and': filter_chapter
-                        }
-                    },
-                    {
-                        '$group': {
-                            '_id': None,
-                            'chapter': {
-                                '$addToSet': '$chapter_id'
-                            }
-                        }
-                    }
-                ]
-                questions_chapter = questions_db[QUESTIONS].aggregate(pipeline_chapter)
-                questions_chapter_data = questions_chapter.next()
-
-                class_data_chapter = []
-                for chapter_id in questions_chapter_data['chapter']:
-                    chapter_info = get_chapter_info(chapter_id=chapter_id)
-                    if chapter_info:
-                        data_chapter = {
-                            'id': chapter_info.get('_id'),
-                            'name': chapter_info.get('name')
-                        }
-                        class_data_chapter.append(data_chapter)
-                
-                class_info = get_class_info(class_id=class_id)
-                if class_info:
-                    data_class = {
-                        'id': class_info.get('_id'),
-                        'name': class_info.get('name'),
-                        'chapters': class_data_chapter
-                    }
-                    subject_data_class.append(data_class)
-            
-            subject_info = get_subject_info(subject_id=subject_id)
-            if subject_info:
-                data_subject = {
-                    'id': subject_info.get('_id'),
-                    'name': subject_info.get('name'),
-                    'classes': subject_data_class
-                }
-                data_return.append(data_subject)
-          
-        logger().info(result)
-        return JSONResponse(content={'status': 'success', 'data': data_return},status_code=status.HTTP_200_OK)
+        if classify_data.alive:
+            result_data = classify_data.next().get('data')
+            return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)
+        else:
+            msg = 'classify not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)

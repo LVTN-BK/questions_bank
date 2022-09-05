@@ -326,12 +326,15 @@ async def group_get_all_question(
                                         '$match': {
                                             '$and': [
                                                 {
-                                                    '$eq': ['$group_id', group_id]
+                                                    '$expr': {
+                                                        '$eq': ['$group_id', group_id]
+                                                    }
                                                 },
                                                 {
-                                                    '$eq': ['$question_id', '$$question_id']
+                                                    '$expr': {
+                                                        '$eq': ['$question_id', '$$question_id']
+                                                    }
                                                 },
-                                                
                                             ]
                                         }
                                     }
