@@ -26,6 +26,9 @@ class GroupQuestion(BaseModel):
     group_id:str= Field(...)
     question_id: str = Field(...)
     sharer_id: str = Field(...)
+    subject_id: str = Field(default=None, description='ID of subject')
+    class_id: str = Field(default=None, description='ID of class')
+    chapter_id: str = Field(default=None, description='ID of chapter')
     datetime_created: float= Field(...)
 
 class GroupExam(BaseModel):

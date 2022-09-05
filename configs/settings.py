@@ -107,6 +107,9 @@ group_db.get_collection(GROUP).create_index([('group_name', 'text')])
 group_db.get_collection('group_participant').create_index([('group_id', pymongo.ASCENDING), ('user_id', pymongo.ASCENDING)], unique=True)
 
 
+group_db[GROUP_QUESTIONS].create_index([('group_id', pymongo.ASCENDING), ('question_id', pymongo.ASCENDING)], unique=True)
+
+
 ############################################
 #question db
 questions_db = MONGO_CLIENT['questions-db']

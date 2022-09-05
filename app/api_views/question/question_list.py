@@ -316,6 +316,41 @@ async def group_get_all_question(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'group_questions',
+                                'let': {
+                                    'question_id': '$question_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$and': [
+                                                {
+                                                    '$eq': ['$group_id', group_id]
+                                                },
+                                                {
+                                                    '$eq': ['$question_id', '$$question_id']
+                                                },
+                                                
+                                            ]
+                                        }
+                                    }
+                                ],
+                                'as': 'group_question_info'
+                            }
+                        },
+                        {
+                            '$unwind': "$group_question_info"
+                        },
+                        {
+                            '$set': {
+                                'subject_id': '$group_question_info.subject_id',
+                                'class_id': '$group_question_info.class_id',
+                                'chapter_id': '$group_question_info.chapter_id',
+                                'datetime_created': '$group_question_info.datetime_created',
+                            }
+                        },
+                        {
                             '$match': {
                                 '$and': filter_question
                             }
@@ -356,6 +391,7 @@ async def group_get_all_question(
                             '$project': { #project for questions collection
                                 '_id': 0,
                                 'type': 1,
+                                'level': 1,
                                 'tags_info': 1,
                                 'datetime_created': 1
                             }
@@ -394,11 +430,17 @@ async def group_get_all_question(
                                 "question_image": 1,
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
+                                'level': "$question_information.level",
                                 'answers': 1,
                                 'answers_right': 1,
                                 'sample_answer': 1,
                                 'display': 1,
                                 'datetime_created': "$question_information.datetime_created"
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
                             }
                         },
                         { 
