@@ -445,7 +445,9 @@ async def get_group_info(
         pipeline = [
             {
                 '$match': {
-                    '_id': ObjectId(group_id)
+                    '_id': ObjectId(group_id),
+                    'group_status': GroupStatus.ENABLE,
+                    'is_deleted': False
                 }
             },
             {
