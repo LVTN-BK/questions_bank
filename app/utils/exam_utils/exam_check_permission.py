@@ -1,6 +1,6 @@
 from configs.logger import logger
 from models.define.question import ManageQuestionType
-from configs.settings import EXAMS, GROUP_PARTICIPANT, exams_db, group_db
+from configs.settings import COMMUNITY_EXAMS, EXAMS, GROUP_PARTICIPANT, exams_db, group_db
 from bson import ObjectId
 
 
@@ -25,8 +25,18 @@ def check_permission_view_exam(exam_id: str, user_id: str):
     if not exam_data:
         raise Exception('exam not found!')
     
-    if exam_data.get('is_public') or exam_data.get('user_id') == user_id:
+    if exam_data.get('user_id') == user_id:
         return True
+
+    # check in community
+    community_exam_data = exams_db[COMMUNITY_EXAMS].find_one(
+        {
+            'exam_id': exam_id,
+        }
+    )
+    if community_exam_data:
+        return True
+
     # check in group
     pipeline = [
         {
@@ -83,3 +93,4 @@ def check_permission_view_exam(exam_id: str, user_id: str):
         return True
     else:
         return False
+
