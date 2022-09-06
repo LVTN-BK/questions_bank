@@ -2127,7 +2127,7 @@ async def group_get_all_exam(
                 '$in': list_exam
             }
         }
-        filter_exam_version.append(query_search)
+        filter_exam_version.append(query_exam)
 
 
         # =============== search =================
@@ -2204,13 +2204,13 @@ async def group_get_all_exam(
                     'localField': 'exam_object_id',
                     'foreignField': '_id',
                     'pipeline': [
-                        # {
-                        #     '$addFields': {
-                        #         'exam_id': {
-                        #             '$toString': '$_id'
-                        #         }
-                        #     }
-                        # },
+                        {
+                            '$addFields': {
+                                'exam_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
                         # {
                         #     '$match': {
                         #         "$expr": {
@@ -2218,6 +2218,43 @@ async def group_get_all_exam(
                         #         }
                         #     }
                         # },
+                        {
+                            '$lookup': {
+                                'from': 'group_exams',
+                                'let': {
+                                    'exam_id': '$exam_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$and': [
+                                                {
+                                                    '$expr': {
+                                                        '$eq': ['$group_id', group_id]
+                                                    }
+                                                },
+                                                {
+                                                    '$expr': {
+                                                        '$eq': ['$exam_id', '$$exam_id']
+                                                    }
+                                                },
+                                            ]
+                                        }
+                                    }
+                                ],
+                                'as': 'group_exam_info'
+                            }
+                        },
+                        {
+                            '$unwind': "$group_exam_info"
+                        },
+                        {
+                            '$set': {
+                                'subject_id': '$group_exam_info.subject_id',
+                                'class_id': '$group_exam_info.class_id',
+                                'datetime_created': '$group_exam_info.datetime_created',
+                            }
+                        },
                         {
                             '$match': {
                                 '$and': filter_exam

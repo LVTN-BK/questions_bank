@@ -260,8 +260,6 @@ async def group_get_all_question(
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
             raise Exception('user is not the owner or member of group!')
 
-        # get list question of group
-        list_question = get_list_group_question(group_id=group_id)
 
         filter_question, filter_question_version = get_query_filter_questions(
             search=search,
@@ -273,6 +271,16 @@ async def group_get_all_question(
             tags=tags
         )
 
+        # get list question of group
+        list_question = get_list_group_question(group_id=group_id)
+        # =============== list_group_exam =================
+        query_question = {
+            'question_id': {
+                '$in': list_question
+            }
+        }
+        filter_question_version.append(query_question)
+        
         num_skip = (page - 1)*limit
 
         pipeline = [
@@ -308,13 +316,13 @@ async def group_get_all_question(
                                 }
                             }
                         },
-                        {
-                            '$match': {
-                                "$expr": {
-                                    '$in': ['$question_id', list_question]
-                                }
-                            }
-                        },
+                        # {
+                        #     '$match': {
+                        #         "$expr": {
+                        #             '$in': ['$question_id', list_question]
+                        #         }
+                        #     }
+                        # },
                         {
                             '$lookup': {
                                 'from': 'group_questions',
