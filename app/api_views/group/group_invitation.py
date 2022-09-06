@@ -101,8 +101,8 @@ async def user_accept_invitation(
     try:
         #find invitation
         query_invitation = {
-            'group_id': ObjectId(data.group_id),
-            'user_id': ObjectId(data2.get('user_id'))
+            'group_id': data.group_id,
+            'user_id': data2.get('user_id')
         }
         invitation = group_db[GROUP_INVITATION].find_one(query_invitation)
         if not invitation:
@@ -164,8 +164,8 @@ async def user_reject_invitation(
     try:
         #find invitation
         query_invitation = {
-            'group_id': ObjectId(data.group_id),
-            'user_id': ObjectId(data2.get('user_id'))
+            'group_id': data.group_id,
+            'user_id': data2.get('user_id')
         }
         invitation = group_db[GROUP_INVITATION].find_one(query_invitation,{'group_id':1, 'user_id':1})
         if not invitation:

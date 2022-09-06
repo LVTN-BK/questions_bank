@@ -171,3 +171,10 @@ class DATA_Remove_Group_Question(BaseModel):
     group_id: str = Field(..., description='ID of group')
     question_id: str = Field(..., description='ID of question')
 
+#==================================================================
+#=====================USER_REMOVE_GROUP_EXAM=======================
+#==================================================================
+class DATA_Remove_Group_Exam(BaseModel):
+    group_id: str = Field(..., description='ID of group')
+    exam_id: str = Field(..., description='ID of exam')
+
