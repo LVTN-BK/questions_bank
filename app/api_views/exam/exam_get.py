@@ -1985,6 +1985,31 @@ async def user_get_all_exam(
                             }
                         },
                         {
+                            '$addFields': {
+                                'exam_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'community_exams',
+                                'let': {
+                                    'exam_id': '$exam_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$exam_id', '$$exam_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'community_exam_info'
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
                                 # 'exam_id': 1,
@@ -1998,7 +2023,9 @@ async def user_get_all_exam(
                                     '$ifNull': [{'$first': '$class_info'}, None]
                                 },
                                 'tags_info': 1,
-                                'is_public': 1,
+                                'is_public': {
+                                    '$ne': ['$community_exam_info', []]
+                                },
                                 'datetime_created': 1
                             }
                         },
@@ -2100,7 +2127,7 @@ async def group_get_all_exam(
     search: str = Query(default=None, description='text search'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
-    chapter_id: str = Query(default=None, description='classify by chapter'),
+    # chapter_id: str = Query(default=None, description='classify by chapter'),
     data2: dict = Depends(valid_headers)
 ):
     try:
@@ -2174,12 +2201,12 @@ async def group_get_all_exam(
             }
             filter_exam.append(query_exam_subject)
 
-        # =============== chapter =================
-        if chapter_id:
-            query_exam_chapter = {
-                'chapter_id': chapter_id
-            }
-            filter_exam.append(query_exam_chapter)
+        # # =============== chapter =================
+        # if chapter_id:
+        #     query_exam_chapter = {
+        #         'chapter_id': chapter_id
+        #     }
+        #     filter_exam.append(query_exam_chapter)
 
         num_skip = (page - 1)*limit
 
@@ -2252,7 +2279,7 @@ async def group_get_all_exam(
                             '$set': {
                                 'subject_id': '$group_exam_info.subject_id',
                                 'class_id': '$group_exam_info.class_id',
-                                'datetime_created': '$group_exam_info.datetime_created',
+                                'datetime_shared': '$group_exam_info.datetime_created',
                             }
                         },
                         {
@@ -2395,6 +2422,7 @@ async def group_get_all_exam(
                                     '$ifNull': [{'$first': '$class_info'}, None]
                                 },
                                 'tags_info': 1,
+                                'datetime_shared': 1,
                                 'datetime_created': 1
                             }
                         },
@@ -2441,12 +2469,13 @@ async def group_get_all_exam(
                                 'exam_info': {
                                     '$ifNull': ['$exam_info', None]
                                 },
+                                'datetime_shared': '$exam_detail.datetime_shared',
                                 'datetime_created': '$exam_detail.datetime_created'
                             }
                         },
                         {
                             '$sort': {
-                                'datetime_created': -1
+                                'datetime_shared': -1
                             }
                         },
                         { 
@@ -2493,7 +2522,7 @@ async def community_get_all_exam(
     search: str = Query(default=None, description='text search'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
-    chapter_id: str = Query(default=None, description='classify by chapter'),
+    # chapter_id: str = Query(default=None, description='classify by chapter'),
     data2: dict = Depends(valid_headers)
 ):
     try:
@@ -2522,13 +2551,13 @@ async def community_get_all_exam(
         }
         filter_exam.append(query_exam_status)
 
-        # =============== public =================
-        query_exam_public = {
-            'is_public': {
-                '$eq': True
-            }
-        }
-        filter_exam.append(query_exam_public)
+        # # =============== public =================
+        # query_exam_public = {
+        #     'is_public': {
+        #         '$eq': True
+        #     }
+        # }
+        # filter_exam.append(query_exam_public)
 
         # =============== class =================
         if class_id:
@@ -2544,12 +2573,12 @@ async def community_get_all_exam(
             }
             filter_exam.append(query_exam_subject)
 
-        # =============== chapter =================
-        if chapter_id:
-            query_exam_chapter = {
-                'chapter_id': chapter_id
-            }
-            filter_exam.append(query_exam_chapter)
+        # # =============== chapter =================
+        # if chapter_id:
+        #     query_exam_chapter = {
+        #         'chapter_id': chapter_id
+        #     }
+        #     filter_exam.append(query_exam_chapter)
 
         num_skip = (page - 1)*limit
 
@@ -2574,6 +2603,41 @@ async def community_get_all_exam(
                     'localField': 'exam_object_id',
                     'foreignField': '_id',
                     'pipeline': [
+                        {
+                            '$addFields': {
+                                'exam_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'community_exams',
+                                'let': {
+                                    'exam_id': '$exam_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$exam_id', '$$exam_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'community_exam_info'
+                            }
+                        },
+                        {
+                            '$unwind': "$community_exam_info"
+                        },
+                        {
+                            '$set': {
+                                'subject_id': '$community_exam_info.subject_id',
+                                'class_id': '$community_exam_info.class_id',
+                                'datetime_shared': '$community_exam_info.datetime_created',
+                            }
+                        },
                         {
                             '$match': {
                                 '$and': filter_exam
@@ -2714,6 +2778,7 @@ async def community_get_all_exam(
                                     '$ifNull': [{'$first': '$class_info'}, None]
                                 },
                                 'tags_info': 1,
+                                'datetime_shared': 1,
                                 'datetime_created': 1
                             }
                         },
@@ -2760,12 +2825,13 @@ async def community_get_all_exam(
                                 'exam_info': {
                                     '$ifNull': ['$exam_info', None]
                                 },
+                                'datetime_shared': '$exam_detail.datetime_shared',
                                 'datetime_created': '$exam_detail.datetime_created'
                             }
                         },
                         {
                             '$sort': {
-                                'datetime_created': -1
+                                'datetime_shared': -1
                             }
                         },
                         { 

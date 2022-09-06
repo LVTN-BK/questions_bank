@@ -138,12 +138,39 @@ async def user_get_all_question(
                             }
                         },
                         {
+                            '$addFields': {
+                                'question_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'community_questions',
+                                'let': {
+                                    'question_id': '$question_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$question_id', '$$question_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'community_question_info'
+                            }
+                        },
+                        {
                             '$project': { #project for questions collection
                                 '_id': 0,
                                 'type': 1,
                                 'level': 1,
                                 'tags_info': 1,
-                                'is_public': 1,
+                                'is_public': {
+                                    '$ne': ['$community_question_info', []]
+                                },
                                 'datetime_created': 1
                             }
                         }
@@ -182,7 +209,6 @@ async def user_get_all_question(
                                 },
                                 'version_name': 1,
                                 "question_content": 1,
-                                "question_image": 1,
                                 'level': "$question_information.level",
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
@@ -358,7 +384,7 @@ async def group_get_all_question(
                                 'subject_id': '$group_question_info.subject_id',
                                 'class_id': '$group_question_info.class_id',
                                 'chapter_id': '$group_question_info.chapter_id',
-                                'datetime_created': '$group_question_info.datetime_created',
+                                'datetime_shared': '$group_question_info.datetime_created',
                             }
                         },
                         {
@@ -404,6 +430,7 @@ async def group_get_all_question(
                                 'type': 1,
                                 'level': 1,
                                 'tags_info': 1,
+                                'datetime_shared': 1,
                                 'datetime_created': 1
                             }
                         }
@@ -437,8 +464,11 @@ async def group_get_all_question(
                             '$project': {
                                 '_id': 0,
                                 'question_id': 1,
+                                'question_version_id': {
+                                    '$toString': '$_id'
+                                },
+                                'version_name': 1,
                                 "question_content": 1,
-                                "question_image": 1,
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
                                 'level': "$question_information.level",
@@ -446,12 +476,13 @@ async def group_get_all_question(
                                 'answers_right': 1,
                                 'sample_answer': 1,
                                 'display': 1,
+                                'datetime_shared': "$question_information.datetime_shared",
                                 'datetime_created': "$question_information.datetime_created"
                             }
                         },
                         {
                             '$sort': {
-                                'datetime_created': -1
+                                'datetime_shared': -1
                             }
                         },
                         { 
@@ -516,13 +547,13 @@ async def community_get_all_question(
             tags=tags
         )
 
-        # =============== public =================
-        query_question_public = {
-            'is_public': {
-                '$eq': True
-            }
-        }
-        filter_question.append(query_question_public)
+        # # =============== public =================
+        # query_question_public = {
+        #     'is_public': {
+        #         '$eq': True
+        #     }
+        # }
+        # filter_question.append(query_question_public)
 
         num_skip = (page - 1)*limit
 
@@ -552,6 +583,49 @@ async def community_get_all_question(
                     'localField': 'question_object_id',
                     'foreignField': '_id',
                     'pipeline': [
+                        {
+                            '$addFields': {
+                                'question_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        # {
+                        #     '$match': {
+                        #         "$expr": {
+                        #             '$in': ['$question_id', list_question]
+                        #         }
+                        #     }
+                        # },
+                        {
+                            '$lookup': {
+                                'from': 'community_questions',
+                                'let': {
+                                    'question_id': '$question_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$question_id', '$$question_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'community_question_info'
+                            }
+                        },
+                        {
+                            '$unwind': "$community_question_info"
+                        },
+                        {
+                            '$set': {
+                                'subject_id': '$community_question_info.subject_id',
+                                'class_id': '$community_question_info.class_id',
+                                'chapter_id': '$community_question_info.chapter_id',
+                                'datetime_shared': '$community_question_info.datetime_created',
+                            }
+                        },
                         {
                             '$match': {
                                 '$and': filter_question
@@ -593,7 +667,9 @@ async def community_get_all_question(
                             '$project': { #project for questions collection
                                 '_id': 0,
                                 'type': 1,
+                                'level': 1,
                                 'tags_info': 1,
+                                'datetime_shared': 1,
                                 'datetime_created': 1
                             }
                         }
@@ -627,15 +703,25 @@ async def community_get_all_question(
                             '$project': {
                                 '_id': 0,
                                 'question_id': 1,
+                                'question_version_id': {
+                                    '$toString': '$_id'
+                                },
+                                'version_name': 1,
                                 "question_content": 1,
-                                "question_image": 1,
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
+                                'level': "$question_information.level",
                                 'answers': 1,
                                 'answers_right': 1,
                                 'sample_answer': 1,
                                 'display': 1,
+                                'datetime_shared': "$question_information.datetime_shared",
                                 'datetime_created': "$question_information.datetime_created"
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_shared': -1
                             }
                         },
                         { 

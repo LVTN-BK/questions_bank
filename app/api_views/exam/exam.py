@@ -5,7 +5,7 @@ from app.utils.group_utils.group import check_group_exist, check_owner_or_user_o
 from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_question_information_with_version_id
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exams_db, group_db
+from configs.settings import COMMUNITY_EXAMS, EXAMS, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exams_db, group_db
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from models.db.exam import Exams_DB, Exams_Version_DB
@@ -248,6 +248,23 @@ async def delete_exams(
                 #         'exam_id': exam_id
                 #     }
                 # )
+        # delete exam in group
+        exams_db[GROUP_EXAMS].delete_many(
+            {
+                'exam_id': {
+                    '$in': all_id
+                }
+            }
+        )
+
+        # delete exam in community
+        exams_db[COMMUNITY_EXAMS].delete_many(
+            {
+                'exam_id': {
+                    '$in': all_id
+                }
+            }
+        )
 
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:

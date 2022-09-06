@@ -45,6 +45,8 @@ class DATA_Share_Exam_To_Group(BaseModel):
 
 class DATA_Share_Exam_To_Community(BaseModel):
     exam_id: str = Field(..., description='ID of exam')
+    subject_id: str = Field(default=None, description='ID of subject')
+    class_id: str = Field(default=None, description='ID of class')
 
 class DATA_Evaluate_Exam(BaseModel):
     data: List[DATA_Evaluate_Question] = Field(..., description='data to evaluate exam')

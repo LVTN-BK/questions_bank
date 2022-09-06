@@ -7,7 +7,7 @@ from app.utils.classify_utils.classify import check_classify_is_valid
 from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (ANSWERS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
+from configs.settings import (ANSWERS, COMMUNITY_QUESTIONS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
 from fastapi import Depends, Path, Query, status, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
@@ -361,6 +361,25 @@ async def delete_questions(
                 #         'question_id': question_id
                 #     }
                 # )
+            
+        # delete question in group
+        questions_db[GROUP_QUESTIONS].delete_many(
+            {
+                'question_id': {
+                    '$in': all_id
+                }
+            }
+        )
+
+        # delete question in community
+        questions_db[COMMUNITY_QUESTIONS].delete_many(
+            {
+                'question_id': {
+                    '$in': all_id
+                }
+            }
+        )
+
 
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:

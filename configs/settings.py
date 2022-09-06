@@ -112,6 +112,13 @@ group_db[GROUP_EXAMS].create_index([('group_id', pymongo.ASCENDING), ('exam_id',
 
 
 ############################################
+COMMUNITY_QUESTIONS = 'community_questions'
+COMMUNITY_EXAMS = 'community_exams'
+
+group_db[COMMUNITY_QUESTIONS].create_index([('question_id', pymongo.ASCENDING)], unique=True)
+group_db[COMMUNITY_EXAMS].create_index([('exam_id', pymongo.ASCENDING)], unique=True)
+
+############################################
 #question db
 questions_db = MONGO_CLIENT['questions-db']
 QUESTIONS = 'questions'

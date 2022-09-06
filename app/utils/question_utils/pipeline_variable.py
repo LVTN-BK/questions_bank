@@ -95,3 +95,65 @@ LOOKUP_CHAPTER_FROM_QUESTIONS = {
         'as': 'chapter_info'
     }
 },
+
+def get_pipeline_list_question_facet(limit: int, num_skip: int):
+    list_question_facet = [
+        { 
+            '$facet' : {
+                'metadata': [ 
+                    { 
+                        '$count': "total" 
+                    }, 
+                    { 
+                        '$addFields': { 
+                            'page': {
+                                '$toInt': {
+                                    '$ceil': {
+                                        '$divide': ['$total', limit]
+                                    }
+                                }
+                            }
+                        } 
+                    } 
+                ],
+                'data': [ 
+                    {
+                        '$project': {
+                            '_id': 0,
+                            'question_id': 1,
+                            'question_version_id': {
+                                '$toString': '$_id'
+                            },
+                            'version_name': 1,
+                            "question_content": 1,
+                            'level': "$question_information.level",
+                            'question_type': "$question_information.type",
+                            'tags_info': "$question_information.tags_info",
+                            'is_public': "$question_information.is_public",
+                            'answers': 1,
+                            'answers_right': 1,
+                            'sample_answer': 1,
+                            'display': 1,
+                            'datetime_shared': "$question_information.datetime_shared",
+                            'datetime_created': "$question_information.datetime_created"
+                        }
+                    },
+                    {
+                        '$sort': {
+                            'datetime_created': -1
+                        }
+                    },
+                    { 
+                        '$skip': num_skip 
+                    },
+                    { 
+                        '$limit': limit 
+                    } 
+                ] # add projection here wish you re-shape the docs
+            } 
+        },
+        {
+            '$unwind': '$metadata'
+        },
+    ]
+    return list_question_facet
