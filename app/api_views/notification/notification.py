@@ -19,7 +19,7 @@ from models.request.notification import DATA_Create_Noti_Group_Members_Except_Us
 from models.response import *
 from models.system_and_feeds.notification import NotificationContentManage, NotificationTypeManage
 
-from . import notification_manage
+from .. import notification_manage
 # Config logging
 from configs.logger import logger
 from fastapi import WebSocket, Form

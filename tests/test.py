@@ -109,53 +109,53 @@ from models.request.question import DATA_Export
 #     #     print("Exception when calling SMTPApi->send_transac_email: %s\n" % e)
 #     return JSONResponse(status_code=200, content={"message": "email has been sent"})
 
-def remove_file(path: str) -> None:
-    # time.sleep(3)
-    os.unlink(path)
+# def remove_file(path: str) -> None:
+#     # time.sleep(3)
+#     os.unlink(path)
 
-@app.post("/export_word")
-async def export_word(
-    background_tasks: BackgroundTasks,
-    data: DATA_Export,
-    # file: UploadFile = File(...,description="file as UploadFile"),
-):
-    from htmldocx import HtmlToDocx
-    import uuid    
-    file_name = uuid.uuid4().hex
+# @app.post("/export_word")
+# async def export_word(
+#     background_tasks: BackgroundTasks,
+#     data: DATA_Export,
+#     # file: UploadFile = File(...,description="file as UploadFile"),
+# ):
+#     from htmldocx import HtmlToDocx
+#     import uuid    
+#     file_name = uuid.uuid4().hex
 
-    new_parser = HtmlToDocx()
-    # new_parser.parse_html_file('Questions.html', 'out')
-    # file.file.read()
-    docx = new_parser.parse_html_string(data.content)
-    docx.save(f'file_export/{file_name}.docx')
-    some_file_path = f'file_export/{file_name}.docx'
-    background_tasks.add_task(remove_file, some_file_path)
-    return FileResponse(some_file_path, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document', filename='q.docx')
+#     new_parser = HtmlToDocx()
+#     # new_parser.parse_html_file('Questions.html', 'out')
+#     # file.file.read()
+#     docx = new_parser.parse_html_string(data.content)
+#     docx.save(f'file_export/{file_name}.docx')
+#     some_file_path = f'file_export/{file_name}.docx'
+#     background_tasks.add_task(remove_file, some_file_path)
+#     return FileResponse(some_file_path, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document', filename='q.docx')
 
 
-@app.post("/export_pdf")
-async def export_pdf(
-    background_tasks: BackgroundTasks,
-    data: DATA_Export,
-    # content: str = Query(...,description="file as UploadFile"),
-    # file: UploadFile = File(...,description="file as UploadFile"),
-):
-    import pdfkit
-    import uuid    
-    file_name = uuid.uuid4().hex
+# @app.post("/export_pdf")
+# async def export_pdf(
+#     background_tasks: BackgroundTasks,
+#     data: DATA_Export,
+#     # content: str = Query(...,description="file as UploadFile"),
+#     # file: UploadFile = File(...,description="file as UploadFile"),
+# ):
+#     import pdfkit
+#     import uuid    
+#     file_name = uuid.uuid4().hex
 
-    # WKHTMLTOPDF_PATH = '/usr/local/bin/wkhtmltopdf'
-    # config = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_PATH)
-    # logger().info(type(file.file.read()))
+#     # WKHTMLTOPDF_PATH = '/usr/local/bin/wkhtmltopdf'
+#     # config = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_PATH)
+#     # logger().info(type(file.file.read()))
 
-    # t = file.file.read()
-    # logger().info(file.file.read())
-    # logger().info(t)
+#     # t = file.file.read()
+#     # logger().info(file.file.read())
+#     # logger().info(t)
 
-    # , configuration=config
-    # file.file.read().decode('utf-8')
-    pdfkit.from_string(data.content, f'file_export/{file_name}.pdf')
-    some_file_path = f'file_export/{file_name}.pdf'
-    background_tasks.add_task(remove_file, some_file_path)
-    return FileResponse(some_file_path, media_type='application/pdf', filename='p.pdf')
+#     # , configuration=config
+#     # file.file.read().decode('utf-8')
+#     pdfkit.from_string(data.content, f'file_export/{file_name}.pdf')
+#     some_file_path = f'file_export/{file_name}.pdf'
+#     background_tasks.add_task(remove_file, some_file_path)
+#     return FileResponse(some_file_path, media_type='application/pdf', filename='p.pdf')
 
