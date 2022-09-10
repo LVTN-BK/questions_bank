@@ -98,7 +98,8 @@ async def login_system(
                 },
                 {
                     '$project': {
-                        '_id': 0
+                        '_id': 0,
+                        'admin_data': 0
                     }
                 }
             ]
