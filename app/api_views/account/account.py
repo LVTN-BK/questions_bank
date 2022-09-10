@@ -1,6 +1,6 @@
 from fastapi import status, Form
 from fastapi import Body, Depends, Query
-from app.utils.account import send_reset_password_email, send_verify_email, send_verify_update_email
+from app.utils.account_utils.account import send_reset_password_email, send_verify_email, send_verify_update_email
 from models.define.user import UserInfo
 from models.request.account import DATA_Accept_Update_Email, DATA_Apply_Reset_Password, DATA_Reset_Password, DATA_Update_Account, DATA_Update_Password, DATA_Verify_Update_Email
 from pymongo.collection import ReturnDocument
@@ -70,8 +70,43 @@ async def login_system(
                 return_document=ReturnDocument.AFTER
             )
 
-            user_info = SYSTEM[USERS_PROFILE].find_one({'user_id': str(user.get('_id'))})
-            del user_info['_id']
+            pipeline = [
+                {
+                    '$match': {
+                        'user_id': str(user.get('_id'))
+                    }
+                },
+                {
+                    '$lookup': {
+                        'from': 'admin',
+                        'pipeline': [
+                            {
+                                '$match': {
+                                    'user_id': str(user.get('_id'))
+                                }
+                            }
+                        ],
+                        'as': 'admin_data'
+                    }
+                },
+                {
+                    '$set': {
+                        'is_admin': {
+                            '$ne': ['$admin_data', []]
+                        }
+                    }
+                },
+                {
+                    '$project': {
+                        '_id': 0
+                    }
+                }
+            ]
+            user_info = SYSTEM[USERS_PROFILE].aggregate(pipeline)
+            if user_info.alive:
+                user_info = user_info.next()
+            else:
+                raise Exception('user not found!')
 
             # user_info_return = UserInfo(id=str(user.get('_id')), avatar=user_info.get('avatar'))
             return JSONResponse(content={'token': user.get('token'), 'user': user_info},
@@ -81,7 +116,7 @@ async def login_system(
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #==============CREATE_SYSTEM_ACCOUNT========

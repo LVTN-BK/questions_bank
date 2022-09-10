@@ -3,28 +3,23 @@ from typing import List
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
-from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_community_classify_other_id, get_group_classify_other_id, get_subject_info
+from app.utils.classify_utils.classify import get_community_classify_other_id, get_group_classify_other_id, get_subject_info
 from app.utils.exam_utils.exam_check_permission import check_owner_of_exam
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value, question_evaluation_func
+from app.utils.question_utils.question import question_evaluation_func
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import (COMMUNITY_EXAMS, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
-from fastapi import Depends, Path, Query, status, BackgroundTasks
+from fastapi import Depends, status, BackgroundTasks, UploadFile, File
 from fastapi.encoders import jsonable_encoder
 from models.db.community import CommunityExam
-from models.db.group import GroupExam, GroupQuestion
-from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
+from models.db.group import GroupExam
+from models.db.question import Questions_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
-from models.define.question import ManageQuestionType
 from models.request.exam import DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
-from models.request.question import (DATA_Copy_Question, DATA_Create_Answer,
-                                     DATA_Create_Fill_Question,
-                                     DATA_Create_Matching_Question,
-                                     DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
+from models.request.question import (DATA_Copy_Question, DATA_Evaluate_Question)
 from starlette.responses import JSONResponse
 
 
@@ -183,6 +178,33 @@ async def evaluate_exam(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
+#========================================================
+#==================EVALUATE_EXAM_BY_FILE=================
+#========================================================
+@app.post(
+    path='/evaluate_exam_by_file',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['exams - action']
+)
+async def evaluate_exam_by_file(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...,description="file as UploadFile"),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
 
 #========================================================
 #=======================EXAMS_COPY=======================
@@ -262,3 +284,11 @@ async def copy_exam(
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
+
+
+def test_pd():
+    import pandas as pd
+
+    df = pd.read_csv('Book2.xlsx')
+
+    print(df.to_string()) 

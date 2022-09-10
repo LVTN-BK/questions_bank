@@ -73,6 +73,7 @@ SYSTEM = MONGO_CLIENT['questions-db']
 user_db = MONGO_CLIENT['questions-db']
 USER_COLLECTION = 'users'
 USERS_PROFILE = 'users_profile'
+ADMIN_COLLECTION = 'admin'
 
 ##############################################
 # notification db

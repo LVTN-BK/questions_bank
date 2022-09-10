@@ -3,6 +3,7 @@ from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
 from bson import ObjectId
+from app.utils.account_utils.user import check_is_admin
 from app.utils.classify_utils.classify import check_permission_with_class, check_permission_with_subject
 from app.utils.group_utils.group import check_owner_or_user_of_group
 from configs.logger import logger
@@ -79,6 +80,44 @@ async def group_create_subject(
             user_id=data2.get('user_id'),
             group_id=data1.group_id,
             owner_type=ClassifyOwnerType.GROUP,
+            datetime_created=datetime.now().timestamp()
+        )
+
+        #insert into subjects db
+        subject_id = classify_db[SUBJECT].insert_one(jsonable_encoder(subject_data)).inserted_id
+        return JSONResponse(content={'status': 'success', 'data': {'subject_id': str(subject_id)}},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#===============COMMUNITY_CREATE_SUBJECT=================
+#========================================================
+@app.post(
+    path='/community_create_subject',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['classify - community']
+)
+async def community_create_subject(
+    data1: DATA_Create_Subject,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check is admin
+        if not check_is_admin(user_id=data2.get('user_id')):
+            raise Exception('user is not admin!!!')
+
+        subject_data = Subjects_DB(
+            name=data1.name,
+            user_id=data2.get('user_id'),
+            owner_type=ClassifyOwnerType.COMMUNITY,
             datetime_created=datetime.now().timestamp()
         )
 
