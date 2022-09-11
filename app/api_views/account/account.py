@@ -1,6 +1,7 @@
 from fastapi import status, Form
 from fastapi import Body, Depends, Query
 from app.utils.account_utils.account import send_reset_password_email, send_verify_email, send_verify_update_email
+from models.db.account import User
 from models.define.user import UserInfo
 from models.request.account import DATA_Accept_Update_Email, DATA_Apply_Reset_Password, DATA_Reset_Password, DATA_Update_Account, DATA_Update_Password, DATA_Verify_Update_Email
 from pymongo.collection import ReturnDocument
@@ -14,7 +15,7 @@ from fastapi.encoders import jsonable_encoder
 
 # from cryptography.fernet import Fernet
 
-from models.response.account import CreateAccountResponse200, CreateAccountResponse403, GetAccount200, GetAccount403, LoginResponse200, LoginResponse403, PutResetPasswordResponse200, PutResetPasswordResponse400, ResetPasswordResponse201, ResetPasswordResponse404, Token, User
+from models.response.account import CreateAccountResponse200, CreateAccountResponse403, GetAccount200, GetAccount403, LoginResponse200, LoginResponse403, PutResetPasswordResponse200, PutResetPasswordResponse400, ResetPasswordResponse201, ResetPasswordResponse404, Token
 
 from configs.logger import *
 
@@ -43,7 +44,8 @@ async def login_system(
                 'email': {
                     '$eq': email
                 },
-                'is_verified': True
+                'is_verified': True,
+                'is_disable': False
             }
         )
         if user is None:
