@@ -17,7 +17,7 @@ from configs import NOTI_COLLECTION, NOTI_SETTING_COLLECTION, app, noti_db
 from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, DATA_Delete_Notification, DATA_Mark_Notification_As_Seen, DATA_Update_Notification_Setting
 # import response models
 from models.response import *
-from models.system_and_feeds.notification import NotificationContentManage, NotificationTypeManage
+from models.define.notification import NotificationContentManage, NotificationTypeManage
 
 from .. import notification_manage
 # Config logging

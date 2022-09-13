@@ -1,4 +1,4 @@
-from models.system_and_feeds.notification import NotificationContentManage, NotificationTypeManage
+from models.define.notification import NotificationContentManage, NotificationTypeManage
 
 
 def get_notification_content(noti_type: str):

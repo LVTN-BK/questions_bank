@@ -8,7 +8,7 @@ from models.request.group import DATA_Accept_Join_Request, DATA_Invite_Members, 
 from models.request.like import DATA_Create_Like
 from models.request.notification import DATA_Create_Noti_Group_Members_Except_User, DATA_Create_Noti_List_User, TargetData
 from models.request.question import DATA_Share_Question_To_Group
-from models.system_and_feeds.notification import NotificationTypeManage
+from models.define.notification import NotificationTypeManage
 from bson import ObjectId
 
 
