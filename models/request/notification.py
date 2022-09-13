@@ -35,5 +35,5 @@ class DATA_Delete_Notification(BaseModel):
     noti_id: str = Field(..., description='ID of notification will be deleted by user')
 
 class DATA_Mark_Notification_As_Seen(BaseModel):
-    noti_id: str = Field(..., description='ID of notification/mark as read all if noti_id is None')
+    noti_id: str = Field(default=None, description='ID of notification/mark as read all if noti_id is None')
 

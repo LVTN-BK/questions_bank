@@ -64,8 +64,11 @@ async def invite_users_to_group(
                     datetime_created= datetime.now().timestamp()
                 )
                 logger().info(f'uid: {uid}')
-                group_db[GROUP_INVITATION].insert_one(jsonable_encoder(invitation_data))
-                list_broadcast_user.append(uid)
+                try: 
+                    group_db[GROUP_INVITATION].insert_one(jsonable_encoder(invitation_data))
+                    list_broadcast_user.append(uid)
+                except Exception as e:
+                    logger().error(e)
 
             data = {
                 'group_name': group.get('group_name'),

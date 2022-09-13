@@ -1388,5 +1388,6 @@ async def user_auto_pick_question(
         return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg="Có lỗi xảy ra!"
+        return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
