@@ -13,7 +13,7 @@ from bson import ObjectId
 
 
 class SendNotification:
-    def group_share_question(
+    async def group_share_question(
         data: DATA_Share_Question_To_Group,
         user_id: str
     ):
@@ -28,9 +28,9 @@ class SendNotification:
             noti_type=NotificationTypeManage.GROUP_SHARE_QUESTION,
             target=target_data
         )
-        create_notification_to_group_members_except_user(data_noti_group)
+        await create_notification_to_group_members_except_user(data_noti_group)
     
-    def group_share_exam(
+    async def group_share_exam(
         data: DATA_Share_Exam_To_Group,
         user_id: str
     ):
@@ -45,9 +45,9 @@ class SendNotification:
             noti_type=NotificationTypeManage.GROUP_SHARE_EXAM,
             target=target_data
         )
-        create_notification_to_group_members_except_user(data_noti_group)
+        await create_notification_to_group_members_except_user(data_noti_group)
 
-    def group_accept_request_join(
+    async def group_accept_request_join(
         data: DATA_Accept_Join_Request,
         user_id: str
     ):
@@ -68,9 +68,9 @@ class SendNotification:
                 noti_type=NotificationTypeManage.GROUP_ACCEPT_REQUEST,
                 target=target_data
             )
-            create_notification_to_list_specific_user(data_noti)
+            await create_notification_to_list_specific_user(data_noti)
             
-    def group_reject_request_join(
+    async def group_reject_request_join(
         data: DATA_Reject_Join_Request,
         user_id: str
     ):
@@ -91,9 +91,9 @@ class SendNotification:
                 noti_type=NotificationTypeManage.GROUP_REJECT_REQUEST,
                 target=target_data
             )
-            create_notification_to_list_specific_user(data_noti)
+            await create_notification_to_list_specific_user(data_noti)
 
-    def group_invite_member(
+    async def group_invite_member(
         data: DATA_Invite_Members,
         user_id: str
     ):        
@@ -107,9 +107,9 @@ class SendNotification:
             noti_type=NotificationTypeManage.GROUP_INVITE_MEMBER,
             target=target_data
         )
-        create_notification_to_list_specific_user(data_noti)
+        await create_notification_to_list_specific_user(data_noti)
 
-    def user_request_join_group(
+    async def user_request_join_group(
         data: DATA_Join_Request,
         user_id: str
     ):    
@@ -132,11 +132,11 @@ class SendNotification:
                     noti_type=NotificationTypeManage.USER_REQUEST_JOIN_GROUP,
                     target=target_data
                 )
-                create_notification_to_list_specific_user(data_noti)
+                await create_notification_to_list_specific_user(data_noti)
         except Exception as e:
             logger().error(e)
 
-    def create_comment(
+    async def create_comment(
         data: DATA_Create_Comment,
         user_id: str
     ):        
@@ -181,9 +181,9 @@ class SendNotification:
             else:
                 return
 
-        create_notification_to_list_specific_user(data_noti)
+        await create_notification_to_list_specific_user(data_noti)
 
-    def create_reply_comment(
+    async def create_reply_comment(
         data: DATA_Create_Reply_Comment,
         user_id: str
     ):   
@@ -224,9 +224,9 @@ class SendNotification:
         else:
             return
 
-        create_notification_to_list_specific_user(data_noti)
+        await create_notification_to_list_specific_user(data_noti)
 
-    def create_like(
+    async def create_like(
         data: DATA_Create_Like,
         user_id: str
     ):        
@@ -271,5 +271,5 @@ class SendNotification:
             else:
                 return
 
-        create_notification_to_list_specific_user(data_noti)
+        await create_notification_to_list_specific_user(data_noti)
 

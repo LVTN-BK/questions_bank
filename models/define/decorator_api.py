@@ -8,11 +8,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.group_share_question,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.group_share_question(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.group_share_question,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
     
@@ -21,11 +22,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.group_share_exam,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.group_share_exam(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.group_share_exam,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
 
@@ -34,11 +36,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.group_accept_request_join,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.group_accept_request_join(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.group_accept_request_join,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
         
@@ -47,11 +50,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.group_reject_request_join,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.group_reject_request_join(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.group_reject_request_join,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
 
@@ -60,11 +64,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.group_invite_member,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.group_invite_member(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.group_invite_member,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
 
@@ -73,11 +78,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.user_request_join_group,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.user_request_join_group(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.user_request_join_group,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
 
@@ -86,11 +92,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.create_comment,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.create_comment(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.create_comment,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
 
@@ -99,11 +106,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.create_reply_comment,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.create_reply_comment(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.create_reply_comment,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
 
@@ -112,11 +120,12 @@ class SendNotiDecoratorsApi:
         async def inner(*args, **kwargs):
             response_data = await func(*args, **kwargs)
             if response_data.status_code == 200:
-                kwargs.get("background_tasks").add_task(
-                    SendNotification.create_like,
-                    data=kwargs.get("data"), 
-                    user_id=kwargs.get("data2").get('user_id')
-                )
+                await SendNotification.create_like(data=kwargs.get("data"), user_id=kwargs.get("data2").get('user_id'))
+                # kwargs.get("background_tasks").add_task(
+                #     SendNotification.create_like,
+                #     data=kwargs.get("data"), 
+                #     user_id=kwargs.get("data2").get('user_id')
+                # )
             return response_data
         return inner
 

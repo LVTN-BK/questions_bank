@@ -12,7 +12,7 @@ from app.api_views import notification_manage
 
 
 
-def create_notification_to_list_specific_user(
+async def create_notification_to_list_specific_user(
     data: DATA_Create_Noti_List_User
 ): 
     try:
@@ -47,14 +47,14 @@ def create_notification_to_list_specific_user(
             del json_data['removed_ids']
 
             # Broastcast to active user:
-            notification_manage.broadcast_notification_to_list_specific_user(receive_ids=data.list_users, json_data=json_data, noti_type=data.noti_type)
+            await notification_manage.broadcast_notification_to_list_specific_user(receive_ids=data.list_users, json_data=json_data, noti_type=data.noti_type)
 
         return True
     except Exception as e:
         logger().error(e)
         return False
 
-def create_notification_to_group_members_except_user(
+async def create_notification_to_group_members_except_user(
     data: DATA_Create_Noti_Group_Members_Except_User
 ):
     try:
@@ -86,7 +86,7 @@ def create_notification_to_group_members_except_user(
             del json_data['removed_ids']
 
             # Broastcast to active members:
-            notification_manage.broadcast_notification_to_list_specific_user(receive_ids=receive_ids, json_data=json_data)
+            await notification_manage.broadcast_notification_to_list_specific_user(receive_ids=receive_ids, json_data=json_data)
 
         return True
     except Exception as e:
