@@ -4,7 +4,7 @@ from app.utils.group_utils.group import check_group_exist, check_owner_or_user_o
 from app.utils.question_utils.question import get_data_and_metadata
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import EXAMS, EXAMS_VERSION, GROUP_EXAMS, app, exams_db, group_db
+from configs.settings import EXAMS, EXAMS_EVALUATION, EXAMS_VERSION, GROUP_EXAMS, app, exams_db, group_db
 from fastapi import Depends, Path, Query, status
 from starlette.responses import JSONResponse
 from models.define.target import ManageTargetType
@@ -2856,3 +2856,96 @@ async def community_get_all_exam(
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#===================GET_EXAM_EVALUATION==================
+#========================================================
+@app.get(
+    path='/get_exam_evaluation',
+    responses={
+        status.HTTP_200_OK: {
+            'model': UserGetAllExamResponse200
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': UserGetAllExamResponse403
+        }
+    },
+    tags=['exams - get']
+)
+async def get_exam_evaluation(
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    exam_id: str = Query(..., description='ID of exam'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        num_skip = (page - 1)*limit
+
+        pipeline = [
+            {
+                '$match': {
+                    "exam_id": exam_id,
+                    'user_id': data2.get('user_id')
+                }
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': {
+                                    '$toString': '$_id'
+                                },
+                                'exam_id': 1,
+                                'datetime_created': 1,
+                                'data': 1
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'         
+            }
+        ]
+
+        exams = exams_db[EXAMS_EVALUATION].aggregate(pipeline)
+        
+        result_data, meta_data = get_data_and_metadata(aggregate_response=exams, page=page)
+
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+
+

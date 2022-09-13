@@ -1,18 +1,19 @@
-import copy
+import pandas as pd
 from typing import List
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_community_classify_other_id, get_group_classify_other_id, get_subject_info
 from app.utils.exam_utils.exam_check_permission import check_owner_of_exam
+from app.utils.exam_utils.exam_eval import evaluate_irt, get_item_level_name, get_probability_irt, insert_exam_evaluate, insert_question_evaluate
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import question_evaluation_func
+from app.utils.question_utils.question import get_question_level, question_evaluation_func
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import (COMMUNITY_EXAMS, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
-from fastapi import Depends, status, BackgroundTasks, UploadFile, File
+from fastapi import Depends, status, BackgroundTasks, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
 from models.db.community import CommunityExam
 from models.db.group import GroupExam
@@ -21,6 +22,7 @@ from models.define.decorator_api import SendNotiDecoratorsApi
 from models.request.exam import DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
 from models.request.question import (DATA_Copy_Question, DATA_Evaluate_Question)
 from starlette.responses import JSONResponse
+
 
 
 #========================================================
@@ -195,15 +197,111 @@ async def evaluate_exam(
 )
 async def evaluate_exam_by_file(
     background_tasks: BackgroundTasks,
+    exam_id: str = Form(...),
     file: UploadFile = File(...,description="file as UploadFile"),
     data2: dict = Depends(valid_headers)
 ):
     try:
+        # contents = file.file.read()
+        # from io import StringIO
+        # s = str(contents,'utf-8')
+        # data_excel = StringIO(s)
+        df = pd.read_excel(file.file.read())
+        logger().info('====11======')
+        file.file.close()
+        num_row = df.shape[0]
+        num_col = df.shape[1]
+        logger().info(num_col)
+
+        # add column name "total" to sum add point for each student
+        df['total'] =  df[list(df.columns)].sum(axis=1)
         
-        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+        # list difficult param for each group same ability
+        list_b_total = []
+
+        # list ability params for group same ability
+        list_a_total = []
+
+        for x in df.groupby("total"):   # group by same point/same ability
+            # get dataFrame for each group
+            dfx = x[1]
+            dfx = dfx.drop(['total'], axis=1)
+
+            # num student in group
+            size = dfx.shape[0]
+
+            # list probability answer right
+            list_p = [get_probability_irt(sum=sum, size=size, n=num_row) for sum in dfx.sum()]
+            
+            # list evaluation value
+            list_e = [evaluate_irt(p) for p in list_p]
+
+            # ability value of group same ability
+            a = sum(list_e)/len(list_e)
+
+            list_a_total.append(a)
+            
+            # danh sach do kho cau hoi cua nhom nang luc k
+            list_b = [(a-e) for e in list_e]
+
+            list_b_total.append(list_b)
+            
+        df = df.drop(['total'], axis=1)
+
+        # get list difficult param
+        df_group = pd.DataFrame(list_b_total, columns =list(df.columns))
+        size_group = df_group.shape[0]
+        list_difficult_param = [v/size_group for v in df_group.sum()]
+
+        # nang luc trung binh
+        a_mean = sum(list_a_total)/len(list_a_total)
+
+        # danh sach xac suat tra loi dung cau hoi
+        list_probability_all = [s/num_row for s in df.sum()]
+
+        # insert data to database
+        background_tasks.add_task(
+            insert_question_evaluate, 
+            user_id = data2.get('user_id'),
+            question_ids = list(df.columns), 
+            difficult_params = list_difficult_param, 
+            probabilities = list_probability_all, 
+            ability = a_mean,
+            num_student = num_row
+        )
+
+        # return data:
+        list_questions = list(df.columns)
+
+        question_eval_data = []
+        for x in range(num_col):
+            data_eval = {
+                'question_id': list_questions[x],
+                'correct_probability': round(list_probability_all[x], 3),
+                'num_student': num_row,
+                'difficult_value': round(list_difficult_param[x], 3),
+                'old_level': get_question_level(question_id=list_questions[x]),
+                'result': get_item_level_name(b = list_difficult_param[x]),
+            }
+            question_eval_data.append(data_eval)
+        result_data = {
+            'exam_id': exam_id,
+            'datetime_created': datetime.now().timestamp(),
+            'data': question_eval_data
+        }
+
+        # insert data to database
+        background_tasks.add_task(
+            insert_exam_evaluate, 
+            user_id = data2.get('user_id'),
+            exam_id = exam_id, 
+            data = result_data
+        )
+
+        return JSONResponse(content={'status': 'success', 'data': result_data}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
@@ -285,10 +383,3 @@ async def copy_exam(
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
-
-def test_pd():
-    import pandas as pd
-
-    df = pd.read_csv('Book2.xlsx')
-
-    print(df.to_string()) 

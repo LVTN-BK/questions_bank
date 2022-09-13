@@ -392,6 +392,10 @@ def question_evaluation_func(
         logger().error(e)
         raise Exception(str(e))
 
+
+
+
+
 #==================IMPORT_QUESTION================
 def question_import_func(
     data: DATA_Import_Question,
@@ -426,3 +430,20 @@ def question_import_func(
         questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(question_version_data))
     except Exception as e:
         logger().error(e)
+
+
+def get_question_level(question_id: str):
+    try:
+        question_data = questions_db[QUESTIONS].find_one(
+            {
+                '_id': ObjectId(question_id)
+            }
+        )
+
+        if question_data:
+            return question_data.get('level')
+        else:
+            return None
+    except Exception as e:
+        logger().error(e)
+        return None
