@@ -11,15 +11,16 @@ from app.utils.question_utils.question import get_question_level, question_evalu
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (COMMUNITY_EXAMS, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
+from configs.settings import (COMMUNITY_EXAMS, EXAMS_VERSION, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
 from fastapi import Depends, status, BackgroundTasks, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
 from models.db.community import CommunityExam
+from models.db.exam import Exams_DB, Exams_Version_DB
 from models.db.group import GroupExam
 from models.db.question import Questions_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
-from models.request.exam import DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
+from models.request.exam import DATA_Copy_Exam, DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
 from models.request.question import (DATA_Copy_Question, DATA_Evaluate_Question)
 from starlette.responses import JSONResponse
 
@@ -317,69 +318,66 @@ async def evaluate_exam_by_file(
             'model': ''
         }
     },
-    tags=['exams - action'],
-    deprecated=True
+    tags=['exams - action']
 )
 async def copy_exam(
     background_tasks: BackgroundTasks,
-    data: DATA_Copy_Question,
+    data: DATA_Copy_Exam,
     data2: dict = Depends(valid_headers)
 ):
     try:
         # check owner of question
-        if check_owner_of_question(user_id=data2.get('user_id'), question_id=data.question_id):
-            raise Exception('user is now owner of question!!!')
+        if check_owner_of_exam(user_id=data2.get('user_id'), exam_id=data.exam_id):
+            raise Exception('user is now owner of exam!!!')
 
-        # find question info
-        question_info = questions_db[QUESTIONS].find_one(
+        # find exam info
+        exam_info = exams_db[EXAMS].find_one(
             {
-                '_id': ObjectId(data.question_id),
+                '_id': ObjectId(data.exam_id),
             }
         )
 
-        # find question latest version
-        question_version_info = questions_db[QUESTIONS_VERSION].find_one(
+        # find exam latest version
+        exam_version_info = exams_db[EXAMS_VERSION].find_one(
             {
-                'question_id': data.question_id,
+                'exam_id': data.exam_id,
                 'is_latest': True
             }
         )
 
-        if not question_info or not question_version_info:
-            raise Exception('question not found!!!')
+        if not exam_info or not exam_version_info:
+            raise Exception('exam not found!!!')
 
-        question_data = Questions_DB(
+        exam_data = Exams_DB(
             user_id=data2.get('user_id'),
             class_id=data.class_id,
             subject_id=data.subject_id,
-            chapter_id=data.chapter_id,
-            type=question_info.get('type'),
-            tag_id=question_info.get('tag_id'),
-            level=question_info.get('level'),
+            tag_id=exam_info.get('tag_id'),
             datetime_created=datetime.now().timestamp()
         )
-        question_insert_id = questions_db[QUESTIONS].insert_one(jsonable_encoder(question_data)).inserted_id
+        exam_insert_id = exams_db[EXAMS].insert_one(jsonable_encoder(exam_data)).inserted_id
 
         
-        question_version_data = Questions_Version_DB(
-            question_id=str(question_insert_id),
-            question_content=question_version_info.get('question_content'),
-            answers=question_version_info.get('answers'),
-            answers_right=question_version_info.get('answers_right'),
-            sample_answer=question_version_info.get('sample_answer'),
-            display=question_version_info.get('display'),
+        exam_version_data = Exams_Version_DB(
+            exam_id=str(exam_insert_id),
+            exam_title=exam_version_info.get('exam_title'),
+            note=exam_version_info.get('note'),
+            time_limit=exam_version_info.get('time_limit'),
+            organization_info=exam_version_info.get('organization_info'),
+            exam_info=exam_version_info.get('exam_info'),
+            questions=exam_version_info.get('questions'),
             datetime_created=datetime.now().timestamp()
         )
 
-        questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(question_version_data))
+        exams_db[EXAMS_VERSION].insert_one(jsonable_encoder(exam_version_data))
 
         data = {
-            'question_id': str(question_insert_id)
+            'exam_id': str(exam_insert_id)
         }
 
         return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
