@@ -2910,11 +2910,54 @@ async def get_exam_evaluation(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'questions',
+                                'let': {
+                                    'question_id': '$question_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'question_id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$question_id', '$$question_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'question_info'
+                            }
+                        },
+                        {
+                            '$set': {
+                                'question_info': {
+                                    '$ifNull': [{'$first': '$question_info'}, {}]
+                                }
+                            }
+                        },
+                        {
+                            '$set': {
+                                'old_level': {
+                                    '$ifNull': ['$question_info.level', None]
+                                },
+                                'is_owner': {
+                                    '$eq': ['$question_info.user_id', data2.get('user_id')]
+                                }
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
                                 'user_id': 0,
                                 'evaluation_id': 0,
-                                'datetime_created': 0
+                                'datetime_created': 0,
+                                'question_info': 0
                             }
                         }
                     ],
