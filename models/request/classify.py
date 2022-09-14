@@ -27,6 +27,10 @@ class DATA_Update_class(BaseModel):
 class DATA_Delete_Class(BaseModel):
     class_id: str = Field(..., description='ID of class')
 
+class DATA_Group_Delete_Class(BaseModel):
+    class_id: str = Field(..., description='ID of class')
+    group_id: str = Field(..., description='ID of group')
+
 class DATA_Create_Chapter(BaseModel):
     name: str = Field(..., description='name of chapter')
     class_id: str = Field(..., description='ID of class')

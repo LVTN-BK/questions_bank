@@ -40,20 +40,20 @@ def check_permission_with_subject(user_id: str, subject_id: str):
     try:
         res = classify_db[SUBJECT].find_one({'_id': ObjectId(subject_id)})
         if not res:
-            return False
+            return False, None
         if (res.get('owner_type') == ClassifyOwnerType.USER) or (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
             if user_id != res.get('user_id'):
-                return False
+                return False, res.get('owner_type')
             else:
-                return True
+                return True, res.get('owner_type')
         else:
             if not check_owner_or_user_of_group(user_id=user_id, group_id=res.get('group_id')):
-                return False
+                return False, res.get('owner_type')
             else:
-                return True
+                return True, res.get('owner_type')
     except Exception as e:
         logger().error(e)
-        return False
+        return False, None
 
 def check_permission_with_class(user_id: str, class_id: str):
     try:
@@ -96,19 +96,19 @@ def check_permission_with_class(user_id: str, class_id: str):
             if (res.get('owner_type') == ClassifyOwnerType.USER) or (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
                 # check owner of class
                 if user_id != res.get('user_id'):
-                    return False
+                    return False, res.get('owner_type')
                 else:
-                    return True
+                    return True, res.get('owner_type')
             else:
                 if not check_owner_or_user_of_group(user_id=user_id, group_id=res.get('group_id')):
-                    return False
+                    return False, res.get('owner_type')
                 else:
-                    return True
+                    return True, res.get('owner_type')
         else:
-            return False
+            return False, None
     except Exception as e:
         logger().error(e)
-        return False
+        return False, None
 
 def check_permission_with_chapter(user_id: str, chapter_id: str):
     try:
@@ -170,19 +170,19 @@ def check_permission_with_chapter(user_id: str, chapter_id: str):
             if (res.get('owner_type') == ClassifyOwnerType.USER) or (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
                 # check owner of chapter
                 if user_id != res.get('user_id'):
-                    return False
+                    return False, res.get('owner_type')
                 else:
-                    return True
+                    return True, res.get('owner_type')
             else:
                 if not check_owner_or_user_of_group(user_id=user_id, group_id=res.get('group_id')):
-                    return False
+                    return False, res.get('owner_type')
                 else:
-                    return True
+                    return True, res.get('owner_type')
         else:
-            return False
+            return False, None
     except Exception as e:
         logger().error(e)
-        return False
+        return False, None
 
 def get_group_classify_other_id(group_id: str, user_id: str):
     # subject other

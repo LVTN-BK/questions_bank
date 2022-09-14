@@ -5,13 +5,13 @@ from app.utils._header import valid_headers
 from bson import ObjectId
 from app.utils.classify_utils.classify import check_permission_with_chapter, check_permission_with_class, check_permission_with_subject
 from configs.logger import logger
-from configs.settings import (CHAPTER, CLASS, QUESTIONS, SUBJECT, TAG_COLLECTION,
+from configs.settings import (CHAPTER, CLASS, COMMUNITY_QUESTIONS, GROUP_QUESTIONS, QUESTIONS, SUBJECT, TAG_COLLECTION,
                               app, classify_db, questions_db)
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from models.db.classify import Chapters_DB, Class_DB, Subjects_DB
 from models.define.classify import ClassifyOwnerType
-from models.request.classify import DATA_Create_Chapter, DATA_Create_Class, DATA_Create_Subject, DATA_Delete_Chapter, DATA_Delete_Class, DATA_Delete_Subject, DATA_Update_Subject, DATA_Update_chapter, DATA_Update_class
+from models.request.classify import DATA_Create_Chapter, DATA_Create_Class, DATA_Create_Subject, DATA_Delete_Chapter, DATA_Delete_Class, DATA_Delete_Subject, DATA_Group_Delete_Class, DATA_Update_Subject, DATA_Update_chapter, DATA_Update_class
 
 from starlette.responses import JSONResponse
 
@@ -36,7 +36,8 @@ async def update_subject(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        if not check_permission_with_subject(user_id=data2.get('user_id'), subject_id=data1.subject_id):
+        permission, _ = check_permission_with_subject(user_id=data2.get('user_id'), subject_id=data1.subject_id)
+        if not permission:
             raise Exception('user not have permission with subject!')
 
         #insert into subjects db
@@ -81,22 +82,61 @@ async def delete_subject(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # find if have question use this subject
-        subject_usage = questions_db[QUESTIONS].find_one(
-            {
-                'subject_id': data1.subject_id
-            }
-        )
-        if subject_usage:
-            msg = 'subject is in-use, can\'t delete it!!!'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        permission, owner_type = check_permission_with_subject(user_id=data2.get('user_id'), subject_id=data1.subject_id)
+        if not permission:
+            raise Exception('Người dùng không có quyền đối với môn học!')
+        
+        subject_data={}
+        if owner_type == ClassifyOwnerType.USER:
+            # find if have question use this subject
+            subject_usage = questions_db[QUESTIONS].find_one(
+                {
+                    'subject_id': data1.subject_id,
+                    'user_id': data2.get('user_id')
+                }
+            )
+            if subject_usage:
+                msg = 'Môn học đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
-        subject_data = classify_db[SUBJECT].find_one_and_delete(
-            {
-                '_id': ObjectId(data1.subject_id),
-                'user_id': data2.get('user_id')
-            }
-        )
+            subject_data = classify_db[SUBJECT].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.subject_id),
+                    'user_id': data2.get('user_id')
+                }
+            )
+        elif owner_type == ClassifyOwnerType.GROUP:
+            # find if have question use this subject
+            subject_usage = questions_db[GROUP_QUESTIONS].find_one(
+                {
+                    'subject_id': data1.subject_id
+                }
+            )
+            if subject_usage:
+                msg = 'Môn học đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+            subject_data = classify_db[SUBJECT].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.subject_id)
+                }
+            )
+        elif owner_type == ClassifyOwnerType.COMMUNITY:
+            # find if have question use this subject
+            subject_usage = questions_db[COMMUNITY_QUESTIONS].find_one(
+                {
+                    'subject_id': data1.subject_id
+                }
+            )
+            if subject_usage:
+                msg = 'Môn học đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+            subject_data = classify_db[SUBJECT].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.subject_id)
+                }
+            )
         if subject_data:
             return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
         else:
@@ -128,7 +168,8 @@ async def update_class(
 ):
     try:
         # check owner of class
-        if not check_permission_with_class(user_id=data2.get('user_id'), class_id=data1.class_id):
+        permission, _ = check_permission_with_class(user_id=data2.get('user_id'), class_id=data1.class_id)
+        if not permission:
             raise Exception('user not have permission with class!')
         
         class_data = classify_db[CLASS].find_one_and_update(
@@ -171,20 +212,104 @@ async def delete_class(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # find if have question use this class
-        class_usage = questions_db[QUESTIONS].find_one(
+        permission, owner_type = check_permission_with_class(user_id=data2.get('user_id'), class_id=data1.class_id)
+        if not permission:
+            raise Exception('Người dùng không có quyền đối với môn học!')
+        
+        class_data={}
+        if owner_type == ClassifyOwnerType.USER:
+            # find if have question use this class
+            class_usage = questions_db[QUESTIONS].find_one(
+                {
+                    'class_id': data1.class_id,
+                    'user_id': data2.get('user_id')
+                }
+            )
+            if class_usage:
+                msg = 'Lớp đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+            class_data = classify_db[CLASS].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.class_id),
+                    'user_id': data2.get('user_id')
+                }
+            )
+        elif owner_type == ClassifyOwnerType.GROUP:
+            # find if have question use this class
+            class_usage = questions_db[GROUP_QUESTIONS].find_one(
+                {
+                    'class_id': data1.class_id
+                }
+            )
+            if class_usage:
+                msg = 'Lớp đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+            class_data = classify_db[CLASS].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.class_id)
+                }
+            )
+        elif owner_type == ClassifyOwnerType.COMMUNITY:
+            # find if have question use this class
+            class_usage = questions_db[COMMUNITY_QUESTIONS].find_one(
+                {
+                    'class_id': data1.class_id
+                }
+            )
+            if class_usage:
+                msg = 'Môn học đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+            class_data = classify_db[CLASS].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.class_id)
+                }
+            )
+        if class_data:
+            return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+        else:
+            msg = 'class not found!!!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#====================GROUP_DELETE_CLASS==================
+#========================================================
+@app.delete(
+    path='/group_delete_class',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['classify']
+)
+async def group_delete_class(
+    data1: DATA_Group_Delete_Class,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # find if have question in group use this class
+        class_usage = questions_db[GROUP_QUESTIONS].find_one(
             {
-                'class_id': data1.class_id
+                'class_id': data1.class_id,
+                'group_id': data1.group_id
             }
         )
         if class_usage:
-            msg = 'class is in-use, can\'t delete it!!!'
+            msg = 'Lớp này đang được sử dụng, không thể xóa!'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
         class_data = classify_db[CLASS].find_one_and_delete(
             {
-                '_id': ObjectId(data1.class_id),
-                'user_id': data2.get('user_id')
+                '_id': ObjectId(data1.class_id)
             }
         )
         if class_data:
@@ -216,7 +341,8 @@ async def update_chapter(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        if not check_permission_with_chapter(user_id=data2.get('user_id'), chapter_id=data1.chapter_id):
+        permission, _ = check_permission_with_chapter(user_id=data2.get('user_id'), chapter_id=data1.chapter_id)
+        if not permission:
             raise Exception('user not have permission with chapter!')
         
         chapter_data = classify_db[CHAPTER].find_one_and_update(
@@ -259,26 +385,65 @@ async def delete_chapter(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        # find if have question use this class
-        chapter_usage = questions_db[QUESTIONS].find_one(
-            {
-                'chapter_id': data1.chapter_id
-            }
-        )
-        if chapter_usage:
-            msg = 'chapter is in-use, can\'t delete it!!!'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        permission, owner_type = check_permission_with_chapter(user_id=data2.get('user_id'), chapter_id=data1.chapter_id)
+        if not permission:
+            raise Exception('Người dùng không có quyền đối với Chương!')
+        
+        chapter_data={}
+        if owner_type == ClassifyOwnerType.USER:
+            # find if have question use this chapter
+            chapter_usage = questions_db[QUESTIONS].find_one(
+                {
+                    'chapter_id': data1.chapter_id,
+                    'user_id': data2.get('user_id')
+                }
+            )
+            if chapter_usage:
+                msg = 'Chương đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
-        chapter_data = classify_db[CHAPTER].find_one_and_delete(
-            {
-                '_id': ObjectId(data1.chapter_id),
-                'user_id': data2.get('user_id')
-            }
-        )
+            chapter_data = questions_db[CHAPTER].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.chapter_id),
+                    'user_id': data2.get('user_id')
+                }
+            )
+        elif owner_type == ClassifyOwnerType.GROUP:
+            # find if have question use this class
+            chapter_usage = questions_db[GROUP_QUESTIONS].find_one(
+                {
+                    'chapter_id': data1.chapter_id
+                }
+            )
+            if chapter_usage:
+                msg = 'Chương đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+            chapter_data = questions_db[CHAPTER].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.chapter_id)
+                }
+            )
+        elif owner_type == ClassifyOwnerType.COMMUNITY:
+            # find if have question use this class
+            chapter_usage = questions_db[COMMUNITY_QUESTIONS].find_one(
+                {
+                    'chapter_id': data1.chapter_id
+                }
+            )
+            if chapter_usage:
+                msg = 'Môn học đang được sử dụng, không thể xóa!'
+                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+            chapter_data = questions_db[CHAPTER].find_one_and_delete(
+                {
+                    '_id': ObjectId(data1.chapter_id)
+                }
+            )
         if chapter_data:
             return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
         else:
-            msg = 'chapter not found!!!'
+            msg = 'Không tìm thấy chương!'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
