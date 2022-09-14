@@ -180,7 +180,41 @@ async def user_get_all_question(
             },
             {
                 '$unwind': '$question_information'
-            },                    
+            },
+            {
+                '$lookup': {
+                    'from': 'questions_evaluation',
+                    'let': {
+                        'question_id': '$question_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$question_id', '$$question_id']
+                                },
+                                'user_id': data2.get('user_id')
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        {
+                            '$limit': 1
+                        }
+                    ],
+                    'as': 'question_evaluation'
+                }
+            },   
+            {
+                '$set': {
+                    'question_evaluation': {
+                        '$ifNull': [{'$first': '$question_evaluation'}, {}]
+                    }
+                }
+            },                
             { 
                 '$facet' : {
                     'metadata': [ 
@@ -210,6 +244,9 @@ async def user_get_all_question(
                                 'version_name': 1,
                                 "question_content": 1,
                                 'level': "$question_information.level",
+                                'recommend_level': {
+                                    '$ifNull': ['$question_evaluation.result', None]
+                                },
                                 'question_type': "$question_information.type",
                                 'tags_info': "$question_information.tags_info",
                                 'is_public': "$question_information.is_public",
