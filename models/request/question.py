@@ -150,3 +150,10 @@ class DATA_Auto_Pick_Question(BaseModel):
 class DATA_Export(BaseModel):
     content: str = Field(..., description='content')
 
+
+class UpdateQuestionLevel(BaseModel):
+    question_id: str = Field(..., description='ID of question')
+    new_level: str = Field(default=None, description='new level')
+
+class DATA_Update_Question_Level(BaseModel):
+    data: List[UpdateQuestionLevel] = Field(..., description='data update question level')

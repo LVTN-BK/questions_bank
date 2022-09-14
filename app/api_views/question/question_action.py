@@ -22,7 +22,7 @@ from models.request.question import (DATA_Copy_Question, DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Import_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Import_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question, DATA_Update_Question_Level)
 from starlette.responses import JSONResponse
 
 
@@ -304,4 +304,49 @@ async def import_question(
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+#========================================================
+#====================UPDATE_QUESTION_LEVEL===============
+#========================================================
+@app.put(
+    path='/update_question_level',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - action']
+)
+async def update_question_level(
+    data: DATA_Update_Question_Level,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        for data_update in data.data:
+            query_question = {
+                'level': data_update.get('new_level'),
+                'datetime_updated': datetime.now().timestamp()
+            }
+
+            # update question collection
+            update_question = questions_db[QUESTIONS].find_one_and_update(
+                {
+                    '_id': ObjectId(data_update.get('question_id')),
+                    'user_id': data2.get('user_id')
+                },
+                {
+                    '$set': query_question
+                }
+            )
+            
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
 
