@@ -156,4 +156,10 @@ class UpdateQuestionLevel(BaseModel):
     new_level: str = Field(default=None, description='new level')
 
 class DATA_Update_Question_Level(BaseModel):
-    data: List[UpdateQuestionLevel] = Field(..., description='data update question level')
+    evaluation_id: str = Field(..., description='ID of evaluation')
+    question_ids: List[str] = Field(..., description='List question IDs')
+    # data: List[UpdateQuestionLevel] = Field(..., description='data update question level')
+
+class DATA_Reject_Update_Question_Level(BaseModel):
+    evaluation_id: str = Field(..., description='ID of evaluation')
+    question_ids: List[str] = Field(..., description='List question IDs')

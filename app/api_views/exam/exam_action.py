@@ -20,6 +20,7 @@ from models.db.exam import Exams_DB, Exams_Version_DB
 from models.db.group import GroupExam
 from models.db.question import Questions_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
+from models.define.exam import ManageExamEvaluationStatus
 from models.request.exam import DATA_Copy_Exam, DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
 from models.request.question import (DATA_Copy_Question, DATA_Evaluate_Question)
 from starlette.responses import JSONResponse
@@ -208,7 +209,6 @@ async def evaluate_exam_by_file(
         # s = str(contents,'utf-8')
         # data_excel = StringIO(s)
         df = pd.read_excel(file.file.read())
-        logger().info('====11======')
         file.file.close()
         num_row = df.shape[0]
         num_col = df.shape[1]
@@ -260,16 +260,16 @@ async def evaluate_exam_by_file(
         # danh sach xac suat tra loi dung cau hoi
         list_probability_all = [s/num_row for s in df.sum()]
 
-        # insert data to database
-        background_tasks.add_task(
-            insert_question_evaluate, 
-            user_id = data2.get('user_id'),
-            question_ids = list(df.columns), 
-            difficult_params = list_difficult_param, 
-            probabilities = list_probability_all, 
-            ability = a_mean,
-            num_student = num_row
-        )
+        # # insert data to database
+        # background_tasks.add_task(
+        #     insert_question_evaluate, 
+        #     user_id = data2.get('user_id'),
+        #     question_ids = list(df.columns), 
+        #     difficult_params = list_difficult_param, 
+        #     probabilities = list_probability_all, 
+        #     ability = a_mean,
+        #     num_student = num_row
+        # )
 
         # return data:
         list_questions = list(df.columns)
@@ -283,6 +283,7 @@ async def evaluate_exam_by_file(
                 'difficult_value': round(list_difficult_param[x], 3),
                 'old_level': get_question_level(question_id=list_questions[x]),
                 'result': get_item_level_name(b = list_difficult_param[x]),
+                'status': ManageExamEvaluationStatus.PENDING
             }
             question_eval_data.append(data_eval)
         result_data = {

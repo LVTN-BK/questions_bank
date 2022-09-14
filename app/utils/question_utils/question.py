@@ -2,11 +2,12 @@ from datetime import datetime
 from math import ceil
 from configs.logger import logger
 from models.db.question import Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
+from models.define.exam import ManageExamEvaluationStatus
 from models.define.question import ManageQuestionLevel, ManageQuestionType
 from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, questions_db, classify_db, TAG_COLLECTION
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
-from models.request.question import DATA_Evaluate_Question, DATA_Import_Question
+from models.request.question import DATA_Evaluate_Question, DATA_Import_Question, DATA_Reject_Update_Question_Level, DATA_Update_Question_Level
 
 
 def get_list_tag_id_from_input(list_tag: list):
@@ -392,7 +393,51 @@ def question_evaluation_func(
         logger().error(e)
         raise Exception(str(e))
 
+def update_question_evaluation_status(user_id: str, data: DATA_Update_Question_Level):
+    try:
+        # for data_update in data.data:
+        query_find = {
+            'evaluation_id': ObjectId(data.evaluation_id),
+            'user_id': user_id,
+            'question_id': {
+                '$in': data.question_ids
+            }
+        }
 
+        query_update = {
+            '$set': {
+                'status': ManageExamEvaluationStatus.ACCEPT
+            }
+        }
+        update_question_evaluation = questions_db[QUESTIONS_EVALUATION].update_many(
+            query_find,
+            query_update
+        )
+    except Exception as e:
+        logger().error(e)
+
+def reject_update_question_evaluation_status(user_id: str, data: DATA_Reject_Update_Question_Level):
+    try:
+        # for question_id in data.question_ids:
+        query_find = {
+            'evaluation_id': ObjectId(data.evaluation_id),
+            'user_id': user_id,
+            'question_id': {
+                '$in': data.question_ids
+            }
+        }
+
+        query_update = {
+            '$set': {
+                'status': ManageExamEvaluationStatus.REJECT
+            }
+        }
+        update_question_evaluation = questions_db[QUESTIONS_EVALUATION].update_many(
+            query_find,
+            query_update
+        )
+    except Exception as e:
+        logger().error(e)
 
 
 

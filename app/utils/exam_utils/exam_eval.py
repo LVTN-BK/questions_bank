@@ -72,27 +72,47 @@ def insert_question_evaluate(user_id, question_ids, difficult_params, probabilit
 def insert_exam_evaluate(exam_id: str, user_id: str, data: dict):
     try:
         # update current latest question evaluation
-        update_question_evaluation = exams_db[EXAMS_EVALUATION].find_one_and_update(
-            {
-                'exam_id': exam_id,
-                'user_id': user_id,
-                'is_latest': True
-            },
-            {
-                '$set': {
-                    'is_latest': False
-                }
-            }
-        )
+        # update_question_evaluation = exams_db[EXAMS_EVALUATION].find_one_and_update(
+        #     {
+        #         'exam_id': exam_id,
+        #         'user_id': user_id,
+        #         'is_latest': True
+        #     },
+        #     {
+        #         '$set': {
+        #             'is_latest': False
+        #         }
+        #     }
+        # )
 
-        data.update(
-            {
-                'user_id': user_id,
-                'is_latest': True,
-            }
-        )
-
+        data_insert_exam = {
+            'user_id': user_id,
+            'exam_id': data.get('exam_id'),
+            'datetime_created': data.get('datetime')
+        }
         # insert evaluation into db
-        exams_db[EXAMS_EVALUATION].insert_one(data)
+        insert_exam_id = exams_db[EXAMS_EVALUATION].insert_one(data_insert_exam).inserted_id
+        
+        # insert to question evaluation
+        for data_question in data.get('data'):
+            data_question.update(
+                {
+                    'user_id': user_id,
+                    'evaluation_id': str(insert_exam_id),
+                    'datetime_created': data.get('datetime')
+                }
+            )
+            exams_db[QUESTIONS_EVALUATION].insert_one(data_question)
+
+
+
+        # data.update(
+        #     {
+        #         'user_id': user_id,
+        #         'is_latest': True,
+        #     }
+        # )
+
+        
     except Exception as e:
         logger().error(e)

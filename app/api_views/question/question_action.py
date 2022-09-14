@@ -6,7 +6,7 @@ from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_group_classify_other_id, get_subject_info
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value, question_import_func
+from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value, question_import_func, update_question_evaluation_status
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
@@ -22,7 +22,7 @@ from models.request.question import (DATA_Copy_Question, DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Import_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question, DATA_Update_Question_Level)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Import_Question, DATA_Reject_Update_Question_Level, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question, DATA_Update_Question_Level)
 from starlette.responses import JSONResponse
 
 
@@ -310,7 +310,7 @@ async def import_question(
 #====================UPDATE_QUESTION_LEVEL===============
 #========================================================
 @app.put(
-    path='/update_question_level',
+    path='/accept_update_question_level',
     responses={
         status.HTTP_200_OK: {
             'model': ''
@@ -321,27 +321,78 @@ async def import_question(
     },
     tags=['questions - action']
 )
-async def update_question_level(
+async def accept_update_question_level(
+    background_tasks: BackgroundTasks,
     data: DATA_Update_Question_Level,
     data2: dict = Depends(valid_headers)
 ):
     try:
-        for data_update in data.data:
-            query_question = {
-                'level': data_update.new_level,
-                'datetime_updated': datetime.now().timestamp()
-            }
-
-            # update question collection
-            update_question = questions_db[QUESTIONS].find_one_and_update(
+        for question_id in data.question_ids:
+            # find question evaluation
+            ques_eval = questions_db[QUESTIONS].find_one(
                 {
-                    '_id': ObjectId(data_update.question_id),
-                    'user_id': data2.get('user_id')
-                },
-                {
-                    '$set': query_question
+                    'question_id': question_id,
+                    'user_id': data2.get('user_id'),
+                    'evaluation_id': data.evaluation_id
                 }
             )
+            if ques_eval:
+                query_question = {
+                    'level': ques_eval.get('result'),
+                    'datetime_updated': datetime.now().timestamp()
+                }
+
+                # update question collection
+                update_question = questions_db[QUESTIONS].find_one_and_update(
+                    {
+                        '_id': ObjectId(question_id),
+                        'user_id': data2.get('user_id')
+                    },
+                    {
+                        '$set': query_question
+                    }
+                )
+        
+        # update question evaluation
+        background_tasks.add_task(
+            update_question_evaluation_status, 
+            user_id = data2.get('user_id'),
+            data = data
+        )
+            
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#================REJECT_UPDATE_QUESTION_LEVEL============
+#========================================================
+@app.put(
+    path='/reject_update_question_level',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - action']
+)
+async def reject_update_question_level(
+    background_tasks: BackgroundTasks,
+    data: DATA_Reject_Update_Question_Level,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # update question evaluation
+        background_tasks.add_task(
+            update_question_evaluation_status, 
+            user_id = data2.get('user_id'),
+            data = data
+        )
             
         return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
     except Exception as e:

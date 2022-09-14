@@ -2888,6 +2888,39 @@ async def get_exam_evaluation(
                     'user_id': data2.get('user_id')
                 }
             },
+            {
+                '$set': {
+                    'eval_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'questions_evaluation',
+                    'let': {
+                        'eval_id': '$eval_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$evaluation_id', '$$eval_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 0,
+                                'evaluation_id': 0,
+                                'datetime_created': 0
+                            }
+                        }
+                    ],
+                    'as': 'data'
+                }
+            },
             { 
                 '$facet' : {
                     'metadata': [ 
