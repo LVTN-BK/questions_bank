@@ -328,14 +328,14 @@ async def update_question_level(
     try:
         for data_update in data.data:
             query_question = {
-                'level': data_update.get('new_level'),
+                'level': data_update.new_level,
                 'datetime_updated': datetime.now().timestamp()
             }
 
             # update question collection
             update_question = questions_db[QUESTIONS].find_one_and_update(
                 {
-                    '_id': ObjectId(data_update.get('question_id')),
+                    '_id': ObjectId(data_update.question_id),
                     'user_id': data2.get('user_id')
                 },
                 {
