@@ -116,10 +116,11 @@ async def login_system(
                                 status_code=status.HTTP_200_OK)
         else:
             msg = 'Tài khoản hoặc mật khẩu không đúng!'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #==============CREATE_SYSTEM_ACCOUNT========
@@ -217,7 +218,8 @@ async def create_system_account(
         }, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 # #===========================================
@@ -295,7 +297,8 @@ async def update_account_info(
         }, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #=================UPDATE_AVATAR=============
@@ -335,7 +338,8 @@ async def update_avatar(
         }, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed!'}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #=============VERIFY_UPDATE_EMAIL===========
@@ -404,7 +408,8 @@ async def verify_update_email(
 
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #=============ACCEPT_UPDATE_EMAIL===========
@@ -499,7 +504,8 @@ async def accept_update_email(
             return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed!', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'Failed!', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #===========================================
 #================UPDATE_PASSWORD============

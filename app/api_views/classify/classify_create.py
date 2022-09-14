@@ -49,7 +49,8 @@ async def create_subject(
         return JSONResponse(content={'status': 'success', 'data': {'subject_id': str(subject_id)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #=================GROUP_CREATE_SUBJECT===================
@@ -88,7 +89,8 @@ async def group_create_subject(
         return JSONResponse(content={'status': 'success', 'data': {'subject_id': str(subject_id)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #===============COMMUNITY_CREATE_SUBJECT=================
@@ -126,7 +128,8 @@ async def community_create_subject(
         return JSONResponse(content={'status': 'success', 'data': {'subject_id': str(subject_id)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
@@ -165,7 +168,8 @@ async def create_class(
         return JSONResponse(content={'status': 'success', 'data': {'class_id': str(class_id)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
@@ -204,6 +208,7 @@ async def create_chapter(
         return JSONResponse(content={'status': 'success', 'data': {'chapter_id': str(chapter_id)}},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 

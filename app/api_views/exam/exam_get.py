@@ -33,8 +33,8 @@ async def user_get_one_exam(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        if not check_permission_view_exam(exam_id=exam_id, user_id=data2.get('user_id')):
-            raise Exception('user not have permission to view exam!')
+        # if not check_permission_view_exam(exam_id=exam_id, user_id=data2.get('user_id')):
+        #     raise Exception('user not have permission to view exam!')
 
         pipeline = [
             {

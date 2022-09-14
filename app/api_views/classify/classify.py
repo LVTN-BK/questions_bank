@@ -54,11 +54,12 @@ async def update_subject(
         if subject_data:
             return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
         else:
-            msg = 'subject not found!!!'
+            msg = 'Không tìm thấy môn học!'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #======================DELETE_SUBJECT====================
@@ -99,11 +100,12 @@ async def delete_subject(
         if subject_data:
             return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
         else:
-            msg = 'subject not found!!!'
+            msg = 'Không tìm thấy môn học!'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #======================UPDATE_CLASS======================

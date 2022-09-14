@@ -123,7 +123,8 @@ async def get_classify(
         return JSONResponse(content={'status': 'success', 'data': result},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #===================GROUP_GET_CLASSIFY===================
@@ -238,7 +239,8 @@ async def group_get_classify(
         return JSONResponse(content={'status': 'success', 'data': result},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
 #=================COMMUNITY_GET_CLASSIFY=================
@@ -351,4 +353,5 @@ async def community_get_classify(
         return JSONResponse(content={'status': 'success', 'data': result},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)

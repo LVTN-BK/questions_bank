@@ -122,7 +122,8 @@ async def search_user_not_in_group(
         return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
@@ -188,5 +189,6 @@ async def get_user_info(
         return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
