@@ -397,7 +397,7 @@ def update_question_evaluation_status(user_id: str, data: DATA_Update_Question_L
     try:
         # for data_update in data.data:
         query_find = {
-            'evaluation_id': ObjectId(data.evaluation_id),
+            'evaluation_id': data.evaluation_id,
             'user_id': user_id,
             'question_id': {
                 '$in': data.question_ids
@@ -420,7 +420,7 @@ def reject_update_question_evaluation_status(user_id: str, data: DATA_Reject_Upd
     try:
         # for question_id in data.question_ids:
         query_find = {
-            'evaluation_id': ObjectId(data.evaluation_id),
+            'evaluation_id': data.evaluation_id,
             'user_id': user_id,
             'question_id': {
                 '$in': data.question_ids

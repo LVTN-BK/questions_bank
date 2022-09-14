@@ -329,13 +329,14 @@ async def accept_update_question_level(
     try:
         for question_id in data.question_ids:
             # find question evaluation
-            ques_eval = questions_db[QUESTIONS].find_one(
+            ques_eval = questions_db[QUESTIONS_EVALUATION].find_one(
                 {
                     'question_id': question_id,
                     'user_id': data2.get('user_id'),
                     'evaluation_id': data.evaluation_id
                 }
             )
+            logger().info(ques_eval)
             if ques_eval:
                 query_question = {
                     'level': ques_eval.get('result'),
