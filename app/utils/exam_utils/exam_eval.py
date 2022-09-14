@@ -88,7 +88,7 @@ def insert_exam_evaluate(exam_id: str, user_id: str, data: dict):
         data_insert_exam = {
             'user_id': user_id,
             'exam_id': data.get('exam_id'),
-            'datetime_created': data.get('datetime')
+            'datetime_created': data.get('datetime_created')
         }
         # insert evaluation into db
         insert_exam_id = exams_db[EXAMS_EVALUATION].insert_one(data_insert_exam).inserted_id
@@ -99,7 +99,7 @@ def insert_exam_evaluate(exam_id: str, user_id: str, data: dict):
                 {
                     'user_id': user_id,
                     'evaluation_id': str(insert_exam_id),
-                    'datetime_created': data.get('datetime')
+                    'datetime_created': data.get('datetime_created')
                 }
             )
             exams_db[QUESTIONS_EVALUATION].insert_one(data_question)
