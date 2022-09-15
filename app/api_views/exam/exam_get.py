@@ -3029,5 +3029,217 @@ async def get_exam_evaluation(
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
+#========================================================
+#====================USER_EXAM_STATISTIC=================
+#========================================================
+@app.get(
+    path='/user_exam_statistic',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['exams - get']
+)
+async def user_exam_statistic(
+    subject_id: str = Query(default=None, description='classify by subject'),
+    class_id: str = Query(default=None, description='classify by class'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        pipeline_head = [
+            {
+                '$match': {
+                    'user_id': data2.get('user_id')
+                }
+            }
+        ]
+        body_facet = {
+            'total_exam': [
+                {
+                    '$count': 'count'
+                }
+            ]
+        }
+        if not (subject_id or class_id): # all is null
+            pipeline_mid = [
+                {
+                    '$group': {
+                        '_id': '$subject_id',
+                        'num_exams': {
+                            '$count': {}
+                        }
+                    }
+                },
+                # {
+                #     '$set': {
+                #         'subject_object_id': {
+                #             '$toObjectId': '$_id'
+                #         }
+                #     }
+                # },
+                {
+                    '$lookup': {
+                        'from': 'subject',
+                        # 'localField': 'subject_object_id',
+                        # 'foreignField': '_id',
+                        'let': {
+                            'subject_id': '$_id'
+                        },
+                        'pipeline': [
+                            {
+                                '$set': {
+                                    'id': {
+                                        '$toString': '$_id'
+                                    }
+                                }
+                            },
+                            {
+                                '$match': {
+                                    '$expr': {
+                                        '$eq': ['$id', '$$subject_id']
+                                    }
+                                }
+                            },
+                            {
+                                '$project': {
+                                    '_id': 0,
+                                    'name': 1
+                                }
+                            }
+                        ],
+                        'as': 'subject_info'
+                    }
+                },
+                {
+                    '$unwind': '$subject_info'
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'id': '$_id',
+                        'name': '$subject_info.name',
+                        'num_exams': 1,
+
+                    }
+                }
+            ]
+            body_facet['subjects'] = pipeline_mid
+
+        elif subject_id and not class_id: # only subject
+            pipeline_mid = [
+                {
+                    '$group': {
+                        '_id': '$class_id',
+                        'num_exams': {
+                            '$count': {}
+                        }
+                    }
+                },
+                # {
+                #     '$set': {
+                #         'class_object_id': {
+                #             '$toObjectId': '$_id'
+                #         }
+                #     }
+                # },
+                {
+                    '$lookup': {
+                        'from': 'class',
+                        # 'localField': 'class_object_id',
+                        # 'foreignField': '_id',
+                        'let': {
+                            'class_id': '$_id'
+                        },
+                        'pipeline': [
+                            {
+                                '$set': {
+                                    'id': {
+                                        '$toString': '$_id'
+                                    }
+                                }
+                            },
+                            {
+                                '$match': {
+                                    '$expr': {
+                                        '$eq': ['$id', '$$class_id']
+                                    }
+                                }
+                            },
+                            {
+                                '$project': {
+                                    '_id': 0,
+                                    'name': 1
+                                }
+                            }
+                        ],
+                        'as': 'class_info'
+                    }
+                },
+                {
+                    '$unwind': '$class_info'
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'id': '$_id',
+                        'name': '$class_info.name',
+                        'num_exams': 1,
+
+                    }
+                }
+            ]
+            body_facet['classes'] = pipeline_mid
+
+            pipeline_head = [
+                {
+                    '$match': {
+                        'user_id': data2.get('user_id'),
+                        'subject_id': subject_id
+                    }
+                }
+            ]
+        
+        elif all([subject_id, class_id]):
+            pipeline_head = [
+                {
+                    '$match': {
+                        'user_id': data2.get('user_id'),
+                        'subject_id': subject_id,
+                        'class_id': class_id
+                    }
+                }
+            ]
+
+        pipeline_facet = [
+            {
+                '$facet': body_facet
+            },
+            {
+                '$unwind': '$total_exam'
+            },
+            {
+                '$set': {
+                    'total_exam': '$total_exam.count'
+                }
+            }
+        ]
+
+        pipeline = pipeline_head + pipeline_facet
+        
+        exam_info = exams_db[EXAMS].aggregate(pipeline)
+        exam_data = {}
+        if exam_info.alive:
+            exam_data = exam_info.next()
+
+            return JSONResponse(content={'status': 'success', 'data': exam_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
 
 
