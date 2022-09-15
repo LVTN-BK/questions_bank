@@ -1,6 +1,6 @@
 from configs.logger import logger
 from models.define.question import ManageQuestionType
-from configs.settings import COMMUNITY_EXAMS, EXAMS, GROUP_PARTICIPANT, exams_db, group_db
+from configs.settings import COMMUNITY_EXAMS, EXAMS, EXAMS_VERSION, GROUP_PARTICIPANT, exams_db, group_db
 from bson import ObjectId
 
 
@@ -14,6 +14,49 @@ def check_owner_of_exam(user_id: str, exam_id: str):
     if check:
         return True
     else:
+        return False
+
+def check_owner_of_exam_version(user_id: str, exam_version_id: str):
+    try:
+        pipeline=[
+            {
+                '$match': {
+                    '_id': ObjectId(exam_version_id),
+                }
+            },
+            {
+                '$set': {
+                    'exam_object_id': {
+                        '$toObjectId': '$exam_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'exams',
+                    'localField': 'exam_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'user_id': user_id
+                            }
+                        }
+                    ],
+                    'as': 'exam_info'
+                }
+            },
+            {
+                '$unwind': '$exam_info'
+            }
+        ]
+        check = exams_db[EXAMS_VERSION].aggregate(pipeline)
+        if check.alive:
+            return True
+        else:
+            return False
+    except Exception as e:
+        logger().error(e)
         return False
 
 def check_permission_view_exam(exam_id: str, user_id: str):

@@ -302,7 +302,7 @@ async def copy_question_by_version(
         # find question version info
         question_version_info = questions_db[QUESTIONS_VERSION].find_one(
             {
-                '_id': data.question_version_id
+                '_id': ObjectId(data.question_version_id)
             }
         )
 

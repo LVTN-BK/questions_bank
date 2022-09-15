@@ -4,7 +4,7 @@ from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_community_classify_other_id, get_group_classify_other_id, get_subject_info
-from app.utils.exam_utils.exam_check_permission import check_owner_of_exam
+from app.utils.exam_utils.exam_check_permission import check_owner_of_exam, check_owner_of_exam_version
 from app.utils.exam_utils.exam_eval import evaluate_irt, get_item_level_name, get_probability_irt, insert_exam_evaluate, insert_question_evaluate
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
 from app.utils.question_utils.question import get_question_level, question_evaluation_func
@@ -21,7 +21,7 @@ from models.db.group import GroupExam
 from models.db.question import Questions_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.exam import ManageExamEvaluationStatus
-from models.request.exam import DATA_Copy_Exam, DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
+from models.request.exam import DATA_Copy_Exam, DATA_Copy_Exam_By_Version, DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
 from models.request.question import (DATA_Copy_Question, DATA_Evaluate_Question)
 from starlette.responses import JSONResponse
 
@@ -374,6 +374,82 @@ async def copy_exam(
 
         data = {
             'exam_id': str(exam_insert_id)
+        }
+
+        return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#==================EXAMS_COPY_BY_VERSION=================
+#========================================================
+@app.post(
+    path='/copy_exam_by_version',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['exams - action']
+)
+async def copy_exam_by_version(
+    background_tasks: BackgroundTasks,
+    data: DATA_Copy_Exam_By_Version,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check owner of exam version
+        if check_owner_of_exam_version(user_id=data2.get('user_id'), exam_version_id=data.exam_version_id):
+            raise Exception('user is now owner of exam!!!')
+
+        # find exam version info
+        exam_version_info = exams_db[EXAMS_VERSION].find_one(
+            {
+                '_id': ObjectId(data.exam_version_id),
+            }
+        )
+
+        # find exam info
+        exam_info = exams_db[EXAMS].find_one(
+            {
+                '_id': ObjectId(exam_version_info.get('exam_id')),
+            }
+        )
+
+
+        if not exam_info or not exam_version_info:
+            raise Exception('exam not found!!!')
+
+        exam_data = Exams_DB(
+            user_id=data2.get('user_id'),
+            class_id=data.class_id,
+            subject_id=data.subject_id,
+            tag_id=exam_info.get('tag_id'),
+            datetime_created=datetime.now().timestamp()
+        )
+        exam_insert_id = exams_db[EXAMS].insert_one(jsonable_encoder(exam_data)).inserted_id
+
+        
+        exam_version_data = Exams_Version_DB(
+            exam_id=str(exam_insert_id),
+            exam_title=exam_version_info.get('exam_title'),
+            note=exam_version_info.get('note'),
+            time_limit=exam_version_info.get('time_limit'),
+            organization_info=exam_version_info.get('organization_info'),
+            exam_info=exam_version_info.get('exam_info'),
+            questions=exam_version_info.get('questions'),
+            datetime_created=datetime.now().timestamp()
+        )
+
+        exam_version_insert_id = exams_db[EXAMS_VERSION].insert_one(jsonable_encoder(exam_version_data)).inserted_id
+
+        data = {
+            'exam_id': str(exam_insert_id),
+            'exam_version_id': str(exam_version_insert_id)
         }
 
         return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)

@@ -57,4 +57,9 @@ class DATA_Copy_Exam(BaseModel):
     subject_id: str = Field(..., description='ID of subject')
     class_id: str = Field(..., description='ID of class')
 
+class DATA_Copy_Exam_By_Version(BaseModel):
+    exam_version_id: str = Field(..., description='ID of exam version')
+    subject_id: str = Field(..., description='ID of subject')
+    class_id: str = Field(..., description='ID of class')
+
 
