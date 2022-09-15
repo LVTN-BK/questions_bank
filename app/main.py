@@ -8,3 +8,4 @@ from .api_views.comment import *
 from .api_views.classify import *
 from tests.test import *
 from .api_views.image_and_file import *
+from .api_views.community import *
