@@ -7,7 +7,7 @@ from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_group_classify_other_id, get_subject_info
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
 from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value, question_import_func, update_question_evaluation_status
-from app.utils.question_utils.question_check_permission import check_owner_of_question
+from app.utils.question_utils.question_check_permission import check_owner_of_question, check_owner_of_question_version
 from bson import ObjectId
 from configs.logger import logger
 from configs.settings import (ANSWERS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
@@ -18,7 +18,7 @@ from models.db.group import GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
-from models.request.question import (DATA_Copy_Question, DATA_Create_Answer,
+from models.request.question import (DATA_Copy_Question, DATA_Copy_Question_By_Version, DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
@@ -267,6 +267,85 @@ async def copy_question(
 
         data = {
             'question_id': str(question_insert_id)
+        }
+
+        return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#=================QUESTIONS_COPY_BY_VERSION==============
+#========================================================
+@app.post(
+    path='/copy_question_by_version',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - action']
+)
+async def copy_question_by_version(
+    # background_tasks: BackgroundTasks,
+    data: DATA_Copy_Question_By_Version,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # check owner of question version
+        if check_owner_of_question_version(user_id=data2.get('user_id'), question_version_id=data.question_version_id):
+            raise Exception('user is now owner of question!!!')
+
+        # find question version info
+        question_version_info = questions_db[QUESTIONS_VERSION].find_one(
+            {
+                '_id': data.question_version_id
+            }
+        )
+
+        # find question info
+        question_info = questions_db[QUESTIONS].find_one(
+            {
+                '_id': ObjectId(question_version_info.get('question_id')),
+            }
+        )
+
+        
+
+        if not question_info or not question_version_info:
+            raise Exception('question not found!!!')
+
+        question_data = Questions_DB(
+            user_id=data2.get('user_id'),
+            class_id=data.class_id,
+            subject_id=data.subject_id,
+            chapter_id=data.chapter_id,
+            type=question_info.get('type'),
+            tag_id=question_info.get('tag_id'),
+            level=question_info.get('level'),
+            datetime_created=datetime.now().timestamp()
+        )
+        question_insert_id = questions_db[QUESTIONS].insert_one(jsonable_encoder(question_data)).inserted_id
+
+        
+        question_version_data = Questions_Version_DB(
+            question_id=str(question_insert_id),
+            question_content=question_version_info.get('question_content'),
+            answers=question_version_info.get('answers'),
+            answers_right=question_version_info.get('answers_right'),
+            sample_answer=question_version_info.get('sample_answer'),
+            display=question_version_info.get('display'),
+            datetime_created=datetime.now().timestamp()
+        )
+
+        question_version_insert_id = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(question_version_data)).inserted_id
+
+        data = {
+            'question_id': str(question_insert_id),
+            'question_version_id': str(question_version_insert_id)
         }
 
         return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
