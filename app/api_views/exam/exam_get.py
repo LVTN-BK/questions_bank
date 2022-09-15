@@ -2456,6 +2456,9 @@ async def group_get_all_exam(
                             '$project': {
                                 '_id': 0,
                                 'exam_id': 1,
+                                'exam_version_id': {
+                                    '$toString': '$_id'
+                                },
                                 'user_info': '$exam_detail.user_info',
                                 'class_info': '$exam_detail.class_info',
                                 'subject_info': '$exam_detail.subject_info',
@@ -2812,6 +2815,9 @@ async def community_get_all_exam(
                             '$project': {
                                 '_id': 0,
                                 'exam_id': 1,
+                                'exam_version_id': {
+                                    '$toString': '$_id'
+                                },
                                 'user_info': '$exam_detail.user_info',
                                 'class_info': '$exam_detail.class_info',
                                 'subject_info': '$exam_detail.subject_info',
