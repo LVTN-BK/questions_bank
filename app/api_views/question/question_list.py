@@ -462,8 +462,36 @@ async def group_get_all_question(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'users_profile',
+                                'localField': 'user_id',
+                                'foreignField': 'user_id',
+                                'pipeline': [
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'user_id': 1,
+                                            'name': {
+                                                '$ifNull': ['$name', None]
+                                            },
+                                            'email': {
+                                                '$ifNull': ['$email', None]
+                                            },
+                                            'avatar': {
+                                                '$ifNull': ['$avatar', None]
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'author_data'
+                            }
+                        },
+                        {
                             '$project': { #project for questions collection
                                 '_id': 0,
+                                'user_info': {
+                                    '$ifNull': [{'$first': '$author_data'}, None]
+                                },
                                 'type': 1,
                                 'level': 1,
                                 'tags_info': 1,
@@ -500,6 +528,7 @@ async def group_get_all_question(
                         {
                             '$project': {
                                 '_id': 0,
+                                'user_info': "$question_information.user_info",
                                 'question_id': 1,
                                 'question_version_id': {
                                     '$toString': '$_id'
@@ -701,8 +730,36 @@ async def community_get_all_question(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'users_profile',
+                                'localField': 'user_id',
+                                'foreignField': 'user_id',
+                                'pipeline': [
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'user_id': 1,
+                                            'name': {
+                                                '$ifNull': ['$name', None]
+                                            },
+                                            'email': {
+                                                '$ifNull': ['$email', None]
+                                            },
+                                            'avatar': {
+                                                '$ifNull': ['$avatar', None]
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'author_data'
+                            }
+                        },
+                        {
                             '$project': { #project for questions collection
                                 '_id': 0,
+                                'user_info': {
+                                    '$ifNull': [{'$first': '$author_data'}, None]
+                                },
                                 'type': 1,
                                 'level': 1,
                                 'tags_info': 1,
@@ -739,6 +796,7 @@ async def community_get_all_question(
                         {
                             '$project': {
                                 '_id': 0,
+                                'user_info': "$question_information.user_info",
                                 'question_id': 1,
                                 'question_version_id': {
                                     '$toString': '$_id'
@@ -782,7 +840,8 @@ async def community_get_all_question(
         return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'Failed'}, status_code=status.HTTP_403_FORBIDDEN)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
