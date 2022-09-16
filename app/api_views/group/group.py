@@ -1591,33 +1591,33 @@ async def remove_group_exam(
         return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
         
 
-        # find member
-        query_mem = {
-            'group_id': data.group_id,
-            'user_id': data2.get('user_id'),
-        }
-        mem_data = group_db[GROUP_PARTICIPANT].find_one(query_mem)
-        if mem_data:
-            # find exam
-            query_exam = {
-                'group_id': data.group_id,
-                'exam_id': data.exam_id
-            }
-            exam_data = group_db[GROUP_EXAMS].find_one(query_exam)
-            if not exam_data:
-                msg = 'exam not found!'
-                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+        # # find member
+        # query_mem = {
+        #     'group_id': data.group_id,
+        #     'user_id': data2.get('user_id'),
+        # }
+        # mem_data = group_db[GROUP_PARTICIPANT].find_one(query_mem)
+        # if mem_data:
+        #     # find exam
+        #     query_exam = {
+        #         'group_id': data.group_id,
+        #         'exam_id': data.exam_id
+        #     }
+        #     exam_data = group_db[GROUP_EXAMS].find_one(query_exam)
+        #     if not exam_data:
+        #         msg = 'exam not found!'
+        #         return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
 
-            # check user is group owner or sharer
-            if mem_data.get('is_owner') or (exam_data.get('sharer_id') == data2.get('user_id')):
-                # delete group exam
-                group_db[GROUP_EXAMS].delete_one(query_exam)
-            else:
-                raise Exception('user is not owner of group or sharer!')
+        #     # check user is group owner or sharer
+        #     if mem_data.get('is_owner') or (exam_data.get('sharer_id') == data2.get('user_id')):
+        #         # delete group exam
+        #         group_db[GROUP_EXAMS].delete_one(query_exam)
+        #     else:
+        #         raise Exception('user is not owner of group or sharer!')
 
-            return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
-        else:
-            raise Exception('user is not member of group!!!')        
+        #     return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+        # else:
+        #     raise Exception('user is not member of group!!!')        
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)

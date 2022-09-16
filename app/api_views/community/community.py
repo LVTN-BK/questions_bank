@@ -43,18 +43,39 @@ async def remove_community_question(
 ):
     logger().info('===============user_remove_community_question=================')
     try:
-        # check permission remove community question
-        # check is admin or owner of question
-        if not (check_is_admin(user_id=data2.get('user_id')) or check_owner_of_question(user_id=data2.get('user_id'), question_id=data.question_id)):
-            raise Exception('Người dùng không có quyền xóa câu hỏi!')
-
-        group_db[COMMUNITY_QUESTIONS].delete_one(
-            {
-                'question_id': data.question_id
+        # check is admin
+        if check_is_admin(user_id=data2.get('user_id')):
+            query_delete = {
+                'group_id': data.group_id,
+                'question_id': {
+                    '$in': data.question_ids
+                }
             }
-        )
+            group_db[COMMUNITY_QUESTIONS].delete_many(query_delete)
+        # check member of group
+        else:
+            query_delete = {
+                'question_id': {
+                    '$in': data.question_ids
+                },
+                'sharer_id': data2.get('user_id')
+            }
+            group_db[COMMUNITY_QUESTIONS].delete_many(query_delete)
 
-        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)      
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+
+        # # check permission remove community question
+        # # check is admin or owner of question
+        # if not (check_is_admin(user_id=data2.get('user_id')) or check_owner_of_question(user_id=data2.get('user_id'), question_id=data.question_id)):
+        #     raise Exception('Người dùng không có quyền xóa câu hỏi!')
+
+        # group_db[COMMUNITY_QUESTIONS].delete_one(
+        #     {
+        #         'question_id': data.question_id
+        #     }
+        # )
+
+        # return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)      
     except Exception as e:
         logger().error(e)
         msg = 'Có lỗi xảy ra!'
@@ -86,18 +107,38 @@ async def remove_community_exam(
 ):
     logger().info('===============user_remove_community_exam=================')
     try:
-        # check permission remove community exam
-        # check is admin or owner of exam
-        if not (check_is_admin(user_id=data2.get('user_id')) or check_owner_of_exam(user_id=data2.get('user_id'), exam_id=data.exam_id)):
-            raise Exception('Người dùng không có quyền xóa đề thi!')
-
-        group_db[COMMUNITY_EXAMS].delete_one(
-            {
-                'exam_id': data.exam_id
+        # check is admin
+        if check_is_admin(user_id=data2.get('user_id')):
+            query_delete = {
+                'exam_id': {
+                    '$in': data.exam_ids
+                }
             }
-        )
+            group_db[COMMUNITY_EXAMS].delete_many(query_delete)
+        # check member of group
+        else:
+            query_delete = {
+                'exam_id': {
+                    '$in': data.exam_ids
+                },
+                'sharer_id': data2.get('user_id')
+            }
+            group_db[COMMUNITY_EXAMS].delete_many(query_delete)
 
-        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)           
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+
+        # # check permission remove community exam
+        # # check is admin or owner of exam
+        # if not (check_is_admin(user_id=data2.get('user_id')) or check_owner_of_exam(user_id=data2.get('user_id'), exam_id=data.exam_id)):
+        #     raise Exception('Người dùng không có quyền xóa đề thi!')
+
+        # group_db[COMMUNITY_EXAMS].delete_one(
+        #     {
+        #         'exam_id': data.exam_id
+        #     }
+        # )
+
+        # return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)           
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)

@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field, HttpUrl
 #=================USER_REMOVE_COMMUNITY_QUESTION===================
 #==================================================================
 class DATA_Remove_Community_Question(BaseModel):
-    question_id: str = Field(..., description='ID of question')
+    question_ids: List[str] = Field(..., description='List ID of question')
 
 #==================================================================
 #===================USER_REMOVE_COMMUNITY_EXAM=====================
 #==================================================================
 class DATA_Remove_Community_Exam(BaseModel):
-    exam_id: str = Field(..., description='ID of exam')
+    exam_ids: List[str] = Field(..., description='List ID of exam')
