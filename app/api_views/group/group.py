@@ -2,7 +2,7 @@
 from datetime import datetime
 from math import ceil
 from typing import Optional
-from app.utils.group_utils.group import check_group_exist, check_owner_of_group
+from app.utils.group_utils.group import check_group_exist, check_owner_of_group, check_owner_or_user_of_group
 from app.utils.question_utils.question import get_data_and_metadata
 from configs.settings import GROUP_EXAMS, GROUP_QUESTIONS
 from models.db.group import Group_DB, GroupMember
@@ -1485,33 +1485,57 @@ async def remove_group_question(
 ):
     logger().info('===============user_remove_group_question=================')
     try:
-        # find member
-        query_mem = {
-            'group_id': data.group_id,
-            'user_id': data2.get('user_id'),
-        }
-        mem_data = group_db[GROUP_PARTICIPANT].find_one(query_mem)
-        if mem_data:
-            # find question
-            query_question = {
+        # check owner of group
+        if check_owner_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+            query_delete = {
                 'group_id': data.group_id,
-                'question_id': data.question_id
+                'question_id': {
+                    '$in': data.question_ids
+                }
             }
-            question_data = group_db[GROUP_QUESTIONS].find_one(query_question)
-            if not question_data:
-                msg = 'question not found!'
-                return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
-
-            # check user is group owner or sharer
-            if mem_data.get('is_owner') or (question_data.get('sharer_id') == data2.get('user_id')):
-                # delete group question
-                group_db[GROUP_QUESTIONS].delete_one(query_question)
-            else:
-                raise Exception('user is not owner of group or sharer!')
-
-            return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+            group_db[GROUP_QUESTIONS].delete_many(query_delete)
+        # check member of group
+        elif check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+            query_delete = {
+                'group_id': data.group_id,
+                'question_id': {
+                    '$in': data.question_ids
+                },
+                'sharer_id': data2.get('user_id')
+            }
+            group_db[GROUP_QUESTIONS].delete_many(query_delete)
         else:
-            raise Exception('user is not member of group!!!')        
+            raise Exception('Bạn không là thành viên nhóm!')
+
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+
+        # # find member
+        # query_mem = {
+        #     'group_id': data.group_id,
+        #     'user_id': data2.get('user_id'),
+        # }
+        # mem_data = group_db[GROUP_PARTICIPANT].find_one(query_mem)
+        # if mem_data:
+        #     # find question
+        #     query_question = {
+        #         'group_id': data.group_id,
+        #         'question_id': data.question_id
+        #     }
+        #     question_data = group_db[GROUP_QUESTIONS].find_one(query_question)
+        #     if not question_data:
+        #         msg = 'question not found!'
+        #         return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+
+        #     # check user is group owner or sharer
+        #     if mem_data.get('is_owner') or (question_data.get('sharer_id') == data2.get('user_id')):
+        #         # delete group question
+        #         group_db[GROUP_QUESTIONS].delete_one(query_question)
+        #     else:
+        #         raise Exception('user is not owner of group or sharer!')
+
+        #     return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+        # else:
+        #     raise Exception('user is not member of group!!!')        
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
@@ -1542,6 +1566,31 @@ async def remove_group_exam(
 ):
     logger().info('===============user_remove_group_exam=================')
     try:
+        # check owner of group
+        if check_owner_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+            query_delete = {
+                'group_id': data.group_id,
+                'exam_id': {
+                    '$in': data.exam_ids
+                }
+            }
+            group_db[GROUP_EXAMS].delete_many(query_delete)
+        # check member of group
+        elif check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=data.group_id):
+            query_delete = {
+                'group_id': data.group_id,
+                'exam_id': {
+                    '$in': data.exam_ids
+                },
+                'sharer_id': data2.get('user_id')
+            }
+            group_db[GROUP_EXAMS].delete_many(query_delete)
+        else:
+            raise Exception('Bạn không là thành viên nhóm!')
+
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+        
+
         # find member
         query_mem = {
             'group_id': data.group_id,
@@ -1571,7 +1620,7 @@ async def remove_group_exam(
             raise Exception('user is not member of group!!!')        
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 

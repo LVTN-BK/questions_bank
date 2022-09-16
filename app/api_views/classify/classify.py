@@ -277,51 +277,6 @@ async def delete_class(
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #========================================================
-#====================GROUP_DELETE_CLASS==================
-#========================================================
-@app.delete(
-    path='/group_delete_class',
-    responses={
-        status.HTTP_200_OK: {
-            'model': ''
-        },
-        status.HTTP_403_FORBIDDEN: {
-            'model': ''
-        }
-    },
-    tags=['classify']
-)
-async def group_delete_class(
-    data1: DATA_Group_Delete_Class,
-    data2: dict = Depends(valid_headers)
-):
-    try:
-        # find if have question in group use this class
-        class_usage = questions_db[GROUP_QUESTIONS].find_one(
-            {
-                'class_id': data1.class_id,
-                'group_id': data1.group_id
-            }
-        )
-        if class_usage:
-            msg = 'Lớp này đang được sử dụng, không thể xóa!'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
-
-        class_data = classify_db[CLASS].find_one_and_delete(
-            {
-                '_id': ObjectId(data1.class_id)
-            }
-        )
-        if class_data:
-            return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
-        else:
-            msg = 'class not found!!!'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        logger().error(e)
-        return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
-
-#========================================================
 #=====================UPDATE_CHAPTER=====================
 #========================================================
 @app.put(
