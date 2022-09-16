@@ -9,7 +9,7 @@ from app.utils.question_utils.question import get_data_and_metadata, get_list_ta
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (ANSWERS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
+from configs.settings import (ANSWERS, COMMUNITY_QUESTIONS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
 from fastapi import Depends, Path, Query, status, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
@@ -356,8 +356,6 @@ async def group_get_question_classify(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        filter_question = [{}]
-
         #check group exist:
         if not check_group_exist(group_id=group_id):
             msg = 'group not found!'
@@ -366,16 +364,6 @@ async def group_get_question_classify(
         # check owner of group or member
         if not check_owner_or_user_of_group(user_id=data2.get('user_id'), group_id=group_id):
             raise Exception('user is not the owner or member of group!')
-
-
-        # get list question of group
-        list_question = get_list_group_question(group_id=group_id)
-
-        # =============== status =================
-        query_question_status = {
-            'is_removed': False
-        }
-        filter_question.append(query_question_status)
 
         pipeline = [
             {
@@ -560,6 +548,206 @@ async def group_get_question_classify(
             return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)
         else:
             msg = 'classify not found!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#=============COMMUNITY_GET_QUESTION_CLASSIFY============
+#========================================================
+@app.get(
+    path='/community/get_question_classify',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions']
+)
+async def community_get_question_classify(
+    # data2: dict = Depends(valid_headers)
+):
+    try:
+        pipeline = [
+            {
+                '$group': {
+                    '_id': '$subject_id'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'subject',
+                    'let': {
+                        'subject_id': '$_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            },
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$subject_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'subject_info'
+                }
+            },
+            {
+                '$unwind': '$subject_info'
+            },
+            {
+                '$lookup': {
+                    'from': 'community_questions',
+                    'let': {
+                        'subject_id': '$_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$subject_id', '$$subject_id']
+                                }
+                            }
+                        },
+                        {
+                            '$group': {
+                                '_id': '$class_id'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'class',
+                                'let': {
+                                    'class_id': '$_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        },
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$class_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'class_info'
+                            }
+                        },
+                        {
+                            '$unwind': '$class_info'
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'community_questions',
+                                'let': {
+                                    'class_id': '$_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$class_id', '$$class_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$group': {
+                                            '_id': '$chapter_id',
+                                        }
+                                    },
+                                    {
+                                        '$lookup': {
+                                            'from': 'chapter',
+                                            'let': {
+                                                'chapter_id': '$_id'
+                                            },
+                                            'pipeline': [
+                                                {
+                                                    '$set': {
+                                                        'id': {
+                                                            '$toString': '$_id'
+                                                        }
+                                                    },
+                                                },
+                                                {
+                                                    '$match': {
+                                                        '$expr': {
+                                                            '$eq': ['$id', '$$chapter_id']
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            'as': 'chapter_info'
+                                        }
+                                    },
+                                    {
+                                        '$unwind': '$chapter_info'
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': '$_id',
+                                            'name': '$chapter_info.name'
+                                        }
+                                    }
+                                ],
+                                'as': 'chapters'
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': '$_id',
+                                'name': '$class_info.name',
+                                'chapters': 1
+                            }
+                        }
+                    ],
+                    'as': 'classes'
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'id': '$_id',
+                    'name': '$subject_info.name',
+                    'classes': 1
+                }
+            },
+            {
+                '$group': {
+                    '_id': None,
+                    'data': {
+                        '$push': '$$ROOT'
+                    }
+                }
+            }
+        ]
+
+        classify_data = questions_db[COMMUNITY_QUESTIONS].aggregate(pipeline)
+
+        if classify_data.alive:
+            result_data = classify_data.next().get('data')
+            return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)
+        else:
+            msg = 'Không tìm thấy!'
             return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger().error(e)
