@@ -1487,3 +1487,131 @@ async def user_auto_pick_question(
         msg="Có lỗi xảy ra!"
         return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
+
+
+#========================================================
+#===========USER_GET_LIST_QUESTION_EVALUATION============
+#========================================================
+@app.get(
+    path='/user_get_questions_evaluation',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - evaluation']
+)
+async def user_get_questions_evaluation(
+    page: int = Query(default=1, description='page number'),
+    limit: int = Query(default=10, description='limit of num result'),
+    # search: Optional[str] = Query(default=None, description='text search'),
+    question_id: Optional[str] = Query(..., description='ID of question'),
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        num_skip = (page - 1)*limit
+
+        pipeline = [
+            {
+                '$match': {
+                    'question_id': question_id,
+                    'user_id': data2.get('user_id')
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'questions',
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'question_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                'question_id': question_id
+                            }
+                        }
+                    ],
+                    'as': 'question_info'
+                }
+            },
+            {
+                '$set': {
+                    'question_info': {
+                        '$ifNull': [{'$first': '$question_info'}, {}]
+                    }
+                }
+            },
+            {
+                '$set': {
+                    'old_level': {
+                        '$ifNull': ['$question_info.level', None]
+                    },
+                    # 'is_owner': {
+                    #     '$eq': ['$question_info.user_id', data2.get('user_id')]
+                    # }
+                }
+            },                   
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 0,
+                                # 'evaluation_id': 0,
+                                # 'datetime_created': 0,
+                                'question_info': 0,
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'
+            },
+        ]
+
+        questions = questions_db[QUESTIONS_EVALUATION].aggregate(pipeline)
+
+        result_data, meta_data = get_data_and_metadata(aggregate_response=questions, page=page)
+
+        return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
