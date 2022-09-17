@@ -2958,6 +2958,11 @@ async def get_exam_evaluation(
                             }
                         },
                         {
+                            '$sort': {
+                                'datetime_created': 1
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
                                 'user_id': 0,
