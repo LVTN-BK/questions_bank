@@ -6,7 +6,7 @@ from app.secure._token import *
 from app.utils._header import valid_headers
 from app.utils.classify_utils.classify import get_chapter_info, get_class_info, get_community_classify_other_id, get_group_classify_other_id, get_subject_info
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_question
-from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value, question_import_func, update_question_evaluation_status
+from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value, question_import_func, reject_update_question_evaluation_status, update_question_evaluation_status
 from app.utils.question_utils.question_check_permission import check_owner_of_question, check_owner_of_question_version
 from bson import ObjectId
 from configs.logger import logger
@@ -491,7 +491,7 @@ async def reject_update_question_level(
     try:
         # update question evaluation
         background_tasks.add_task(
-            update_question_evaluation_status, 
+            reject_update_question_evaluation_status, 
             user_id = data2.get('user_id'),
             data = data
         )
