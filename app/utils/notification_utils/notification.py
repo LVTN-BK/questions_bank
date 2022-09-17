@@ -85,7 +85,8 @@ async def create_notification_to_group_members_except_user(
             json_data = jsonable_encoder(new_noti)
             _id = noti_db[NOTI_COLLECTION].insert_one(json_data).inserted_id
 
-            json_data['_id'] = str(json_data['_id'])
+            json_data['id'] = str(json_data['_id'])
+            del json_data['_id']
             del json_data['receiver_ids']
             del json_data['seen_ids']
             del json_data['removed_ids']
