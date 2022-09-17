@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.account_utils.user import get_user_info
 from app.utils.notification_utils.check_noti_setting import get_list_user_id_enable_noti_type
 from app.utils.group_utils.group import get_group_members_id_except_user
 from app.utils.notification_utils.notification_content import get_notification_content
@@ -46,6 +47,10 @@ async def create_notification_to_list_specific_user(
             del json_data['seen_ids']
             del json_data['removed_ids']
 
+            sender_info = get_user_info(user_id=json_data.get('sender_id'))
+            json_data['sender_info'] = sender_info
+            del json_data['sender_id']
+
             # Broastcast to active user:
             await notification_manage.broadcast_notification_to_list_specific_user(receive_ids=data.list_users, json_data=json_data, noti_type=data.noti_type)
 
@@ -84,6 +89,10 @@ async def create_notification_to_group_members_except_user(
             del json_data['receiver_ids']
             del json_data['seen_ids']
             del json_data['removed_ids']
+
+            sender_info = get_user_info(user_id=json_data.get('sender_id'))
+            json_data['sender_info'] = sender_info
+            del json_data['sender_id']
 
             # Broastcast to active members:
             await notification_manage.broadcast_notification_to_list_specific_user(receive_ids=receive_ids, json_data=json_data)

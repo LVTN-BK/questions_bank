@@ -1,5 +1,5 @@
 from configs.logger import logger
-from configs.settings import ADMIN_COLLECTION, user_db
+from configs.settings import ADMIN_COLLECTION, USERS_PROFILE, user_db
 
 
 def check_is_admin(user_id:str):
@@ -14,3 +14,37 @@ def check_is_admin(user_id:str):
     except Exception as e:
         logger().error(e)
         return False
+
+
+def get_user_info(user_id: str):
+    try:
+        pipeline = [
+            {
+                '$match': {
+                    'user_id': user_id
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'user_id': 1,
+                    'name': {
+                        '$ifNull': ['$name', None]
+                    },
+                    'email': {
+                        '$ifNull': ['$email', None]
+                    },
+                    'avatar': {
+                        '$ifNull': ['$avatar', None]
+                    }
+                }
+            }
+        ]
+        user_data = user_db[USERS_PROFILE].aggregate(pipeline)
+        if user_data.alive:
+            result = user_data.next()
+            return result
+        else:
+            return {}
+    except Exception:
+        return {}
