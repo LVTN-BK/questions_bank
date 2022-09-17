@@ -69,7 +69,7 @@ def insert_question_evaluate(user_id, question_ids, difficult_params, probabilit
         logger().error(e)
 
 
-def insert_exam_evaluate(exam_id: str, user_id: str, data: dict):
+def insert_exam_evaluate(user_id: str, data: dict):
     try:
         # update current latest question evaluation
         # update_question_evaluation = exams_db[EXAMS_EVALUATION].find_one_and_update(
@@ -85,21 +85,21 @@ def insert_exam_evaluate(exam_id: str, user_id: str, data: dict):
         #     }
         # )
 
-        data_insert_exam = {
-            'user_id': user_id,
-            'exam_id': data.get('exam_id'),
-            'datetime_created': data.get('datetime_created')
-        }
-        # insert evaluation into db
-        insert_exam_id = exams_db[EXAMS_EVALUATION].insert_one(data_insert_exam).inserted_id
+        # data_insert_exam = {
+        #     'user_id': user_id,
+        #     'exam_id': data.get('exam_id'),
+        #     'datetime_created': data.get('datetime_created')
+        # }
+        # # insert evaluation into db
+        # insert_exam_id = exams_db[EXAMS_EVALUATION].insert_one(data_insert_exam).inserted_id
         
         # insert to question evaluation
         for data_question in data.get('data'):
             data_question.update(
                 {
                     'user_id': user_id,
-                    'evaluation_id': str(insert_exam_id),
-                    'datetime_created': data.get('datetime_created')
+                    'evaluation_id': data.get('id'),
+                    'datetime_created': datetime.now().timestamp()
                 }
             )
             exams_db[QUESTIONS_EVALUATION].insert_one(data_question)

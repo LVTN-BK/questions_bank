@@ -11,7 +11,7 @@ from app.utils.question_utils.question import get_question_level, question_evalu
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (COMMUNITY_EXAMS, EXAMS_VERSION, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
+from configs.settings import (COMMUNITY_EXAMS, EXAMS_EVALUATION, EXAMS_VERSION, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
 from fastapi import Depends, status, BackgroundTasks, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
@@ -286,17 +286,32 @@ async def evaluate_exam_by_file(
                 'status': ManageExamEvaluationStatus.PENDING
             }
             question_eval_data.append(data_eval)
+        
         result_data = {
             'exam_id': exam_id,
             'datetime_created': datetime.now().timestamp(),
             'data': question_eval_data
         }
 
+        data_insert_exam = {
+            'user_id': data2.get('user_id'),
+            'exam_id': exam_id,
+            'datetime_created': result_data.get('datetime_created')
+        }
+        # insert evaluation into db
+        insert_exam_id = exams_db[EXAMS_EVALUATION].insert_one(data_insert_exam).inserted_id
+        
+        result_data.update(
+            {
+                'id': str(insert_exam_id)
+            }
+        )
+
         # insert data to database
         background_tasks.add_task(
             insert_exam_evaluate, 
             user_id = data2.get('user_id'),
-            exam_id = exam_id, 
+            # evaluation_id = str(insert_exam_id), 
             data = result_data
         )
 
