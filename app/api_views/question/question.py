@@ -472,8 +472,29 @@ async def user_get_one_question(
                 '$unwind': '$ques_ver'
             },
             {
+                '$lookup': {
+                    'from': 'community_questions',
+                    'let': {
+                        'question_id': '$question_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$question_id', '$$question_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'community_question_info'
+                }
+            },
+            {
                 '$project': {
                     '_id': 0,
+                    'is_public': {
+                        '$ne': ['$community_question_info', []]
+                    },
                     'user_id': 1,
                     'class_id': 1,
                     'subject_id': 1,
@@ -785,8 +806,29 @@ async def get_question_by_version(
                 '$unwind': '$question_information'
             },
             {
+                '$lookup': {
+                    'from': 'community_questions',
+                    'let': {
+                        'question_id': '$question_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$question_id', '$$question_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'community_question_info'
+                }
+            },
+            {
                 '$project': {
                     '_id': 0,
+                    'is_public': {
+                        '$ne': ['$community_question_info', []]
+                    },
                     'question_id': 1,
                     'question_version_id': {
                         '$toString': '$_id'

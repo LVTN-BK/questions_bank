@@ -469,9 +469,30 @@ async def user_get_one_exam(
                 '$unwind': '$exam_detail'
             },
             {
+                '$lookup': {
+                    'from': 'community_exams',
+                    'let': {
+                        'exam_id': '$exam_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$exam_id', '$$exam_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'community_exam_info'
+                }
+            },
+            {
                 '$project': {
                     '_id': 0,
                     'exam_id': 1,
+                    'is_public': {
+                        '$ne': ['$community_exam_info', []]
+                    },
                     'user_info': {
                         '$ifNull': [{'$first': '$author_data'}, None]
                     },
@@ -1123,8 +1144,36 @@ async def get_exam_by_version(
                             }
                         },
                         {
+                            '$addFields': {
+                                'exam_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'community_exams',
+                                'let': {
+                                    'exam_id': '$exam_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$exam_id', '$$exam_id']
+                                            }
+                                        }
+                                    }
+                                ],
+                                'as': 'community_exam_info'
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
+                                'is_public': {
+                                    '$ne': ['$community_exam_info', []]
+                                },
                                 # 'exam_id': 1,
                                 'user_info': {
                                     '$ifNull': [{'$first': '$author_data'}, None]
@@ -1150,6 +1199,7 @@ async def get_exam_by_version(
                 '$project': {
                     '_id': 0,
                     'exam_id': 1,
+                    'is_public': '$exam_detail.is_public',
                     'user_info': '$exam_detail.user_info',
                     'class_info': '$exam_detail.class_info',
                     'subject_info': '$exam_detail.subject_info',
