@@ -312,15 +312,29 @@ async def community_get_classify(
                             }
                         },
                         {
+                            '$set': {
+                                'namelen': {
+                                    '$strLenCP': '$name'
+                                }
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'namelen': -1,
+                                'name': -1
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
                                 'id': {
                                     '$getField': 'class_id'
                                 },
                                 'name': 1,
+                                # 'namelen': 1,
                                 'chapters': 1
                             }
-                        }      
+                        }
                     ],
                     'as': 'classes'
                 }
