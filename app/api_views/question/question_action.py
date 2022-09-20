@@ -399,7 +399,8 @@ async def import_question(
     try:
         list_question_data = json.load(file.file)
         for question_data in list_question_data:
-            background_tasks.add_task(question_import_func, data=data, question_data=question_data, user_id=data2.get('user_id'))
+            question_import_func(data=data, question_data=question_data, user_id=data2.get('user_id'))
+            # background_tasks.add_task(question_import_func, data=data, question_data=question_data, user_id=data2.get('user_id'))
 
         return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
     except Exception as e:
