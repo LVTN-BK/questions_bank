@@ -263,9 +263,15 @@ async def user_get_all_question(
                                 '_id': 0,
                                 'type': 1,
                                 'level': 1,
-                                'subject_info': 1,
-                                'class_info': 1,
-                                'chapter_info': 1,
+                                'subject_info': {
+                                    '$first': '$subject_info'
+                                },
+                                'class_info': {
+                                    '$first': '$class_info'
+                                },
+                                'chapter_info': {
+                                    '$first': '$chapter_info'
+                                },
                                 'tags_info': 1,
                                 'is_public': {
                                     '$ne': ['$community_question_info', []]
