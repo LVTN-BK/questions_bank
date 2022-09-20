@@ -4,4 +4,4 @@ class ClassifyOwnerType:
     COMMUNITY = 'community'
 
 class ClassifyDefaultValue:
-    OTHER = 'Other'
+    OTHER = 'Khác'

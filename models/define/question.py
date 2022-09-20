@@ -10,3 +10,9 @@ class ManageQuestionType:
     SORT = 'sort'
     MATCHING = 'matching'
     FILL = 'fill'
+
+class ImportQuestionClassifyMode:
+    CHANGE = 'change'
+    KEEP = 'keep'
+    TEMPORATY = 'temporary'
+

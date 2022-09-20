@@ -1,6 +1,8 @@
 from typing import Dict, List, Optional, Tuple, Union
 from pydantic import BaseModel, Field
 
+from models.define.question import ImportQuestionClassifyMode
+
 class Tag(BaseModel):
     id: str = Field(..., description='ID of tag')
     isNew: bool = Field(..., description='tag is new?')
@@ -104,9 +106,10 @@ class DATA_Copy_Question(BaseModel):
     chapter_id: str = Field(..., description='ID of chapter')
 
 class DATA_Import_Question(BaseModel):
-    subject_id: str = Field(..., description='ID of subject')
-    class_id: str = Field(..., description='ID of class')
-    chapter_id: str = Field(..., description='ID of chapter')
+    mode: str = Field(default=ImportQuestionClassifyMode.KEEP, description='import mode')
+    subject_id: str = Field(default=None, description='ID of subject')
+    class_id: str = Field(default=None, description='ID of class')
+    chapter_id: str = Field(default=None, description='ID of chapter')
 
 class DATA_Copy_Question(BaseModel):
     question_id: str = Field(..., description='ID of question')
@@ -172,3 +175,12 @@ class DATA_Update_Question_Level(BaseModel):
 class DATA_Reject_Update_Question_Level(BaseModel):
     evaluation_id: str = Field(..., description='ID of evaluation')
     question_ids: List[str] = Field(..., description='List question IDs')
+
+
+class DATA_Update_Question_Classify(BaseModel):
+    question_ids: List[str] = Field(..., description='List question IDs')
+    subject_id: str = Field(..., description='ID of subject')
+    class_id: str = Field(..., description='ID of class')
+    chapter_id: str = Field(..., description='ID of chapter')
+
+

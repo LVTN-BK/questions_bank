@@ -23,7 +23,7 @@ from models.request.question import (DATA_Copy_Question, DATA_Copy_Question_By_V
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Import_Question, DATA_Reject_Update_Question_Level, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question, DATA_Update_Question_Level)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Import_Question, DATA_Reject_Update_Question_Level, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question, DATA_Update_Question_Classify, DATA_Update_Question_Level)
 from starlette.responses import JSONResponse
 
 
@@ -502,4 +502,46 @@ async def reject_update_question_level(
         msg = 'Có lỗi xảy ra!'
         return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
+
+#========================================================
+#===================UPDATE_QUESTION_CLASSIFY=============
+#========================================================
+@app.put(
+    path='/update_question_classify',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - action']
+)
+async def update_question_classify(
+    data: DATA_Update_Question_Classify,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        list_object_id = [ObjectId(x) for x in data.question_ids]
+        questions_db[QUESTIONS].update_many(
+            {
+                '_id': {
+                    '$in': list_object_id
+                },
+                'user_id': data2.get('user_id')
+            },
+            {
+                '$set': {
+                    'subject_id': data.subject_id,
+                    'class_id': data.class_id,
+                    'chapter_id': data.chapter_id
+                }
+            }
+        )
+        return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 

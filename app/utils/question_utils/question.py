@@ -1,9 +1,10 @@
 from datetime import datetime
 from math import ceil
+from app.utils.classify_utils.classify_create import get_user_classify_other_id, user_import_classify
 from configs.logger import logger
 from models.db.question import Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.exam import ManageExamEvaluationStatus
-from models.define.question import ManageQuestionLevel, ManageQuestionType
+from models.define.question import ImportQuestionClassifyMode, ManageQuestionLevel, ManageQuestionType
 from configs.settings import ANSWERS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, questions_db, classify_db, TAG_COLLECTION
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
@@ -449,11 +450,23 @@ def question_import_func(
 ):
     try:
         logger().info('===========question_import_func============')
+        if data.mode == ImportQuestionClassifyMode.KEEP:
+            subject_id, class_id, chapter_id = user_import_classify(
+                subject_id=question_data.get('subject_id'),
+                class_id=question_data.get('class_id'), 
+                chapter_id=question_data.get('chapter_id'),
+                user_id=user_id
+            )
+        elif data.mode == ImportQuestionClassifyMode.CHANGE and all([data.subject_id, data.class_id, data.chapter_id]):
+            subject_id, class_id, chapter_id = data.subject_id, data.class_id, data.chapter_id
+        else:
+            subject_id, class_id, chapter_id = get_user_classify_other_id(user_id=user_id)
+
         data_insert_question = Questions_DB(
             user_id=user_id,
-            class_id=data.class_id,
-            subject_id=data.subject_id,
-            chapter_id=data.chapter_id,
+            class_id=class_id,
+            subject_id=subject_id,
+            chapter_id=chapter_id,
             type=question_data.get('question_type'),
             tag_id=get_list_tag_id_from_input(question_data.get('tags_info')),
             level=question_data.get('level'),
