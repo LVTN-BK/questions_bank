@@ -130,7 +130,7 @@ def user_import_classify(subject_name: str, class_name: str, chapter_name: str, 
             chapter_data = Chapters_DB(
                 name=chapter_name,
                 user_id=user_id,
-                subject_id=id_subject,
+                class_id=id_class,
                 datetime_created=datetime.now().timestamp(),
             )
             id_insert_chapter = classify_db[CHAPTER].insert_one(jsonable_encoder(chapter_data)).inserted_id
@@ -138,7 +138,8 @@ def user_import_classify(subject_name: str, class_name: str, chapter_name: str, 
         return id_subject, id_class, id_chapter
         # else:
         #     return get_user_classify_other_id(user_id=user_id)
-    except Exception:
+    except Exception as e:
+        logger().error(e)
         return get_user_classify_other_id(user_id=user_id)
 
 
