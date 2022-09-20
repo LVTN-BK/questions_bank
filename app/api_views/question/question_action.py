@@ -507,7 +507,7 @@ async def reject_update_question_level(
 #========================================================
 #===================UPDATE_QUESTION_CLASSIFY=============
 #========================================================
-@app.put(
+@app.post(
     path='/update_question_classify',
     responses={
         status.HTTP_200_OK: {
