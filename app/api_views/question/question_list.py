@@ -106,6 +106,102 @@ async def user_get_all_question(
                             }
                         },
                         {
+                            '$lookup': {
+                                'from': 'subject',
+                                'let': {
+                                    'subject_id': '$subject_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$subject_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'subject_info'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'class',
+                                'let': {
+                                    'class_id': '$class_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$class_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'class_info'
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'chapter',
+                                'let': {
+                                    'chapter_id': '$chapter_id'
+                                },
+                                'pipeline': [
+                                    {
+                                        '$set': {
+                                            'id': {
+                                                '$toString': '$_id'
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$match': {
+                                            '$expr': {
+                                                '$eq': ['$id', '$$chapter_id']
+                                            }
+                                        }
+                                    },
+                                    {
+                                        '$project': {
+                                            '_id': 0,
+                                            'id': 1,
+                                            'name': 1
+                                        }
+                                    }
+                                ],
+                                'as': 'chapter_info'
+                            }
+                        },
+                        {
                             '$lookup': { #join with tag collection
                                 'from': 'tag',
                                 'let': {
@@ -167,6 +263,9 @@ async def user_get_all_question(
                                 '_id': 0,
                                 'type': 1,
                                 'level': 1,
+                                'subject_info': 1,
+                                'class_info': 1,
+                                'chapter_info': 1,
                                 'tags_info': 1,
                                 'is_public': {
                                     '$ne': ['$community_question_info', []]
@@ -248,6 +347,9 @@ async def user_get_all_question(
                                     '$ifNull': ['$question_evaluation.result', None]
                                 },
                                 'question_type': "$question_information.type",
+                                'subject_info': "$question_information.subject_info",
+                                'class_info': "$question_information.class_info",
+                                'chapter_info': "$question_information.chapter_info",
                                 'tags_info': "$question_information.tags_info",
                                 'is_public': "$question_information.is_public",
                                 'answers': 1,

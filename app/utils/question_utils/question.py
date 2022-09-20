@@ -452,9 +452,9 @@ def question_import_func(
         logger().info('===========question_import_func============')
         if data.mode == ImportQuestionClassifyMode.KEEP:
             subject_id, class_id, chapter_id = user_import_classify(
-                subject_id=question_data.get('subject_id'),
-                class_id=question_data.get('class_id'), 
-                chapter_id=question_data.get('chapter_id'),
+                subject_name=question_data.get('subject_info').get('name'),
+                class_name=question_data.get('class_info').get('name'), 
+                chapter_name=question_data.get('chapter_info').get('name'),
                 user_id=user_id
             )
         elif data.mode == ImportQuestionClassifyMode.CHANGE and all([data.subject_id, data.class_id, data.chapter_id]):
