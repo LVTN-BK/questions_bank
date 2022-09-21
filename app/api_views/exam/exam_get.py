@@ -441,6 +441,9 @@ async def user_get_one_exam(
                                 'exam_title': {
                                     '$first': '$exam_title'
                                 },
+                                'exam_code': {
+                                    '$first': '$exam_code'
+                                },
                                 'version_name': {
                                     '$first': '$version_name'
                                 },
@@ -481,6 +484,9 @@ async def user_get_one_exam(
                                 'exam_title': {
                                     '$first': '$exam_title'
                                 },
+                                'exam_code': {
+                                    '$first': '$exam_code'
+                                },
                                 'version_name': {
                                     '$first': '$version_name'
                                 },
@@ -507,6 +513,7 @@ async def user_get_one_exam(
                                 'exam_version_id': '$_id',
                                 'version_name': 1,
                                 'exam_title': 1,
+                                'exam_code': 1,
                                 'note': 1,
                                 'time_limit': 1,
                                 'organization_info': 1,
@@ -560,6 +567,7 @@ async def user_get_one_exam(
                     },
                     'tags_info': 1,
                     'exam_title': '$exam_detail.exam_title',
+                    'exam_code': '$exam_detail.exam_code',
                     'exam_version_id': '$exam_detail.exam_version_id',
                     'version_name': '$exam_detail.version_name',
                     'note': '$exam_detail.note',
@@ -1041,6 +1049,9 @@ async def get_exam_by_version(
                     'exam_title': {
                         '$first': '$exam_title'
                     },
+                    'exam_code': {
+                        '$first': '$exam_code'
+                    },
                     'version_name': {
                         '$first': '$version_name'
                     },
@@ -1083,6 +1094,9 @@ async def get_exam_by_version(
                     'exam_title': {
                         '$first': '$exam_title'
                     },
+                    'exam_code': {
+                        '$first': '$exam_code'
+                    },
                     'version_name': {
                         '$first': '$version_name'
                     },
@@ -1110,6 +1124,7 @@ async def get_exam_by_version(
                     'exam_version_id': '$_id',
                     'version_name': 1,
                     'exam_title': 1,
+                    'exam_code': 1,
                     'note': 1,
                     'time_limit': 1,
                     'organization_info': 1,

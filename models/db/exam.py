@@ -18,6 +18,7 @@ class Exams_DB(BaseModel):
 
 class Exams_Version_DB(BaseModel):
     exam_id: str = Field(..., description='ID of exam')
+    exam_code: str = Field(default=None, description='Exam code')
     exam_title: str = Field(..., description='title of exam')
     version_name: int = Field(default=1, description='name of version')
     is_latest: bool = Field(default=True, description='is the newest version of question')

@@ -36,6 +36,9 @@ async def create_exam(
 ):
     try:
         data1 = jsonable_encoder(data1)
+        if data1.get('num_version')>1:
+            if len(data1.get('exam_codes') != data1.get('num_version')):
+                raise Exception('Số lượng mã đề không đúng!')
         
         exam = Exams_DB(
             user_id=data2.get('user_id'),
@@ -55,6 +58,7 @@ async def create_exam(
             # insert exam version to exams_version
             exams_version = Exams_Version_DB(
                 exam_id=str(id_exam),
+                exam_code=data1.get('exam_codes')[i - 1] if data1.get('exam_codes') else None,
                 exam_title=data1.get('exam_title'),
                 version_name = i,
                 is_latest=False,
@@ -140,11 +144,20 @@ async def update_exam(
                 'datetime_updated': datetime.now().timestamp()
             }
         )
+        
+        # find version of exam
+        exam_version_info = exams_db[EXAMS_VERSION].find_one({
+            '_id': ObjectId(data1.get('exam_version_id')),
+        })
+        if not exam_version_info:
+            msg = 'exam version not found!'
+            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        
 
         # update question collection
         update_exam = exams_db[EXAMS].find_one_and_update(
             {
-                '_id': ObjectId(data1.get('exam_id')),
+                '_id': ObjectId(exam_version_info.get('exam_id')),
                 'user_id': data2.get('user_id')
             },
             {
@@ -155,38 +168,33 @@ async def update_exam(
             msg = 'not your exam!'
             return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
-
-        # find last version of exam
-        exam_version_info = exams_db[EXAMS_VERSION].find_one({
-            'exam_id': data1.get('exam_id'),
-            'is_latest': True
-        })
-        if not exam_version_info:
-            msg = 'exam version not found!'
-            return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
-        
         query_exam_version = {}
-        if data1.get('exam_title') != exam_version_info.get('exam_title'):
+        if data1.get('exam_title') and data1.get('exam_title') != exam_version_info.get('exam_title'):
             query_exam_title = {
                 'exam_title': data1.get('exam_title')
             }
             query_exam_version.update(query_exam_title)
-        if data1.get('note') != exam_version_info.get('note'):
+        if data1.get('exam_code') and data1.get('exam_code') != exam_version_info.get('exam_code'):
+            query_exam_code = {
+                'exam_code': data1.get('exam_code')
+            }
+            query_exam_version.update(query_exam_code)
+        if data1.get('note') and data1.get('note') != exam_version_info.get('note'):
             query_note = {
                 'note': data1.get('note')
             }
             query_exam_version.update(query_note)
-        if data1.get('time_limit') != exam_version_info.get('time_limit'):
+        if data1.get('time_limit') and data1.get('time_limit') != exam_version_info.get('time_limit'):
             query_time_limit = {
                 'time_limit': data1.get('time_limit')
             }
             query_exam_version.update(query_time_limit)
-        if data1.get('organization_info') != exam_version_info.get('organization_info'):
+        if data1.get('organization_info') and data1.get('organization_info') != exam_version_info.get('organization_info'):
             query_organization_info = {
                 'organization_info': data1.get('organization_info')
             }
             query_exam_version.update(query_organization_info)
-        if data1.get('exam_info') != exam_version_info.get('exam_info'):
+        if data1.get('exam_info') and data1.get('exam_info') != exam_version_info.get('exam_info'):
             query_exam_info = {
                 'exam_info': data1.get('exam_info')
             }
@@ -197,7 +205,7 @@ async def update_exam(
             }
             query_exam_version.update(query_questions)
 
-        if query_exam_version:
+        if data1.get('new_version'):
             # update older version status
             up_exam_version = exams_db[EXAMS_VERSION].find_one_and_update({
                 'exam_id': data1.get('exam_id'),
@@ -211,7 +219,7 @@ async def update_exam(
 
             # insert new version
             query_version_name = {
-                'version_name': exam_version_info.get('version_name') + 1,
+                'version_name': up_exam_version.get('version_name') + 1,
                 'datetime_created': datetime.now().timestamp()
             }
             query_exam_version.update(query_version_name)
@@ -219,6 +227,24 @@ async def update_exam(
             del exam_version_info['_id']
             exam_version_info.update(query_exam_version)
             exam_version_info = exams_db[EXAMS_VERSION].insert_one(exam_version_info)
+        else:
+            # update version
+            query_version_name = {
+                'datetime_created': datetime.now().timestamp()
+            }
+            query_exam_version.update(query_version_name)
+
+            del exam_version_info['_id']
+            exam_version_info.update(query_exam_version)
+            exam_version_info = exams_db[EXAMS_VERSION].update_one(
+                {
+                    '_id': ObjectId(data1.get('exam_version_id')),
+                },
+                {
+                    '$set': exam_version_info
+                }
+            )
+
         return JSONResponse(content={'status': 'success'}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
