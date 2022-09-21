@@ -5,10 +5,10 @@ from app.utils.group_utils.group import check_group_exist, check_owner_or_user_o
 from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_question_information_with_version_id
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import COMMUNITY_EXAMS, EXAMS, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exams_db, group_db
+from configs.settings import COMMUNITY_EXAMS, EXAMS, EXAMS_SECTION, EXAMS_VERSION, GROUP_EXAMS, SYSTEM, app, exams_db, group_db
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
-from models.db.exam import Exams_DB, Exams_Version_DB
+from models.db.exam import Exam_Section_DB, Exams_DB, Exams_Version_DB
 from models.request.exam import DATA_Create_Exam, DATA_Delete_Exam, DATA_Update_Exam
 from starlette.responses import JSONResponse
 
@@ -55,6 +55,20 @@ async def create_exam(
 
         for i in range(1, data1.get('num_version') + 1):
             logger().info(data1['questions'])
+            # insert section
+            questions = []
+            for section in data1['questions']:
+                exam_section_data = Exam_Section_DB(
+                    section_name=section.get('section_name'),
+                    section_questions=section.get('section_questions'),
+                    user_id=data2.get('user_id'),
+                    exam_id=str(id_exam),
+                    datetime_created=datetime.now().timestamp()
+                )
+                id_exam_section = exams_db[EXAMS_SECTION].insert_one(jsonable_encoder(exam_section_data)).inserted_id
+                questions.append(str(id_exam_section))
+            
+            
             # insert exam version to exams_version
             exams_version = Exams_Version_DB(
                 exam_id=str(id_exam),
@@ -66,7 +80,7 @@ async def create_exam(
                 time_limit=data1.get('time_limit'),
                 organization_info=data1.get('organization_info'),
                 exam_info=data1.get('exam_info'),
-                questions=data1['questions'],
+                questions=questions,
                 datetime_created=datetime.now().timestamp()
             )
             id_exam_version = exams_db[EXAMS_VERSION].insert_one(jsonable_encoder(exams_version)).inserted_id
@@ -199,16 +213,29 @@ async def update_exam(
                 'exam_info': data1.get('exam_info')
             }
             query_exam_version.update(query_exam_info)
-        if data1.get('questions') and data1.get('questions') != exam_version_info.get('questions'):
-            query_questions = {
-                'questions': data1.get('questions')
-            }
-            query_exam_version.update(query_questions)
+        # if data1.get('questions') and data1.get('questions') != exam_version_info.get('questions'):
+        #     query_questions = {
+        #         'questions': data1.get('questions')
+        #     }
+        #     query_exam_version.update(query_questions)
 
         if data1.get('new_version'):
+            # insert section
+            questions = []
+            for section in data1['questions']:
+                exam_section_data = Exam_Section_DB(
+                    section_name=section.get('section_name'),
+                    section_questions=section.get('section_questions'),
+                    user_id=data2.get('user_id'),
+                    exam_id=exam_version_info.get('exam_id'),
+                    datetime_created=datetime.now().timestamp()
+                )
+                id_exam_section = exams_db[EXAMS_SECTION].insert_one(jsonable_encoder(exam_section_data)).inserted_id
+                questions.append(str(id_exam_section))
+
             # update older version status
             up_exam_version = exams_db[EXAMS_VERSION].find_one_and_update({
-                'exam_id': data1.get('exam_id'),
+                'exam_id': exam_version_info.get('exam_id'),
                 'is_latest': True
             },
             {
@@ -220,6 +247,7 @@ async def update_exam(
             # insert new version
             query_version_name = {
                 'version_name': up_exam_version.get('version_name') + 1,
+                'questions': questions,
                 'datetime_created': datetime.now().timestamp()
             }
             query_exam_version.update(query_version_name)
@@ -228,8 +256,33 @@ async def update_exam(
             exam_version_info.update(query_exam_version)
             exam_version_info = exams_db[EXAMS_VERSION].insert_one(exam_version_info)
         else:
+            # check len questions section
+            new_questions = []
+            for i in range(len(data1.get('questions'))):
+                data_section_update = data1.get('questions')[i]
+                if len(exam_version_info.get('questions'))>i:
+                    exams_db[EXAMS_SECTION].find_one_and_update(
+                        {
+                            '_id': ObjectId(exam_version_info["questions"][i])
+                        },
+                        {
+                            '$set': data_section_update
+                        }
+                    )
+                    new_questions.append(exam_version_info["questions"][i])
+                else:
+                    exam_section_data = Exam_Section_DB(
+                        section_name=data_section_update.get('section_name'),
+                        section_questions=data_section_update.get('section_questions'),
+                        user_id=data2.get('user_id'),
+                        exam_id=exam_version_info.get('exam_id'),
+                        datetime_created=datetime.now().timestamp()
+                    )
+                    id_exam_section = exams_db[EXAMS_SECTION].insert_one(jsonable_encoder(exam_section_data)).inserted_id
+                    new_questions.append(str(id_exam_section))
             # update version
             query_version_name = {
+                'questions': new_questions,
                 'datetime_created': datetime.now().timestamp()
             }
             query_exam_version.update(query_version_name)

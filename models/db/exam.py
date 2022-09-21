@@ -28,3 +28,11 @@ class Exams_Version_DB(BaseModel):
     exam_info: str = Field(default=None, description='exam information')
     questions: List[SectionQuestion] = Field(..., description='questions of exam')
     datetime_created: float = Field(..., description='time create question version')
+
+class Exam_Section_DB(BaseModel):
+    section_name: str = Field(..., description='name of section')
+    section_questions: List[str] = Field(..., description='list questions of section')
+    user_id: str = Field(..., description='ID of user')
+    exam_id: str = Field(..., description='ID of exam')
+    is_removed: bool = Field(default=False, description='is removed?')
+    datetime_created: float = Field(..., description='time create question version')
