@@ -9,6 +9,7 @@ class SectionQuestion(BaseModel):
     section_questions: List[str] = Field(..., description='list questions of section')
 
 class DATA_Create_Exam(BaseModel):
+    num_version: int = Field(default=1, description='Number of version')
     subject_id: str = Field(..., description='ID of subject')
     class_id: str = Field(..., description='ID of class')
     tag_id: List[Tag] = Field(default=[], description='ID of tag')

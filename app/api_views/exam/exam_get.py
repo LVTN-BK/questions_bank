@@ -197,13 +197,22 @@ async def user_get_one_exam(
                         {
                             '$unwind': '$questions'
                         },
+                        {
+                            '$set': {
+                                'section_name': '$questions.section_name',
+                                'section_questions': '$questions.section_questions',
+                            }
+                        },
+                        {
+                            '$unwind': '$section_questions'
+                        },
 
                         # join with questions_version
                         {
                             '$lookup': {
                                 'from': 'questions_version',
                                 'let': {
-                                    'section_question': '$questions.section_questions'
+                                    'section_question': '$section_questions'
                                 },
                                 'pipeline': [
                                     {
@@ -216,7 +225,7 @@ async def user_get_one_exam(
                                     {
                                         '$match': {
                                             '$expr': {
-                                                '$in': ['$question_version_id', '$$section_question']
+                                                '$eq': ['$question_version_id', '$$section_question']
                                             }
                                         }
                                     },
@@ -413,13 +422,60 @@ async def user_get_one_exam(
                                         }
                                     }
                                 ],
-                                'as': 'questions.section_questions'
+                                'as': 'section_questions'
+                            }
+                        },
+                        {
+                            '$unwind': '$section_questions'
+                        },
+                        {
+                            '$group': {
+                                '_id': {
+                                    '_id': '$_id',
+                                    'section_name': '$section_name'
+                                },
+                                'id': {
+                                    '$first': '$_id'
+                                },
+                                # 'exam_id': '$exam_id',
+                                'exam_title': {
+                                    '$first': '$exam_title'
+                                },
+                                'version_name': {
+                                    '$first': '$version_name'
+                                },
+                                'note': {
+                                    '$first': '$note'
+                                },
+                                'time_limit': {
+                                    '$first': '$time_limit'
+                                },
+                                'organization_info': {
+                                    '$first': '$organization_info'
+                                },
+                                'exam_info': {
+                                    '$first': '$exam_info'
+                                },
+                                'section_name': {
+                                    '$first': '$section_name'
+                                },
+                                'section_questions': {
+                                    '$push': '$section_questions'
+                                }
+                            }
+                        },
+                        {
+                            '$set': {
+                                'questions': {
+                                    'section_name': '$section_name',
+                                    'section_questions': '$section_questions'
+                                }
                             }
                         },
                         {
                             '$group': {
                                 '_id': {
-                                    '$toString': '$_id'
+                                    '$toString': '$id',
                                 },
                                 # 'exam_id': '$exam_id',
                                 'exam_title': {
@@ -739,13 +795,22 @@ async def get_exam_by_version(
             {
                 '$unwind': '$questions'
             },
+            {
+                '$set': {
+                    'section_name': '$questions.section_name',
+                    'section_questions': '$questions.section_questions',
+                }
+            },
+            {
+                '$unwind': '$section_questions'
+            },
 
             # join with questions_version
             {
                 '$lookup': {
                     'from': 'questions_version',
                     'let': {
-                        'section_question': '$questions.section_questions'
+                        'section_question': '$section_questions'
                     },
                     'pipeline': [
                         {
@@ -758,7 +823,7 @@ async def get_exam_by_version(
                         {
                             '$match': {
                                 '$expr': {
-                                    '$in': ['$question_version_id', '$$section_question']
+                                    '$eq': ['$question_version_id', '$$section_question']
                                 }
                             }
                         },
@@ -955,13 +1020,62 @@ async def get_exam_by_version(
                             }
                         }
                     ],
-                    'as': 'questions.section_questions'
+                    'as': 'section_questions'
+                }
+            },
+            {
+                '$unwind': '$section_questions'
+            },
+            {
+                '$group': {
+                    '_id': {
+                        '_id': '$_id',
+                        'section_name': '$section_name'
+                    },
+                    'id': {
+                        '$first': '$_id'
+                    },
+                    'exam_id': {
+                        '$first': '$exam_id'
+                    },
+                    'exam_title': {
+                        '$first': '$exam_title'
+                    },
+                    'version_name': {
+                        '$first': '$version_name'
+                    },
+                    'note': {
+                        '$first': '$note'
+                    },
+                    'time_limit': {
+                        '$first': '$time_limit'
+                    },
+                    'organization_info': {
+                        '$first': '$organization_info'
+                    },
+                    'exam_info': {
+                        '$first': '$exam_info'
+                    },
+                    'section_name': {
+                        '$first': '$section_name'
+                    },
+                    'section_questions': {
+                        '$push': '$section_questions'
+                    }
+                }
+            },
+            {
+                '$set': {
+                    'questions': {
+                        'section_name': '$section_name',
+                        'section_questions': '$section_questions'
+                    }
                 }
             },
             {
                 '$group': {
                     '_id': {
-                        '$toString': '$_id'
+                        '$toString': '$id',
                     },
                     'exam_id': {
                         '$first': '$exam_id'
@@ -986,7 +1100,7 @@ async def get_exam_by_version(
                     },
                     'questions': {
                         '$push': '$questions'
-                    }
+                    },
                 }
             },
             {

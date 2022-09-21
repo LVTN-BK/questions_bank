@@ -13,7 +13,7 @@ from models.request.exam import DATA_Create_Exam, DATA_Delete_Exam, DATA_Update_
 from starlette.responses import JSONResponse
 
 from models.response.exam import UserGetAllExamResponse200, UserGetAllExamResponse403, UserGetOneExamResponse200, UserGetOneExamResponse403
-
+import random
 
 #========================================================
 #=====================CREATE_EXAM========================
@@ -50,18 +50,38 @@ async def create_exam(
         # insert to exams table
         id_exam = exams_db[EXAMS].insert_one(jsonable_encoder(exam)).inserted_id
 
-        # insert exam version to exams_version
-        exams_version = Exams_Version_DB(
-            exam_id=str(id_exam),
-            exam_title=data1.get('exam_title'),
-            note=data1.get('note'),
-            time_limit=data1.get('time_limit'),
-            organization_info=data1.get('organization_info'),
-            exam_info=data1.get('exam_info'),
-            questions=data1.get('questions'),
-            datetime_created=datetime.now().timestamp()
+        for i in range(1, data1.get('num_version') + 1):
+            logger().info(data1['questions'])
+            # insert exam version to exams_version
+            exams_version = Exams_Version_DB(
+                exam_id=str(id_exam),
+                exam_title=data1.get('exam_title'),
+                version_name = i,
+                is_latest=False,
+                note=data1.get('note'),
+                time_limit=data1.get('time_limit'),
+                organization_info=data1.get('organization_info'),
+                exam_info=data1.get('exam_info'),
+                questions=data1['questions'],
+                datetime_created=datetime.now().timestamp()
+            )
+            id_exam_version = exams_db[EXAMS_VERSION].insert_one(jsonable_encoder(exams_version)).inserted_id
+
+            # shuffer
+            for x in data1['questions']:
+                random.shuffle(x['section_questions'])
+
+        # update latest version
+        exams_db[EXAMS_VERSION].update_one(
+            {
+                '_id': id_exam_version
+            },
+            {
+                '$set': {
+                    'is_latest': True
+                }
+            }
         )
-        id_exam_version = exams_db[EXAMS_VERSION].insert_one(jsonable_encoder(exams_version)).inserted_id
 
         exam = jsonable_encoder(exam)
         exams_version = jsonable_encoder(exams_version)
@@ -71,7 +91,8 @@ async def create_exam(
         return JSONResponse(content={'status': 'success', 'data': exam},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-    return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 #========================================================
