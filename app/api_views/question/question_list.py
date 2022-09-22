@@ -7,6 +7,7 @@ from app.utils.group_utils.group import check_group_exist, check_owner_or_user_o
 from app.utils.question_utils.question import get_data_and_metadata, get_list_tag_id_from_input, get_query_filter_questions, get_question_evaluation_value
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
+from app.utils.question_utils.question_exam import auto_pick_question
 from configs.logger import logger
 from configs.settings import (ANSWERS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
@@ -16,6 +17,7 @@ from models.db.group import GroupQuestion
 from models.db.question import Answers_DB, Questions_DB, Questions_Evaluation_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.question import ManageQuestionType
+from models.request.exam import SaveExamConfig
 from models.request.question import (DATA_Auto_Pick_Question, DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
@@ -1594,6 +1596,35 @@ async def user_auto_pick_question(
         logger().error(e)
         msg="Có lỗi xảy ra!"
         return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#===============EXAM_AUTO_GENERATE_QUESTIONS=============
+#========================================================
+@app.post(
+    path='/exam_auto_generate_question',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - exam']
+)
+async def exam_auto_generate_question(
+    data: List[SaveExamConfig],
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        for section in data:
+            section['section_questions'] = auto_pick_question(data=section.get('section_questions'))
+        
+        return JSONResponse(content={'status': 'success', 'data': data},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        msg="Có lỗi xảy ra!"
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 

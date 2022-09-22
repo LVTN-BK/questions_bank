@@ -11,17 +11,17 @@ from app.utils.question_utils.question import get_question_level, question_evalu
 from app.utils.question_utils.question_check_permission import check_owner_of_question
 from bson import ObjectId
 from configs.logger import logger
-from configs.settings import (COMMUNITY_EXAMS, EXAMS_EVALUATION, EXAMS_VERSION, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
+from configs.settings import (COMMUNITY_EXAMS, EXAMS_CONFIG, EXAMS_EVALUATION, EXAMS_VERSION, exams_db, EXAMS, GROUP_EXAMS, GROUP_QUESTIONS, QUESTIONS, QUESTIONS_EVALUATION, QUESTIONS_VERSION, SYSTEM,
                               app, questions_db, group_db)
 from fastapi import Depends, status, BackgroundTasks, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
 from models.db.community import CommunityExam
-from models.db.exam import Exams_DB, Exams_Version_DB
+from models.db.exam import Exam_Config_DB, Exams_DB, Exams_Version_DB
 from models.db.group import GroupExam
 from models.db.question import Questions_DB, Questions_Version_DB
 from models.define.decorator_api import SendNotiDecoratorsApi
 from models.define.exam import ManageExamEvaluationStatus
-from models.request.exam import DATA_Copy_Exam, DATA_Copy_Exam_By_Version, DATA_Evaluate_Exam, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
+from models.request.exam import DATA_Copy_Exam, DATA_Copy_Exam_By_Version, DATA_Evaluate_Exam, DATA_Save_Exam_Config, DATA_Share_Exam_To_Community, DATA_Share_Exam_To_Group
 from models.request.question import (DATA_Copy_Question, DATA_Evaluate_Question)
 from starlette.responses import JSONResponse
 
@@ -471,5 +471,42 @@ async def copy_exam_by_version(
     except Exception as e:
         logger().error(e)
         return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#=====================SAVE_EXAM_CONFIG===================
+#========================================================
+@app.post(
+    path='/save_exam_config',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['exams - action']
+)
+async def save_exam_config(
+    background_tasks: BackgroundTasks,
+    data: DATA_Save_Exam_Config,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        data_config = Exam_Config_DB(
+            user_id=data2.get('user_id'),
+            name=data.name,
+            data=data.data,
+            datetime_created=datetime.now().timestamp()
+        )
+        # find exam version info
+        exam_version_info = exams_db[EXAMS_CONFIG].insert_one(jsonable_encoder(data_config))
+
+        
+        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 

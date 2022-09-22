@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Union
 from pydantic import BaseModel, Field
 
-from models.request.exam import SectionQuestion
+from models.request.exam import SaveExamConfig, SectionQuestion
 
 
 class Exams_DB(BaseModel):
@@ -36,3 +36,9 @@ class Exam_Section_DB(BaseModel):
     exam_id: str = Field(..., description='ID of exam')
     is_removed: bool = Field(default=False, description='is removed?')
     datetime_created: float = Field(..., description='time create question version')
+
+class Exam_Config_DB(BaseModel):
+    user_id: str = Field(..., description='ID of user')
+    name: str = Field(..., description='Name of config')
+    data: List[SaveExamConfig] = Field(..., description='Data of config')
+    datetime_created: float = Field(..., description='time create exam config')

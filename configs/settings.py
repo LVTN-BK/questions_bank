@@ -137,6 +137,7 @@ EXAMS = 'exams'
 EXAMS_VERSION = 'exams_version'
 EXAMS_SECTION = 'exams_section'
 EXAMS_EVALUATION = 'exams_evaluation'
+EXAMS_CONFIG = 'exams_config'
 #create text index for group name
 questions_db[EXAMS_VERSION].create_index([('exam_title', 'text')])
 

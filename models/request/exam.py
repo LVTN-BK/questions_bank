@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple, Union
 from pydantic import BaseModel, Field
 
-from models.request.question import DATA_Evaluate_Question, Tag
+from models.request.question import DATA_Auto_Pick_Question, DATA_Evaluate_Question, Tag
 
 
 class SectionQuestion(BaseModel):
@@ -66,4 +66,10 @@ class DATA_Copy_Exam_By_Version(BaseModel):
     subject_id: str = Field(..., description='ID of subject')
     class_id: str = Field(..., description='ID of class')
 
+class SaveExamConfig(BaseModel):
+    section_name: str = Field(..., description='Name of section')
+    section_questions: List[DATA_Auto_Pick_Question] = Field(..., description='Section questions')
 
+class DATA_Save_Exam_Config(BaseModel):
+    name: str = Field(..., description='Name of config')
+    data: List[SaveExamConfig] = Field(..., description='Section questions')

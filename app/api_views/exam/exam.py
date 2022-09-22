@@ -37,7 +37,7 @@ async def create_exam(
     try:
         data1 = jsonable_encoder(data1)
         if data1.get('num_version')>1:
-            if len(data1.get('exam_codes') != data1.get('num_version')):
+            if len(data1.get('exam_codes')) != data1.get('num_version'):
                 raise Exception('Số lượng mã đề không đúng!')
         
         exam = Exams_DB(
