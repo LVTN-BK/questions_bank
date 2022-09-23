@@ -26,7 +26,7 @@ class Exams_Version_DB(BaseModel):
     time_limit: str = Field(..., description='limit time of exam')
     organization_info: str = Field(default=None, description='organization information')
     exam_info: str = Field(default=None, description='exam information')
-    questions: List[SectionQuestion] = Field(..., description='questions of exam')
+    questions: List[str] = Field(..., description='questions of exam')
     datetime_created: float = Field(..., description='time create question version')
 
 class Exam_Section_DB(BaseModel):
