@@ -383,13 +383,13 @@ async def create_new_exam_code(
                 }
             },
             {
-                '$unwind': '$exam_info'
+                '$unwind': '$exams_info'
             },
             {
                 '$project': {
                     '_id': 0,
                     'exam_object_id': 0,
-                    'exam_info': 0
+                    'exams_info': 0
                 }
             }
         ]
@@ -420,10 +420,14 @@ async def create_new_exam_code(
             id_exam_section = exams_db[EXAMS_SECTION].insert_one(section_info).inserted_id
             questions.append(str(id_exam_section))
 
-        exam_version_info['questions'] = questions
-        # del exam_version_info['_id']
-        exam_version_info['version_name'] = num_version + 1
-        exam_version_info['exam_code'] = data.exam_code
+        exam_version_info.update(
+            {
+                'questions': questions,
+                'version_name': num_version + 1,
+                'exam_code': data.exam_code,
+                'datetime_created': datetime.now().timestamp()
+            }
+        )
 
         insert_exam_version = exams_db[EXAMS_VERSION].insert_one(exam_version_info).inserted_id
 
@@ -486,23 +490,24 @@ async def delete_exam_version(
                 }
             },
             {
-                '$unwind': '$exam_info'
+                '$unwind': '$exams_info'
             },
             {
                 '$project': {
                     '_id': 0,
                     'exam_object_id': 0,
-                    'exam_info': 0
+                    'exams_info': 0
                 }
             }
         ]
         exam_aggregate = exams_db[EXAMS_VERSION].aggregate(pipeline)
-        
+        # logger().info(exam_aggregate.alive)
         if not exam_aggregate.alive:
             msg = 'Không tìm thấy phiên bản đề thi!'
             return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
         
         exam_version_info = exam_aggregate.next()
+        # logger().info(exam_version_info)
         # get number of version (not include deleted version)
         exam_version_num_remain = exams_db[EXAMS_VERSION].find({
             'exam_id': exam_version_info.get('exam_id'),
