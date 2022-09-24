@@ -2591,12 +2591,12 @@ async def group_get_all_exam(
         # get list exam of group
         list_exam = get_list_group_exam(group_id=group_id)
         # =============== list_group_exam =================
-        query_exam = {
-            'exam_id': {
-                '$in': list_exam
-            }
-        }
-        filter_exam_version.append(query_exam)
+        # query_exam = {
+        #     'exam_id': {
+        #         '$in': list_exam
+        #     }
+        # }
+        # filter_exam_version.append(query_exam)
 
 
         # =============== search =================
@@ -2609,17 +2609,18 @@ async def group_get_all_exam(
             }
             filter_exam_version.append(query_search)
         
-        # =============== version =================
-        query_latest_version = {
-            'is_latest': True
-        }
-        filter_exam_version.append(query_latest_version)
+        # # =============== version =================
+        # query_latest_version = {
+        #     'is_latest': True
+        # }
+        # filter_exam_version.append(query_latest_version)
 
         # =============== status =================
         query_exam_status = {
             'is_removed': False
         }
         filter_exam.append(query_exam_status)
+        filter_exam_version.append(query_exam_status)
 
         # # =============== owner =================
         # query_exam_owner = {
@@ -2652,222 +2653,228 @@ async def group_get_all_exam(
 
         num_skip = (page - 1)*limit
 
+
         pipeline = [
             {
+                '$addFields': {
+                    'exam_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
                 '$match': {
-                    "$and": filter_exam_version
+                    "$expr": {
+                        '$in': ['$exam_id', list_exam]
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'group_exams',
+                    'let': {
+                        'exam_id': '$exam_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$and': [
+                                    {
+                                        '$expr': {
+                                            '$eq': ['$group_id', group_id]
+                                        }
+                                    },
+                                    {
+                                        '$expr': {
+                                            '$eq': ['$exam_id', '$$exam_id']
+                                        }
+                                    },
+                                ]
+                            }
+                        }
+                    ],
+                    'as': 'group_exam_info'
+                }
+            },
+            {
+                '$unwind': "$group_exam_info"
+            },
+            {
+                '$set': {
+                    'subject_id': '$group_exam_info.subject_id',
+                    'class_id': '$group_exam_info.class_id',
+                    'datetime_shared': '$group_exam_info.datetime_created',
+                }
+            },
+            {
+                '$match': {
+                    '$and': filter_exam
                 }
             },
             {
                 '$addFields': {
-                    'exam_object_id': {
-                        '$toObjectId': '$exam_id'
+                    'exam_id': {
+                        '$toString': '$_id'
                     }
                 }
             },
-
-            #join with exam
             {
-                "$lookup": {
-                    'from': 'exams',
-                    'localField': 'exam_object_id',
-                    'foreignField': '_id',
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
                     'pipeline': [
                         {
-                            '$addFields': {
-                                'exam_id': {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'author_data'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'subject',
+                    'let': {
+                        'subject_id': '$subject_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
                                     '$toString': '$_id'
                                 }
                             }
                         },
-                        # {
-                        #     '$match': {
-                        #         "$expr": {
-                        #             '$in': ['$exam_id', list_exam]
-                        #         }
-                        #     }
-                        # },
-                        {
-                            '$lookup': {
-                                'from': 'group_exams',
-                                'let': {
-                                    'exam_id': '$exam_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$match': {
-                                            '$and': [
-                                                {
-                                                    '$expr': {
-                                                        '$eq': ['$group_id', group_id]
-                                                    }
-                                                },
-                                                {
-                                                    '$expr': {
-                                                        '$eq': ['$exam_id', '$$exam_id']
-                                                    }
-                                                },
-                                            ]
-                                        }
-                                    }
-                                ],
-                                'as': 'group_exam_info'
-                            }
-                        },
-                        {
-                            '$unwind': "$group_exam_info"
-                        },
-                        {
-                            '$set': {
-                                'subject_id': '$group_exam_info.subject_id',
-                                'class_id': '$group_exam_info.class_id',
-                                'datetime_shared': '$group_exam_info.datetime_created',
-                            }
-                        },
                         {
                             '$match': {
-                                '$and': filter_exam
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'users_profile',
-                                'localField': 'user_id',
-                                'foreignField': 'user_id',
-                                'pipeline': [
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'user_id': 1,
-                                            'name': {
-                                                '$ifNull': ['$name', None]
-                                            },
-                                            'email': {
-                                                '$ifNull': ['$email', None]
-                                            },
-                                            'avatar': {
-                                                '$ifNull': ['$avatar', None]
-                                            }
-                                        }
-                                    }
-                                ],
-                                'as': 'author_data'
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'subject',
-                                'let': {
-                                    'subject_id': '$subject_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$set': {
-                                            'id': {
-                                                '$toString': '$_id'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$eq': ['$id', '$$subject_id']
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'id': 1,
-                                            'name': 1
-                                        }
-                                    }
-                                ],
-                                'as': 'subject_info'
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'class',
-                                'let': {
-                                    'class_id': '$class_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$set': {
-                                            'id': {
-                                                '$toString': '$_id'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$eq': ['$id', '$$class_id']
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'id': 1,
-                                            'name': 1
-                                        }
-                                    }
-                                ],
-                                'as': 'class_info'
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'tag',
-                                'let': {
-                                    'list_tag_id': '$tag_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$set': {
-                                            'id': {
-                                                '$toString': '$_id'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$in': ['$id', '$$list_tag_id']
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'id': 1,
-                                            'name': 1
-                                        }
-                                    }
-                                ],
-                                'as': 'tags_info'
+                                '$expr': {
+                                    '$eq': ['$id', '$$subject_id']
+                                }
                             }
                         },
                         {
                             '$project': {
                                 '_id': 0,
-                                # 'exam_id': 1,
-                                'user_info': {
-                                    '$ifNull': [{'$first': '$author_data'}, None]
-                                },
-                                'subject_info': {
-                                    '$ifNull': [{'$first': '$subject_info'}, None]
-                                },
-                                'class_info': {
-                                    '$ifNull': [{'$first': '$class_info'}, None]
-                                },
-                                'tags_info': 1,
-                                'datetime_shared': 1,
-                                'datetime_created': 1
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'subject_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'class',
+                    'let': {
+                        'class_id': '$class_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
                             }
                         },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$class_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'class_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'tag',
+                    'let': {
+                        'list_tag_id': '$tag_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$in': ['$id', '$$list_tag_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'tags_info'
+                }
+            },
+            #join with exam_version
+            {
+                "$lookup": {
+                    'from': 'exams_version',
+                    'localField': 'exam_id',
+                    'foreignField': 'exam_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$and': filter_exam_version
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        {
+                            '$limit': 1
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_version_id': '$_id',
+                                # 'version_name': 1,
+                                'exam_title': 1,
+                                # 'exam_code': 1,
+                                'note': 1,
+                                'time_limit': 1,
+                                'organization_info': 1,
+                                'exam_info': 1
+                            }
+                        },
+                        # {
+                        #     '$unwind': '$exam_title'
+                        # },
                     ],
                     'as': 'exam_detail'
                 }
@@ -2875,6 +2882,24 @@ async def group_get_all_exam(
             {
                 '$unwind': '$exam_detail'
             },
+            # {
+            #     '$lookup': {
+            #         'from': 'community_exams',
+            #         'let': {
+            #             'exam_id': '$exam_id'
+            #         },
+            #         'pipeline': [
+            #             {
+            #                 '$match': {
+            #                     '$expr': {
+            #                         '$eq': ['$exam_id', '$$exam_id']
+            #                     }
+            #                 }
+            #             }
+            #         ],
+            #         'as': 'community_exam_info'
+            #     }
+            # },
             { 
                 '$facet' : {
                     'metadata': [ 
@@ -2898,29 +2923,39 @@ async def group_get_all_exam(
                             '$project': {
                                 '_id': 0,
                                 'exam_id': 1,
-                                'exam_version_id': {
-                                    '$toString': '$_id'
+                                # 'is_public': {
+                                #     '$ne': ['$community_exam_info', []]
+                                # },
+                                'user_info': {
+                                    '$ifNull': [{'$first': '$author_data'}, None]
                                 },
-                                'user_info': '$exam_detail.user_info',
-                                'class_info': '$exam_detail.class_info',
-                                'subject_info': '$exam_detail.subject_info',
-                                'tags_info': '$exam_detail.tags_info',
-                                'exam_title': 1,
-                                'note': 1,
-                                'time_limit': 1,
+                                'subject_info': {
+                                    '$ifNull': [{'$first': '$subject_info'}, None]
+                                },
+                                'class_info': {
+                                    '$ifNull': [{'$first': '$class_info'}, None]
+                                },
+                                'tags_info': 1,
+                                'exam_title': '$exam_detail.exam_title',
+                                # 'exam_code': '$exam_detail.exam_code',
+                                'exam_version_id': '$exam_detail.exam_version_id',
+                                # 'version_name': '$exam_detail.version_name',
+                                'note': '$exam_detail.note',
+                                'time_limit': '$exam_detail.time_limit',
                                 'organization_info': {
-                                    '$ifNull': ['$organization_info', None]
+                                    '$ifNull': ['$exam_detail.organization_info', None]
                                 },
                                 'exam_info': {
-                                    '$ifNull': ['$exam_info', None]
+                                    '$ifNull': ['$exam_detail.exam_info', None]
                                 },
-                                'datetime_shared': '$exam_detail.datetime_shared',
-                                'datetime_created': '$exam_detail.datetime_created'
+                                'datetime_shared': 1,
+                                'datetime_created': 1
+                                # 'exam_detail': 1
                             }
                         },
                         {
                             '$sort': {
-                                'datetime_shared': -1
+                                'datetime_created': -1
                             }
                         },
                         { 
@@ -2937,7 +2972,8 @@ async def group_get_all_exam(
             }
         ]
 
-        exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
+
+        exams = exams_db[EXAMS].aggregate(pipeline)
         
         result_data, meta_data = get_data_and_metadata(aggregate_response=exams, page=page)
 
@@ -2985,16 +3021,17 @@ async def community_get_all_exam(
             filter_exam_version.append(query_search)
         
         # =============== version =================
-        query_latest_version = {
-            'is_latest': True
-        }
-        filter_exam_version.append(query_latest_version)
+        # query_latest_version = {
+        #     'is_latest': True
+        # }
+        # filter_exam_version.append(query_latest_version)
 
         # =============== status =================
         query_exam_status = {
             'is_removed': False
         }
         filter_exam.append(query_exam_status)
+        filter_exam_version.append(query_exam_status)
 
         # # =============== public =================
         # query_exam_public = {
@@ -3029,204 +3066,209 @@ async def community_get_all_exam(
 
         pipeline = [
             {
+                '$addFields': {
+                    'exam_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'community_exams',
+                    'let': {
+                        'exam_id': '$exam_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$exam_id', '$$exam_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'community_exam_info'
+                }
+            },
+            {
+                '$unwind': "$community_exam_info"
+            },
+            {
+                '$set': {
+                    'subject_id': '$community_exam_info.subject_id',
+                    'class_id': '$community_exam_info.class_id',
+                    'datetime_shared': '$community_exam_info.datetime_created',
+                }
+            },
+            {
                 '$match': {
-                    "$and": filter_exam_version
+                    '$and': filter_exam
                 }
             },
             {
                 '$addFields': {
-                    'exam_object_id': {
-                        '$toObjectId': '$exam_id'
+                    'exam_id': {
+                        '$toString': '$_id'
                     }
                 }
             },
-
-            #join with exam
             {
-                "$lookup": {
-                    'from': 'exams',
-                    'localField': 'exam_object_id',
-                    'foreignField': '_id',
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
                     'pipeline': [
                         {
-                            '$addFields': {
-                                'exam_id': {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'author_data'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'subject',
+                    'let': {
+                        'subject_id': '$subject_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
                                     '$toString': '$_id'
                                 }
                             }
                         },
                         {
-                            '$lookup': {
-                                'from': 'community_exams',
-                                'let': {
-                                    'exam_id': '$exam_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$eq': ['$exam_id', '$$exam_id']
-                                            }
-                                        }
-                                    }
-                                ],
-                                'as': 'community_exam_info'
-                            }
-                        },
-                        {
-                            '$unwind': "$community_exam_info"
-                        },
-                        {
-                            '$set': {
-                                'subject_id': '$community_exam_info.subject_id',
-                                'class_id': '$community_exam_info.class_id',
-                                'datetime_shared': '$community_exam_info.datetime_created',
-                            }
-                        },
-                        {
                             '$match': {
-                                '$and': filter_exam
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'users_profile',
-                                'localField': 'user_id',
-                                'foreignField': 'user_id',
-                                'pipeline': [
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'user_id': 1,
-                                            'name': {
-                                                '$ifNull': ['$name', None]
-                                            },
-                                            'email': {
-                                                '$ifNull': ['$email', None]
-                                            },
-                                            'avatar': {
-                                                '$ifNull': ['$avatar', None]
-                                            }
-                                        }
-                                    }
-                                ],
-                                'as': 'author_data'
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'subject',
-                                'let': {
-                                    'subject_id': '$subject_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$set': {
-                                            'id': {
-                                                '$toString': '$_id'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$eq': ['$id', '$$subject_id']
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'id': 1,
-                                            'name': 1
-                                        }
-                                    }
-                                ],
-                                'as': 'subject_info'
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'class',
-                                'let': {
-                                    'class_id': '$class_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$set': {
-                                            'id': {
-                                                '$toString': '$_id'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$eq': ['$id', '$$class_id']
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'id': 1,
-                                            'name': 1
-                                        }
-                                    }
-                                ],
-                                'as': 'class_info'
-                            }
-                        },
-                        {
-                            '$lookup': {
-                                'from': 'tag',
-                                'let': {
-                                    'list_tag_id': '$tag_id'
-                                },
-                                'pipeline': [
-                                    {
-                                        '$set': {
-                                            'id': {
-                                                '$toString': '$_id'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$match': {
-                                            '$expr': {
-                                                '$in': ['$id', '$$list_tag_id']
-                                            }
-                                        }
-                                    },
-                                    {
-                                        '$project': {
-                                            '_id': 0,
-                                            'id': 1,
-                                            'name': 1
-                                        }
-                                    }
-                                ],
-                                'as': 'tags_info'
+                                '$expr': {
+                                    '$eq': ['$id', '$$subject_id']
+                                }
                             }
                         },
                         {
                             '$project': {
                                 '_id': 0,
-                                # 'exam_id': 1,
-                                'user_info': {
-                                    '$ifNull': [{'$first': '$author_data'}, None]
-                                },
-                                'subject_info': {
-                                    '$ifNull': [{'$first': '$subject_info'}, None]
-                                },
-                                'class_info': {
-                                    '$ifNull': [{'$first': '$class_info'}, None]
-                                },
-                                'tags_info': 1,
-                                'datetime_shared': 1,
-                                'datetime_created': 1
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'subject_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'class',
+                    'let': {
+                        'class_id': '$class_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
                             }
                         },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$class_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'class_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'tag',
+                    'let': {
+                        'list_tag_id': '$tag_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$in': ['$id', '$$list_tag_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'tags_info'
+                }
+            },
+            #join with exam_version
+            {
+                "$lookup": {
+                    'from': 'exams_version',
+                    'localField': 'exam_id',
+                    'foreignField': 'exam_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$and': filter_exam_version
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        {
+                            '$limit': 1
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_version_id': '$_id',
+                                # 'version_name': 1,
+                                'exam_title': 1,
+                                # 'exam_code': 1,
+                                'note': 1,
+                                'time_limit': 1,
+                                'organization_info': 1,
+                                'exam_info': 1
+                            }
+                        },
+                        # {
+                        #     '$unwind': '$exam_title'
+                        # },
                     ],
                     'as': 'exam_detail'
                 }
@@ -3257,29 +3299,36 @@ async def community_get_all_exam(
                             '$project': {
                                 '_id': 0,
                                 'exam_id': 1,
-                                'exam_version_id': {
-                                    '$toString': '$_id'
+                                'user_info': {
+                                    '$ifNull': [{'$first': '$author_data'}, None]
                                 },
-                                'user_info': '$exam_detail.user_info',
-                                'class_info': '$exam_detail.class_info',
-                                'subject_info': '$exam_detail.subject_info',
-                                'tags_info': '$exam_detail.tags_info',
-                                'exam_title': 1,
-                                'note': 1,
-                                'time_limit': 1,
+                                'subject_info': {
+                                    '$ifNull': [{'$first': '$subject_info'}, None]
+                                },
+                                'class_info': {
+                                    '$ifNull': [{'$first': '$class_info'}, None]
+                                },
+                                'tags_info': 1,
+                                'exam_title': '$exam_detail.exam_title',
+                                # 'exam_code': '$exam_detail.exam_code',
+                                'exam_version_id': '$exam_detail.exam_version_id',
+                                # 'version_name': '$exam_detail.version_name',
+                                'note': '$exam_detail.note',
+                                'time_limit': '$exam_detail.time_limit',
                                 'organization_info': {
-                                    '$ifNull': ['$organization_info', None]
+                                    '$ifNull': ['$exam_detail.organization_info', None]
                                 },
                                 'exam_info': {
-                                    '$ifNull': ['$exam_info', None]
+                                    '$ifNull': ['$exam_detail.exam_info', None]
                                 },
-                                'datetime_shared': '$exam_detail.datetime_shared',
-                                'datetime_created': '$exam_detail.datetime_created'
+                                'datetime_shared': 1,
+                                'datetime_created': 1
+                                # 'exam_detail': 1
                             }
                         },
                         {
                             '$sort': {
-                                'datetime_shared': -1
+                                'datetime_created': -1
                             }
                         },
                         { 
@@ -3296,7 +3345,8 @@ async def community_get_all_exam(
             }
         ]
 
-        exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
+
+        exams = exams_db[EXAMS].aggregate(pipeline)
         
         result_data, meta_data = get_data_and_metadata(aggregate_response=exams, page=page)
 
