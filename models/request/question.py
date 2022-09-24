@@ -184,3 +184,9 @@ class DATA_Update_Question_Classify(BaseModel):
     chapter_id: str = Field(..., description='ID of chapter')
 
 
+
+class DATA_Question_Statistic_Strict_Auto_Pick(BaseModel):
+    chapter_id: str = Field(..., description='ID of chapter')
+    type: List[str] = Field(..., description='question type')
+
+

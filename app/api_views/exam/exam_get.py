@@ -3215,13 +3215,11 @@ async def user_exam_statistic(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        pipeline_head = [
-            {
-                '$match': {
-                    'user_id': data2.get('user_id')
-                }
-            }
-        ]
+        pipeline_head = {
+            'user_id': data2.get('user_id'),
+            'is_removed': False
+        }
+    
         body_facet = {
             'total_exam': [
                 {
@@ -3359,25 +3357,19 @@ async def user_exam_statistic(
             ]
             body_facet['classes'] = pipeline_mid
 
-            pipeline_head = [
+            pipeline_head.update(
                 {
-                    '$match': {
-                        'user_id': data2.get('user_id'),
-                        'subject_id': subject_id
-                    }
+                    'subject_id': subject_id
                 }
-            ]
+            )
         
         elif all([subject_id, class_id]):
-            pipeline_head = [
+            pipeline_head.update(
                 {
-                    '$match': {
-                        'user_id': data2.get('user_id'),
-                        'subject_id': subject_id,
-                        'class_id': class_id
-                    }
+                    'subject_id': subject_id,
+                    'class_id': class_id
                 }
-            ]
+            )
 
         pipeline_facet = [
             {
@@ -3393,7 +3385,13 @@ async def user_exam_statistic(
             }
         ]
 
-        pipeline = pipeline_head + pipeline_facet
+        pipeline_match = [
+            {
+                '$match': pipeline_head
+            }
+        ]
+
+        pipeline = pipeline_match + pipeline_facet
         
         exam_info = exams_db[EXAMS].aggregate(pipeline)
         exam_data = {}

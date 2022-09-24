@@ -20,7 +20,7 @@ from models.request.question import (DATA_Create_Answer,
                                      DATA_Create_Fill_Question,
                                      DATA_Create_Matching_Question,
                                      DATA_Create_Multi_Choice_Question,
-                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
+                                     DATA_Create_Sort_Question, DATA_Delete_Question, DATA_Evaluate_Question, DATA_Question_Statistic_Strict_Auto_Pick, DATA_Share_Question_To_Community, DATA_Share_Question_To_Group, DATA_Update_Question)
 from starlette.responses import JSONResponse
 
 
@@ -1014,14 +1014,11 @@ async def user_question_statistic(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        pipeline_head = [
-            {
-                '$match': {
-                    'user_id': data2.get('user_id'),
-                    'is_removed': False
-                }
-            }
-        ]
+        pipeline_head = {
+            'user_id': data2.get('user_id'),
+            'is_removed': False
+        }
+    
         body_facet = {
             'total_question': [
                 {
@@ -1193,14 +1190,11 @@ async def user_question_statistic(
             ]
             body_facet['classes'] = pipeline_mid
 
-            pipeline_head = [
+            pipeline_head.update(
                 {
-                    '$match': {
-                        'user_id': data2.get('user_id'),
-                        'subject_id': subject_id
-                    }
+                    'subject_id': subject_id
                 }
-            ]
+            )
         elif all([subject_id, class_id]) and not chapter_id: # not chapter
             pipeline_mid = [
                 {
@@ -1266,27 +1260,21 @@ async def user_question_statistic(
             ]
             body_facet['chapters'] = pipeline_mid
 
-            pipeline_head = [
+            pipeline_head.update(
                 {
-                    '$match': {
-                        'user_id': data2.get('user_id'),
-                        'subject_id': subject_id,
-                        'class_id': class_id
-                    }
+                    'subject_id': subject_id,
+                    'class_id': class_id
                 }
-            ]
+            )
         
         elif all([subject_id, class_id, chapter_id]):
-            pipeline_head = [
+            pipeline_head.update(
                 {
-                    '$match': {
-                        'user_id': data2.get('user_id'),
-                        'subject_id': subject_id,
-                        'class_id': class_id,
-                        'chapter_id': chapter_id
-                    }
+                    'subject_id': subject_id,
+                    'class_id': class_id,
+                    'chapter_id': chapter_id
                 }
-            ]
+            )
 
         pipeline_facet = [
             {
@@ -1301,8 +1289,13 @@ async def user_question_statistic(
                 }
             }
         ]
+        pipeline_match = [
+            {
+                '$match': pipeline_head
+            }
+        ]
 
-        pipeline = pipeline_head + pipeline_facet
+        pipeline = pipeline_match + pipeline_facet
         
         question_info = questions_db[QUESTIONS].aggregate(pipeline)
         if question_info.alive:
@@ -1374,5 +1367,138 @@ async def user_question_statistic(
         return JSONResponse(content={'status': 'Failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
+
+#========================================================
+#============QUESTION_STATISTIC_STRICT_AUTO_PICK=========
+#========================================================
+@app.post(
+    path='/question_statistic_strict_auto_pick',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_403_FORBIDDEN: {
+            'model': ''
+        }
+    },
+    tags=['questions - statistic']
+)
+async def question_statistic_strict_auto_pick(
+    data: List[DATA_Question_Statistic_Strict_Auto_Pick],
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        result_data = []
+        pipeline_head = {
+            'user_id': data2.get('user_id'),
+            'is_removed': False
+        }
+        body_facet = {
+            'total_question': [
+                {
+                    '$count': 'count'
+                }
+            ],
+            'questions': [
+                {
+                    '$group': {
+                        '_id': '$level',
+                        'num_questions': {
+                            '$count': {}
+                        }
+                    }
+                },
+                {
+                    '$project': {
+                        '_id': 0,
+                        'name': '$_id',
+                        'num_questions': 1
+                    }
+                }
+            ]
+        }
+        for data_strict in data:
+            pipeline_head.update(
+                {
+                    'chapter_id': data_strict.chapter_id,
+                    'type': {
+                        '$in': data_strict.type
+                    }
+                }
+            )
+            logger().info(pipeline_head)
+
+            pipeline_facet = [
+                {
+                    '$facet': body_facet
+                },
+                {
+                    '$unwind': '$total_question'
+                },
+                {
+                    '$set': {
+                        'total_question': '$total_question.count'
+                    }
+                }
+            ]
+
+            pipeline_match = [
+                {
+                    '$match': pipeline_head
+                }
+            ]
+
+            pipeline = pipeline_match + pipeline_facet
+        
+            question_info = questions_db[QUESTIONS].aggregate(pipeline)
+            if question_info.alive:
+                question_data = question_info.next()
+
+                list_level = [dict_data.get('name') for dict_data in question_data.get('questions')]
+                if ManageQuestionLevel.VERY_EASY not in list_level:
+                    app_data = {
+                        'name': ManageQuestionLevel.VERY_EASY,
+                        'num_questions': 0
+                    }
+                    question_data['questions'].append(app_data)
+                if ManageQuestionLevel.EASY not in list_level:
+                    app_data = {
+                        'name': ManageQuestionLevel.EASY,
+                        'num_questions': 0
+                    }
+                    question_data['questions'].append(app_data)
+                if ManageQuestionLevel.MEDIUM not in list_level:
+                    app_data = {
+                        'name': ManageQuestionLevel.MEDIUM,
+                        'num_questions': 0
+                    }
+                    question_data['questions'].append(app_data)
+                if ManageQuestionLevel.HARD not in list_level:
+                    app_data = {
+                        'name': ManageQuestionLevel.HARD,
+                        'num_questions': 0
+                    }
+                    question_data['questions'].append(app_data)
+                if ManageQuestionLevel.VERY_HARD not in list_level:
+                    app_data = {
+                        'name': ManageQuestionLevel.VERY_HARD,
+                        'num_questions': 0
+                    }
+                    question_data['questions'].append(app_data)
+                result_data.append({
+                    'chapter_id': data_strict.chapter_id,
+                    'data': question_data
+                })
+            else:
+                question_data = {}
+                result_data.append({
+                    'chapter_id': data_strict.chapter_id,
+                    'data': question_data
+                })
+        return JSONResponse(content={'status': 'success', 'data': result_data},status_code=status.HTTP_200_OK)        
+    except Exception as e:
+        logger().error(e)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'Failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 
