@@ -748,7 +748,7 @@ async def exam_more_detail(
                                     '$toString': '$_id'
                                 },
                                 # 'exam_id': 1,
-                                'version_name': 1
+                                'version_name': '$exam_code'
                             }
                         }
                     ],
