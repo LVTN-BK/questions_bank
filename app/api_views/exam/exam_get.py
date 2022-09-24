@@ -1967,11 +1967,11 @@ async def user_get_all_exam(
             }
             filter_exam_version.append(query_search)
         
-        # =============== version =================
-        query_latest_version = {
-            'is_latest': True
-        }
-        filter_exam_version.append(query_latest_version)
+        # # =============== version =================
+        # query_latest_version = {
+        #     'is_latest': True
+        # }
+        # filter_exam_version.append(query_latest_version)
 
         # =============== status =================
         query_exam_status = {
@@ -2268,6 +2268,273 @@ async def user_get_all_exam(
                 '$unwind': '$metadata'         
             }
         ]
+
+        pipeline = [
+            {
+                '$match': {
+                    '$and': filter_exam
+                }
+            },
+            {
+                '$addFields': {
+                    'exam_id': {
+                        '$toString': '$_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'users_profile',
+                    'localField': 'user_id',
+                    'foreignField': 'user_id',
+                    'pipeline': [
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_id': 1,
+                                'name': {
+                                    '$ifNull': ['$name', None]
+                                },
+                                'email': {
+                                    '$ifNull': ['$email', None]
+                                },
+                                'avatar': {
+                                    '$ifNull': ['$avatar', None]
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'author_data'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'subject',
+                    'let': {
+                        'subject_id': '$subject_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$subject_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'subject_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'class',
+                    'let': {
+                        'class_id': '$class_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$id', '$$class_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'class_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'tag',
+                    'let': {
+                        'list_tag_id': '$tag_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$set': {
+                                'id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$in': ['$id', '$$list_tag_id']
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'id': 1,
+                                'name': 1
+                            }
+                        }
+                    ],
+                    'as': 'tags_info'
+                }
+            },
+            #join with exam_version
+            {
+                "$lookup": {
+                    'from': 'exams_version',
+                    'localField': 'exam_id',
+                    'foreignField': 'exam_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'is_removed': False
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        {
+                            '$limit': 1
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                # 'exam_version_id': '$_id',
+                                # 'version_name': 1,
+                                'exam_title': 1,
+                                # 'exam_code': 1,
+                                'note': 1,
+                                'time_limit': 1,
+                                'organization_info': 1,
+                                'exam_info': 1
+                            }
+                        },
+                        # {
+                        #     '$unwind': '$exam_title'
+                        # },
+                    ],
+                    'as': 'exam_detail'
+                }
+            },
+            {
+                '$unwind': '$exam_detail'
+            },
+            {
+                '$lookup': {
+                    'from': 'community_exams',
+                    'let': {
+                        'exam_id': '$exam_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$exam_id', '$$exam_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'community_exam_info'
+                }
+            },
+            { 
+                '$facet' : {
+                    'metadata': [ 
+                        { 
+                            '$count': "total" 
+                        }, 
+                        { 
+                            '$addFields': { 
+                                'page': {
+                                    '$toInt': {
+                                        '$ceil': {
+                                            '$divide': ['$total', limit]
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    ],
+                    'data': [ 
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'exam_id': 1,
+                                'is_public': {
+                                    '$ne': ['$community_exam_info', []]
+                                },
+                                'user_info': {
+                                    '$ifNull': [{'$first': '$author_data'}, None]
+                                },
+                                'subject_info': {
+                                    '$ifNull': [{'$first': '$subject_info'}, None]
+                                },
+                                'class_info': {
+                                    '$ifNull': [{'$first': '$class_info'}, None]
+                                },
+                                'tags_info': 1,
+                                'exam_title': '$exam_detail.exam_title',
+                                # 'exam_code': '$exam_detail.exam_code',
+                                # 'exam_version_id': '$exam_detail.exam_version_id',
+                                # 'version_name': '$exam_detail.version_name',
+                                'note': '$exam_detail.note',
+                                'time_limit': '$exam_detail.time_limit',
+                                'organization_info': {
+                                    '$ifNull': ['$exam_detail.organization_info', None]
+                                },
+                                'exam_info': {
+                                    '$ifNull': ['$exam_detail.exam_info', None]
+                                },
+                                'datetime_created': 1
+                                # 'exam_detail': 1
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        { 
+                            '$skip': num_skip 
+                        },
+                        { 
+                            '$limit': limit 
+                        } 
+                    ] # add projection here wish you re-shape the docs
+                } 
+            },
+            {
+                '$unwind': '$metadata'         
+            }
+        ]
+
 
         exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
         
