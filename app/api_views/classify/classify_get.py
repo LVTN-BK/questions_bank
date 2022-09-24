@@ -82,6 +82,19 @@ async def get_classify(
                             }
                         },
                         {
+                            '$set': {
+                                'namelen': {
+                                    '$strLenCP': '$name'
+                                }
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'namelen': 1,
+                                'name': 1
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
                                 'id': {
@@ -93,6 +106,11 @@ async def get_classify(
                         }      
                     ],
                     'as': 'classes'
+                }
+            },
+            {
+                '$sort': {
+                    'name': 1
                 }
             },
             {
@@ -198,6 +216,19 @@ async def group_get_classify(
                             }
                         },
                         {
+                            '$set': {
+                                'namelen': {
+                                    '$strLenCP': '$name'
+                                }
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'namelen': 1,
+                                'name': 1
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
                                 'id': {
@@ -209,6 +240,11 @@ async def group_get_classify(
                         }      
                     ],
                     'as': 'classes'
+                }
+            },
+            {
+                '$sort': {
+                    'name': 1
                 }
             },
             {
@@ -293,17 +329,25 @@ async def community_get_classify(
                                 'localField': 'class_id',
                                 'foreignField': 'class_id',
                                 'pipeline': [
+                                    # {
+                                    #     '$set': {
+                                    #         'namelen': {
+                                    #             '$strLenCP': '$name'
+                                    #         }
+                                    #     }
+                                    # },
+                                    {
+                                        '$sort': {
+                                            # 'namelen': 1,
+                                            'name': 1
+                                        }
+                                    },
                                     {
                                         '$project': {
                                             '_id': 0,
                                             'id': {
                                                 '$toString': '$_id'
                                             },
-                                            'name': 1
-                                        }
-                                    },
-                                    {
-                                        '$sort': {
                                             'name': 1
                                         }
                                     }
@@ -320,8 +364,8 @@ async def community_get_classify(
                         },
                         {
                             '$sort': {
-                                'namelen': -1,
-                                'name': -1
+                                'namelen': 1,
+                                'name': 1
                             }
                         },
                         {
@@ -337,6 +381,19 @@ async def community_get_classify(
                         }
                     ],
                     'as': 'classes'
+                }
+            },
+            # {
+            #     '$set': {
+            #         'namelen': {
+            #             '$strLenCP': '$name'
+            #         }
+            #     }
+            # },
+            {
+                '$sort': {
+                    # 'namelen': 1,
+                    'name': 1
                 }
             },
             {

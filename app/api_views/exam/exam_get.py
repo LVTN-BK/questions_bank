@@ -3115,7 +3115,7 @@ async def community_get_all_exam(
                     }
                 }
             },
-            {
+            { # lookup users_profile
                 '$lookup': {
                     'from': 'users_profile',
                     'localField': 'user_id',
@@ -3140,7 +3140,7 @@ async def community_get_all_exam(
                     'as': 'author_data'
                 }
             },
-            {
+            { # lookup subject
                 '$lookup': {
                     'from': 'subject',
                     'let': {
@@ -3172,7 +3172,7 @@ async def community_get_all_exam(
                     'as': 'subject_info'
                 }
             },
-            {
+            { # lookup class
                 '$lookup': {
                     'from': 'class',
                     'let': {
@@ -3204,7 +3204,7 @@ async def community_get_all_exam(
                     'as': 'class_info'
                 }
             },
-            {
+            { # lookup tag
                 '$lookup': {
                     'from': 'tag',
                     'let': {
@@ -3333,6 +3333,8 @@ async def community_get_all_exam(
                         },
                         {
                             '$sort': {
+                                'subject_info.name': 1,
+                                'class_info.name': 1,
                                 'datetime_created': -1
                             }
                         },
