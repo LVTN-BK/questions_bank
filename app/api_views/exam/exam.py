@@ -421,7 +421,7 @@ async def create_new_exam_code(
             questions.append(str(id_exam_section))
 
         exam_version_info['questions'] = questions
-        del exam_version_info['_id']
+        # del exam_version_info['_id']
         exam_version_info['version_name'] = num_version + 1
         exam_version_info['exam_code'] = data.exam_code
 
