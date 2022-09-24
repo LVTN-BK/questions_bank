@@ -3398,7 +3398,7 @@ async def user_exam_statistic(
         if exam_info.alive:
             exam_data = exam_info.next()
 
-            return JSONResponse(content={'status': 'success', 'data': exam_data},status_code=status.HTTP_200_OK)
+        return JSONResponse(content={'status': 'success', 'data': exam_data},status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
         msg = 'Có lỗi xảy ra!'
