@@ -2862,7 +2862,9 @@ async def group_get_all_exam(
                         {
                             '$project': {
                                 '_id': 0,
-                                'exam_version_id': '$_id',
+                                'exam_version_id': {
+                                    '$toString': '$_id'
+                                },
                                 # 'version_name': 1,
                                 'exam_title': 1,
                                 # 'exam_code': 1,
@@ -2976,6 +2978,7 @@ async def group_get_all_exam(
         exams = exams_db[EXAMS].aggregate(pipeline)
         
         result_data, meta_data = get_data_and_metadata(aggregate_response=exams, page=page)
+        logger().info(result_data)
 
         return JSONResponse(content={'status': 'success', 'data': result_data, 'metadata': meta_data},status_code=status.HTTP_200_OK)
     except Exception as e:
@@ -3256,7 +3259,9 @@ async def community_get_all_exam(
                         {
                             '$project': {
                                 '_id': 0,
-                                'exam_version_id': '$_id',
+                                'exam_version_id': {
+                                    '$toString': '$_id'
+                                },
                                 # 'version_name': 1,
                                 'exam_title': 1,
                                 # 'exam_code': 1,
