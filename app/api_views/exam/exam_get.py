@@ -1978,6 +1978,8 @@ async def user_get_all_exam(
             'is_removed': False
         }
         filter_exam.append(query_exam_status)
+        filter_exam_version.append(query_exam_status)
+        
 
         # =============== owner =================
         query_exam_owner = {
@@ -2412,7 +2414,7 @@ async def user_get_all_exam(
                     'pipeline': [
                         {
                             '$match': {
-                                'is_removed': False
+                                '$and': filter_exam_version
                             }
                         },
                         {
@@ -2536,7 +2538,7 @@ async def user_get_all_exam(
         ]
 
 
-        exams = exams_db[EXAMS_VERSION].aggregate(pipeline)
+        exams = exams_db[EXAMS].aggregate(pipeline)
         
         result_data, meta_data = get_data_and_metadata(aggregate_response=exams, page=page)
 
