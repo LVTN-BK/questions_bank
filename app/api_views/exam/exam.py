@@ -379,17 +379,17 @@ async def create_new_exam_code(
                             }
                         }
                     ],
-                    'as': 'exams_info'
+                    'as': 'exams_information'
                 }
             },
             {
-                '$unwind': '$exams_info'
+                '$unwind': '$exams_information'
             },
             {
                 '$project': {
                     '_id': 0,
                     'exam_object_id': 0,
-                    'exams_info': 0
+                    'exams_information': 0
                 }
             }
         ]
@@ -486,17 +486,17 @@ async def delete_exam_version(
                             }
                         }
                     ],
-                    'as': 'exams_info'
+                    'as': 'exams_information'
                 }
             },
             {
-                '$unwind': '$exams_info'
+                '$unwind': '$exams_information'
             },
             {
                 '$project': {
                     '_id': 0,
                     'exam_object_id': 0,
-                    'exams_info': 0
+                    'exams_information': 0
                 }
             }
         ]
