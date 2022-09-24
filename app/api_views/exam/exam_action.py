@@ -200,6 +200,7 @@ async def evaluate_exam(
 async def evaluate_exam_by_file(
     background_tasks: BackgroundTasks,
     exam_id: str = Form(...),
+    exam_version_id: str = Form(...),
     file: UploadFile = File(...,description="file as UploadFile"),
     data2: dict = Depends(valid_headers)
 ):
@@ -296,6 +297,7 @@ async def evaluate_exam_by_file(
         data_insert_exam = {
             'user_id': data2.get('user_id'),
             'exam_id': exam_id,
+            'exam_version_id': exam_version_id,
             'datetime_created': result_data.get('datetime_created')
         }
         # insert evaluation into db

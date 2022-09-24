@@ -3063,6 +3063,38 @@ async def get_exam_evaluation(
             },
             {
                 '$lookup': {
+                    'from': 'exams_version',
+                    'let': {
+                        'exam_version_id': '$exam_version_id'
+                    },
+                    'pipeline': [
+                        {
+                            '$addFields': {
+                                'exam_version_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': ['$exam_version_id', '$$exam_version_id']
+                                }
+                            }
+                        }
+                    ],
+                    'as': 'exam_version_info'
+                }
+            },
+            {
+                '$set': {
+                    'exam_version': {
+                        '$ifNull': [{'$first': '$exam_version_info'}, {}]
+                    }
+                }
+            },
+            {
+                '$lookup': {
                     'from': 'questions_evaluation',
                     'let': {
                         'eval_id': '$eval_id'
@@ -3161,6 +3193,8 @@ async def get_exam_evaluation(
                                     '$toString': '$_id'
                                 },
                                 'exam_id': 1,
+                                'version_name': '$exam_version.version_name',
+                                'exam_code': '$exam_version.exam_code',
                                 'datetime_created': 1,
                                 'data': 1
                             }
