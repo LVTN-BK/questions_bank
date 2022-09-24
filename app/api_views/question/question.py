@@ -1017,7 +1017,8 @@ async def user_question_statistic(
         pipeline_head = [
             {
                 '$match': {
-                    'user_id': data2.get('user_id')
+                    'user_id': data2.get('user_id'),
+                    'is_removed': False
                 }
             }
         ]
