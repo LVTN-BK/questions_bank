@@ -3228,6 +3228,10 @@ async def user_exam_statistic(
             ]
         }
         if not (subject_id or class_id): # all is null
+            exam_data = {
+                'total_exam': 0,
+                'subjects': []
+            }
             pipeline_mid = [
                 {
                     '$group': {
@@ -3293,6 +3297,10 @@ async def user_exam_statistic(
             body_facet['subjects'] = pipeline_mid
 
         elif subject_id and not class_id: # only subject
+            exam_data = {
+                'total_exam': 0,
+                'classes': []
+            }
             pipeline_mid = [
                 {
                     '$group': {
@@ -3364,6 +3372,9 @@ async def user_exam_statistic(
             )
         
         elif all([subject_id, class_id]):
+            exam_data = {
+                'total_exam': 0
+            }
             pipeline_head.update(
                 {
                     'subject_id': subject_id,
@@ -3394,7 +3405,7 @@ async def user_exam_statistic(
         pipeline = pipeline_match + pipeline_facet
         
         exam_info = exams_db[EXAMS].aggregate(pipeline)
-        exam_data = {}
+        # exam_data = {}
         if exam_info.alive:
             exam_data = exam_info.next()
 
