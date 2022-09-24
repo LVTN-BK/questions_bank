@@ -1,6 +1,7 @@
 from app.secure._password import *
 from app.secure._token import *
 from app.utils._header import valid_headers
+from app.utils.exam_utils.exam import remove_exam
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_exam
 from app.utils.question_utils.question import get_answer, get_data_and_metadata, get_list_tag_id_from_input, get_question_information_with_version_id
 from bson import ObjectId
@@ -9,7 +10,7 @@ from configs.settings import COMMUNITY_EXAMS, EXAMS, EXAMS_SECTION, EXAMS_VERSIO
 from fastapi import Depends, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from models.db.exam import Exam_Section_DB, Exams_DB, Exams_Version_DB
-from models.request.exam import DATA_Create_Exam, DATA_Delete_Exam, DATA_Update_Exam
+from models.request.exam import DATA_Create_Exam, DATA_Create_New_Exam_Code, DATA_Delete_Exam, DATA_Delete_Exam_Version, DATA_Update_Exam
 from starlette.responses import JSONResponse
 
 from models.response.exam import UserGetAllExamResponse200, UserGetAllExamResponse403, UserGetOneExamResponse200, UserGetOneExamResponse403
@@ -324,13 +325,196 @@ async def delete_exams(
     data2: dict = Depends(valid_headers)
 ):
     try:
-        all_id = []
-        # find question
-        for exam_id in data.list_exam_ids:
-            exam_del = exams_db[EXAMS].find_one_and_update(
+        remove_exam(user_id=data2.get('user_id'), list_exam_ids=data.list_exam_ids)
+
+        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+#========================================================
+#==================CREATE_NEW_EXAM_CODE==================
+#========================================================
+@app.post(
+    path='/create_new_exam_code',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ''
+        }
+    },
+    tags=['exams']
+)
+async def create_new_exam_code(
+    data: DATA_Create_New_Exam_Code,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # find version of exam
+        pipeline = [
+            {
+                '$match': {
+                    '_id': ObjectId(data.exam_version_id)
+                }
+            },
+            {
+                '$set': {
+                    'exam_object_id': {
+                        '$toObjectId': '$exam_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'exams',
+                    'localField': 'exam_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'user_id': data2.get('user_id')
+                            }
+                        }
+                    ],
+                    'as': 'exams_info'
+                }
+            },
+            {
+                '$unwind': '$exam_info'
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'exam_object_id': 0,
+                    'exam_info': 0
+                }
+            }
+        ]
+        exam_aggregate = exams_db[EXAMS_VERSION].aggregate(pipeline)
+        
+        if not exam_aggregate.alive:
+            msg = 'Không tìm thấy phiên bản đề thi!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        
+        exam_version_info = exam_aggregate.next()
+
+        # get number of version (include deleted version)
+        exam_version_num = exams_db[EXAMS_VERSION].find({
+            'exam_id': exam_version_info.get('exam_id'),
+        })
+        num_version = exam_version_num.count()
+
+        # insert section
+        questions = []
+        for section in exam_version_info['questions']:
+            section_info = exams_db[EXAMS_SECTION].find_one(
                 {
-                    "_id": ObjectId(exam_id),
-                    'user_id': data2.get('user_id')       
+                    '_id': ObjectId(section)
+                }
+            )
+            random.shuffle(section_info['section_questions'])
+            del section_info['_id']
+            id_exam_section = exams_db[EXAMS_SECTION].insert_one(section_info).inserted_id
+            questions.append(str(id_exam_section))
+
+        exam_version_info['questions'] = questions
+        del exam_version_info['_id']
+        exam_version_info['version_name'] = num_version + 1
+        exam_version_info['exam_code'] = data.exam_code
+
+        insert_exam_version = exams_db[EXAMS_VERSION].insert_one(exam_version_info).inserted_id
+
+        data_return = {
+            'version_id': str(insert_exam_version),
+            'version_name': num_version + 1
+        }
+        return JSONResponse(content={'status': 'success', 'data': data_return}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger().error(e)
+        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
+
+#========================================================
+#==================DELETE_EXAM_VERSION===================
+#========================================================
+@app.delete(
+    path='/delete_exam_version',
+    responses={
+        status.HTTP_200_OK: {
+            'model': ''
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ''
+        }
+    },
+    tags=['exams']
+)
+async def delete_exam_version(
+    data: DATA_Delete_Exam_Version,
+    data2: dict = Depends(valid_headers)
+):
+    try:
+        # find version of exam
+        pipeline = [
+            {
+                '$match': {
+                    '_id': ObjectId(data.exam_version_id)
+                }
+            },
+            {
+                '$set': {
+                    'exam_object_id': {
+                        '$toObjectId': '$exam_id'
+                    }
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'exams',
+                    'localField': 'exam_object_id',
+                    'foreignField': '_id',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'user_id': data2.get('user_id')
+                            }
+                        }
+                    ],
+                    'as': 'exams_info'
+                }
+            },
+            {
+                '$unwind': '$exam_info'
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'exam_object_id': 0,
+                    'exam_info': 0
+                }
+            }
+        ]
+        exam_aggregate = exams_db[EXAMS_VERSION].aggregate(pipeline)
+        
+        if not exam_aggregate.alive:
+            msg = 'Không tìm thấy phiên bản đề thi!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
+        
+        exam_version_info = exam_aggregate.next()
+        # get number of version (not include deleted version)
+        exam_version_num_remain = exams_db[EXAMS_VERSION].find({
+            'exam_id': exam_version_info.get('exam_id'),
+            'is_removed': False
+        })
+        num_version = exam_version_num_remain.count()
+        
+        if num_version > 1:
+            # delete version
+            exams_db[EXAMS_VERSION].update_one(
+                {
+                    '_id': ObjectId(data.exam_version_id)
                 },
                 {
                     '$set': {
@@ -338,38 +522,17 @@ async def delete_exams(
                     }
                 }
             )
+        else: # delete exam
+            remove_exam(user_id=data2.get('user_id'), list_exam_ids=[exam_version_info.get('exam_id')])
 
-            if exam_del:
-                all_id.append(exam_id)
-        
-                # # find exam version
-                # exam_version = exams_db[EXAMS_VERSION].delete_many(
-                #     {
-                #         'exam_id': exam_id
-                #     }
-                # )
-        # delete exam in group
-        exams_db[GROUP_EXAMS].delete_many(
-            {
-                'exam_id': {
-                    '$in': all_id
-                }
-            }
-        )
-
-        # delete exam in community
-        exams_db[COMMUNITY_EXAMS].delete_many(
-            {
-                'exam_id': {
-                    '$in': all_id
-                }
-            }
-        )
-
-        return JSONResponse(content={'status': 'success'},status_code=status.HTTP_200_OK)
+        data_return = {
+            'version_id': data.exam_version_id,
+            'version_name': exam_version_info.get('version_name')
+        }
+        return JSONResponse(content={'status': 'success', 'data': data_return}, status_code=status.HTTP_200_OK)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'failed', 'msg': str(e)}, status_code=status.HTTP_400_BAD_REQUEST)
-
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 

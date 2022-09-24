@@ -191,8 +191,16 @@ async def user_get_one_exam(
                     'pipeline': [
                         {
                             '$match': {
-                                'is_latest': True
+                                'is_removed': False
                             }
+                        },
+                        {
+                            '$sort': {
+                                'datetime_created': -1
+                            }
+                        },
+                        {
+                            '$limit': 1
                         },
                         {
                             '$unwind': '$questions'
@@ -728,6 +736,11 @@ async def exam_more_detail(
                     'localField': 'exam_id',
                     'foreignField': 'exam_id',
                     'pipeline': [
+                        {
+                            '$match': {
+                                'is_removed': False
+                            }
+                        },
                         {
                             '$project' : {
                                 '_id': 0,
@@ -3193,8 +3206,12 @@ async def get_exam_evaluation(
                                     '$toString': '$_id'
                                 },
                                 'exam_id': 1,
-                                'version_name': '$exam_version.version_name',
-                                'exam_code': '$exam_version.exam_code',
+                                'version_name': {
+                                    '$ifNull': ['$exam_version.version_name', None]
+                                },
+                                'exam_code': {
+                                    '$ifNull': ['$exam_version.exam_code', None]
+                                },
                                 'datetime_created': 1,
                                 'data': 1
                             }
