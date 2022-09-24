@@ -76,7 +76,7 @@ class DATA_Save_Exam_Config(BaseModel):
 
 
 class DATA_Create_New_Exam_Code(BaseModel):
-    exam_code: bool = Field(default=False, description='Create new version of exam')
+    exam_code: str = Field(..., description='Create new version of exam')
     exam_version_id: str = Field(..., description='ID of exam version')
 
 class DATA_Delete_Exam_Version(BaseModel):
