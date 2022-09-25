@@ -667,6 +667,13 @@ async def question_more_detail(
                             }
                         },
                         {
+                            '$set': {
+                                'reply_cmt_data': {
+                                    '$concatArrays': ['$reply_cmt_data', [{'default': 1}]]
+                                }
+                            }
+                        },
+                        {
                             '$unwind': {
                                 "path": "$reply_cmt_data",
                                 "preserveNullAndEmptyArrays": True
