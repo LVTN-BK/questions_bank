@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.account_utils.user import check_is_admin
 from app.utils.group_utils.group import check_owner_or_user_of_group
 from configs.logger import logger
 from configs.settings import CHAPTER, CLASS, SUBJECT, classify_db
@@ -41,11 +42,16 @@ def check_permission_with_subject(user_id: str, subject_id: str):
         res = classify_db[SUBJECT].find_one({'_id': ObjectId(subject_id)})
         if not res:
             return False, None
-        if (res.get('owner_type') == ClassifyOwnerType.USER) or (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
+        if (res.get('owner_type') == ClassifyOwnerType.USER):
             if user_id != res.get('user_id'):
                 return False, res.get('owner_type')
             else:
                 return True, res.get('owner_type')
+        elif (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
+            if check_is_admin(user_id=user_id):
+                return True, res.get('owner_type')
+            else:
+                return False, res.get('owner_type')
         else:
             if not check_owner_or_user_of_group(user_id=user_id, group_id=res.get('group_id')):
                 return False, res.get('owner_type')
@@ -93,12 +99,16 @@ def check_permission_with_class(user_id: str, class_id: str):
         res = classify_db[CLASS].aggregate(pipeline)
         if res.alive:
             res = res.next()
-            if (res.get('owner_type') == ClassifyOwnerType.USER) or (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
-                # check owner of class
+            if (res.get('owner_type') == ClassifyOwnerType.USER):
                 if user_id != res.get('user_id'):
                     return False, res.get('owner_type')
                 else:
                     return True, res.get('owner_type')
+            elif (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
+                if check_is_admin(user_id=user_id):
+                    return True, res.get('owner_type')
+                else:
+                    return False, res.get('owner_type')
             else:
                 if not check_owner_or_user_of_group(user_id=user_id, group_id=res.get('group_id')):
                     return False, res.get('owner_type')
@@ -167,12 +177,16 @@ def check_permission_with_chapter(user_id: str, chapter_id: str):
         if res.alive:
             res = res.next()
             logger().info(res)
-            if (res.get('owner_type') == ClassifyOwnerType.USER) or (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
-                # check owner of chapter
+            if (res.get('owner_type') == ClassifyOwnerType.USER):
                 if user_id != res.get('user_id'):
                     return False, res.get('owner_type')
                 else:
                     return True, res.get('owner_type')
+            elif (res.get('owner_type') == ClassifyOwnerType.COMMUNITY):
+                if check_is_admin(user_id=user_id):
+                    return True, res.get('owner_type')
+                else:
+                    return False, res.get('owner_type')
             else:
                 if not check_owner_or_user_of_group(user_id=user_id, group_id=res.get('group_id')):
                     return False, res.get('owner_type')
