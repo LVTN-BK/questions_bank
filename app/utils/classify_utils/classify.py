@@ -40,8 +40,10 @@ def get_subject_info(subject_id: str):
 def check_permission_with_subject(user_id: str, subject_id: str):
     try:
         res = classify_db[SUBJECT].find_one({'_id': ObjectId(subject_id)})
+        
         if not res:
             return False, None
+        logger().info(res.get('owner_type'))
         if (res.get('owner_type') == ClassifyOwnerType.USER):
             if user_id != res.get('user_id'):
                 return False, res.get('owner_type')

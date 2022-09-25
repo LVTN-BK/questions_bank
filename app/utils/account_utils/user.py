@@ -4,9 +4,11 @@ from configs.settings import ADMIN_COLLECTION, USERS_PROFILE, user_db
 
 def check_is_admin(user_id:str):
     try:
+        logger().info('==============check is admin===============')
         admin_data = user_db[ADMIN_COLLECTION].find_one({
             'user_id': user_id
         })
+        logger().info(admin_data)
         if admin_data:
             return True
         else:
