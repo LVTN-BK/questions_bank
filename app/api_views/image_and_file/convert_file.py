@@ -10,6 +10,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import UploadFile, File, BackgroundTasks, Body, Query
 from fastapi.responses import FileResponse
 from models.request.question import DATA_Export
+import pypandoc
 
 @app.post("/export_word")
 async def export_word(
@@ -22,7 +23,7 @@ async def export_word(
     import uuid    
     file_name = uuid.uuid4().hex
 
-    import pypandoc
+    
     pypandoc.convert_text(data.content, 'docx', format='html', outputfile=f'file_export/{file_name}.docx')
     # new_parser = HtmlToDocx()
     # # new_parser.parse_html_file('Questions.html', 'out')
@@ -46,7 +47,8 @@ async def export_pdf(
     import uuid    
     file_name = uuid.uuid4().hex
 
-    pdfkit.from_string(data.content, f'file_export/{file_name}.pdf')
+    # pdfkit.from_string(data.content, f'file_export/{file_name}.pdf')
+    pypandoc.convert_text(data.content, 'pdf', format='html', outputfile=f'file_export/{file_name}.pdf', extra_args=['-V', '--pdf-engine=xelatex'])
     some_file_path = f'file_export/{file_name}.pdf'
     background_tasks.add_task(remove_file, some_file_path)
     return FileResponse(some_file_path, media_type='application/pdf', filename='p.pdf')
