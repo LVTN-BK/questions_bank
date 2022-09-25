@@ -303,6 +303,19 @@ async def evaluate_exam_by_file(
         # insert evaluation into db
         insert_exam_id = exams_db[EXAMS_EVALUATION].insert_one(data_insert_exam).inserted_id
         
+        # find exam code
+        exam_version_info = exams_db[EXAMS_VERSION].find_one(
+            {
+                '_id': ObjectId(exam_version_id)
+            }
+        )
+        if exam_version_info:
+            result_data.update(
+                {
+                    'exam_code': exam_version_info.get('exam_code')
+                }
+            )
+
         result_data.update(
             {
                 'id': str(insert_exam_id)
