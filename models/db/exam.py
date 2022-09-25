@@ -27,6 +27,7 @@ class Exams_Version_DB(BaseModel):
     organization_info: str = Field(default=None, description='organization information')
     exam_info: str = Field(default=None, description='exam information')
     questions: List[str] = Field(..., description='questions of exam')
+    is_removed: bool = Field(default=False, description='is removed?')
     datetime_created: float = Field(..., description='time create question version')
 
 class Exam_Section_DB(BaseModel):
