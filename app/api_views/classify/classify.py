@@ -92,7 +92,8 @@ async def delete_subject(
             subject_usage = questions_db[QUESTIONS].find_one(
                 {
                     'subject_id': data1.subject_id,
-                    'user_id': data2.get('user_id')
+                    'user_id': data2.get('user_id'),
+                    'is_removed': False
                 }
             )
             if subject_usage:
@@ -222,7 +223,8 @@ async def delete_class(
             class_usage = questions_db[QUESTIONS].find_one(
                 {
                     'class_id': data1.class_id,
-                    'user_id': data2.get('user_id')
+                    'user_id': data2.get('user_id'),
+                    'is_removed': False
                 }
             )
             if class_usage:
@@ -350,7 +352,8 @@ async def delete_chapter(
             chapter_usage = questions_db[QUESTIONS].find_one(
                 {
                     'chapter_id': data1.chapter_id,
-                    'user_id': data2.get('user_id')
+                    'user_id': data2.get('user_id'),
+                    'is_removed': False
                 }
             )
             if chapter_usage:
