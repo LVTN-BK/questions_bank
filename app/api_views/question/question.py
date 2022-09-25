@@ -650,6 +650,27 @@ async def question_more_detail(
                                 'target_type': ManageTargetType.QUESTION,
                                 'is_removed': False
                             }
+                        },
+                        {
+                            '$set': {
+                                'cmt_id': {
+                                    '$toString': '$_id'
+                                }
+                            }
+                        },
+                        {
+                            '$lookup': {
+                                'from': 'reply_comments',
+                                'localField': 'cmt_id',
+                                'foreignField': 'comment_id',
+                                'as': 'reply_cmt_data'
+                            }
+                        },
+                        {
+                            '$unwind': {
+                                "path": "$reply_cmt_data",
+                                "preserveNullAndEmptyArrays": True
+                            }
                         }
                     ],
                     'as': 'comments_data'
