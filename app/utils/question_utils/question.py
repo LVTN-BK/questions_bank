@@ -218,12 +218,12 @@ def get_query_filter_questions(search, type, level, class_id, subject_id, chapte
 
     # =============== tags =================
     if tags:
-        query_search = {
+        query_tags = {
             'tag_id': {
                 '$in': tags,
             }
         }
-        filter_question.append(query_search)
+        filter_question.append(query_tags)
     
     # =============== search =================
     if search:

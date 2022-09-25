@@ -1,3 +1,4 @@
+from typing import List
 from app.utils._header import valid_headers
 from app.utils.exam_utils.exam_check_permission import check_permission_view_exam
 from app.utils.group_utils.group import check_group_exist, check_owner_or_user_of_group, get_list_group_exam
@@ -1947,6 +1948,7 @@ async def user_get_all_exam(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     search: str = Query(default=None, description='text search'),
+    tags: List[str] = Query(default=[], description='list tag_id'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -1967,6 +1969,15 @@ async def user_get_all_exam(
             }
             filter_exam_version.append(query_search)
         
+        # =============== tags =================
+        if tags:
+            query_tags = {
+                'tag_id': {
+                    '$in': tags,
+                }
+            }
+            filter_exam.append(query_tags)
+            
         # # =============== version =================
         # query_latest_version = {
         #     'is_latest': True
@@ -2567,6 +2578,7 @@ async def group_get_all_exam(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     search: str = Query(default=None, description='text search'),
+    tags: List[str] = Query(default=[], description='list tag_id'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     # chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -2609,6 +2621,15 @@ async def group_get_all_exam(
             }
             filter_exam_version.append(query_search)
         
+        # =============== tags =================
+        if tags:
+            query_tags = {
+                'tag_id': {
+                    '$in': tags,
+                }
+            }
+            filter_exam.append(query_tags)
+
         # # =============== version =================
         # query_latest_version = {
         #     'is_latest': True
@@ -3004,6 +3025,7 @@ async def community_get_all_exam(
     page: int = Query(default=1, description='page number'),
     limit: int = Query(default=10, description='limit of num result'),
     search: str = Query(default=None, description='text search'),
+    tags: List[str] = Query(default=[], description='list tag_id'),
     class_id: str = Query(default=None, description='classify by class'),
     subject_id: str = Query(default=None, description='classify by subject'),
     # chapter_id: str = Query(default=None, description='classify by chapter'),
@@ -3023,6 +3045,15 @@ async def community_get_all_exam(
             }
             filter_exam_version.append(query_search)
         
+        # =============== tags =================
+        if tags:
+            query_tags = {
+                'tag_id': {
+                    '$in': tags,
+                }
+            }
+            filter_exam.append(query_tags)
+
         # =============== version =================
         # query_latest_version = {
         #     'is_latest': True
