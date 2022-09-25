@@ -146,10 +146,12 @@ async def update_group(
 
             return JSONResponse(content={'status': 'Success'}, status_code=status.HTTP_200_OK)
         else:
-            return JSONResponse(content={'status': 'Not found'}, status_code=status.HTTP_404_NOT_FOUND)
+            msg = 'Không tìm thấy nhóm!'
+            return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         logger().error(e)
-        return JSONResponse(content={'status': 'Bad request'}, status_code=status.HTTP_400_BAD_REQUEST)
+        msg = 'Có lỗi xảy ra!'
+        return JSONResponse(content={'status': 'failed', 'msg': msg}, status_code=status.HTTP_400_BAD_REQUEST)
 
 #=================================================================
 #========================LIST_GROUP_MEMBERS=======================
