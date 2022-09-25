@@ -182,7 +182,12 @@ async def user_get_question_classify(
                                             '_id': 0, 
                                             'name': 1
                                         }
-                                    }
+                                    },
+                                    {
+                                        '$sort': {
+                                            'name': 1
+                                        }
+                                    },
                                 ],
                                 'as': 'class_info'
                             }
@@ -282,16 +287,24 @@ async def user_get_question_classify(
                             }
                         },
                         {
+                            '$set': {
+                                'namelen': {
+                                    '$strLenCP': '$class_info.name'
+                                }
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'namelen': 1,
+                                'class_info.name': 1
+                            }
+                        },
+                        {
                             '$project': {
                                 '_id': 0,
                                 'id': '$class',
                                 'name': '$class_info.name',
                                 'chapters': 1
-                            }
-                        },
-                        {
-                            '$sort': {
-                                'name': 1
                             }
                         }
                     ],
@@ -506,9 +519,27 @@ async def group_get_question_classify(
                                             'id': '$_id',
                                             'name': '$chapter_info.name'
                                         }
-                                    }
+                                    },
+                                    {
+                                        '$sort': {
+                                            'name': 1
+                                        }
+                                    },
                                 ],
                                 'as': 'chapters'
+                            }
+                        },
+                        {
+                            '$set': {
+                                'namelen': {
+                                    '$strLenCP': '$class_info.name'
+                                }
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'namelen': 1,
+                                'class_info.name': 1
                             }
                         },
                         {
@@ -529,6 +560,11 @@ async def group_get_question_classify(
                     'id': '$_id',
                     'name': '$subject_info.name',
                     'classes': 1
+                }
+            },
+            {
+                '$sort': {
+                    'name': 1
                 }
             },
             {
@@ -706,9 +742,27 @@ async def community_get_question_classify(
                                             'id': '$_id',
                                             'name': '$chapter_info.name'
                                         }
-                                    }
+                                    },
+                                    {
+                                        '$sort': {
+                                            'name': 1
+                                        }
+                                    },
                                 ],
                                 'as': 'chapters'
+                            }
+                        },
+                        {
+                            '$set': {
+                                'namelen': {
+                                    '$strLenCP': '$class_info.name'
+                                }
+                            }
+                        },
+                        {
+                            '$sort': {
+                                'namelen': 1,
+                                'class_info.name': 1
                             }
                         },
                         {
@@ -729,6 +783,11 @@ async def community_get_question_classify(
                     'id': '$_id',
                     'name': '$subject_info.name',
                     'classes': 1
+                }
+            },
+            {
+                '$sort': {
+                    'name': 1
                 }
             },
             {
