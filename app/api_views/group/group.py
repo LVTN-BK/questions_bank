@@ -138,7 +138,11 @@ async def update_group(
                 }
 
                 #update data:
-                group_db.get_collection('group').update_many(query, update_query)
+                group_db.get_collection('group').update_one(
+                    {
+                        '_id': ObjectId(data.group_id)
+                    },
+                    update_query)
 
             return JSONResponse(content={'status': 'Success'}, status_code=status.HTTP_200_OK)
         else:
