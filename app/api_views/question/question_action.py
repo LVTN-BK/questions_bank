@@ -340,30 +340,53 @@ async def copy_question_by_version(
         if not question_info or not question_version_info:
             raise Exception('question not found!!!')
 
-        question_data = Questions_DB(
-            user_id=data2.get('user_id'),
-            class_id=data.class_id,
-            subject_id=data.subject_id,
-            chapter_id=data.chapter_id,
-            type=question_info.get('type'),
-            tag_id=question_info.get('tag_id'),
-            level=question_info.get('level'),
-            datetime_created=datetime.now().timestamp()
+        
+        question_info.update(
+            {
+                'user_id':data2.get('user_id'),
+                'class_id':data.class_id,
+                'subject_id':data.subject_id,
+                'chapter_id':data.chapter_id,
+                'datetime_created':datetime.now().timestamp()
+            }
         )
-        question_insert_id = questions_db[QUESTIONS].insert_one(jsonable_encoder(question_data)).inserted_id
+        del question_info['_id']
+
+        # question_data = Questions_DB(
+        #     user_id=data2.get('user_id'),
+        #     class_id=data.class_id,
+        #     subject_id=data.subject_id,
+        #     chapter_id=data.chapter_id,
+        #     type=question_info.get('type'),
+        #     tag_id=question_info.get('tag_id'),
+        #     level=question_info.get('level'),
+        #     datetime_created=datetime.now().timestamp()
+        # )
+        question_insert_id = questions_db[QUESTIONS].insert_one(question_info).inserted_id
+        # question_insert_id = questions_db[QUESTIONS].insert_one(jsonable_encoder(question_data)).inserted_id
 
         
-        question_version_data = Questions_Version_DB(
-            question_id=str(question_insert_id),
-            question_content=question_version_info.get('question_content'),
-            answers=question_version_info.get('answers'),
-            answers_right=question_version_info.get('answers_right'),
-            sample_answer=question_version_info.get('sample_answer'),
-            display=question_version_info.get('display'),
-            datetime_created=datetime.now().timestamp()
+        # question_version_data = Questions_Version_DB(
+        #     question_id=str(question_insert_id),
+        #     question_content=question_version_info.get('question_content'),
+        #     answers=question_version_info.get('answers'),
+        #     answers_right=question_version_info.get('answers_right'),
+        #     sample_answer=question_version_info.get('sample_answer'),
+        #     display=question_version_info.get('display'),
+        #     datetime_created=datetime.now().timestamp()
+        # )
+        question_version_info.update(
+            {
+                'question_id':str(question_insert_id),
+                'version_name': 1,
+                'is_latest': True,
+                'datetime_created':datetime.now().timestamp()
+            }
         )
+        del question_version_info['_id']
 
-        question_version_insert_id = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(question_version_data)).inserted_id
+        question_version_insert_id = questions_db[QUESTIONS_VERSION].insert_one(question_version_info).inserted_id
+        # question_version_insert_id = questions_db[QUESTIONS_VERSION].insert_one(jsonable_encoder(question_version_data)).inserted_id
 
         data = {
             'question_id': str(question_insert_id),
