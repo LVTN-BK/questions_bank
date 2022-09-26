@@ -11,4 +11,5 @@ class User(BaseModel):
     # encrypt_key: str = Field(...)
     key_verify: str = Field(...)
     is_verified: bool = Field(default=False)
+    is_disable: bool = Field(default=False)
     datetime_created: datetime = Field(...)
